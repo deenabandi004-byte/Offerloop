@@ -1,0 +1,8 @@
+.env
+credentials.json
+firebase-creds.json
+sheets-creds.json
+token.pickle
+.DS_Store
+*.pyc
+__pycache__/
