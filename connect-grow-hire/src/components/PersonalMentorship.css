@@ -1,0 +1,56 @@
+.personal-mentorship {
+  background-color: #ffffff;
+}
+
+.mentorship-content {
+  margin-top: 3rem;
+}
+
+.mentorship-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.mentorship-feature {
+  text-align: center;
+  padding: 2rem;
+  border-radius: 12px;
+  background-color: #f8fafc;
+  transition: all 0.3s ease;
+}
+
+.mentorship-feature:hover {
+  background-color: #ffffff;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px);
+}
+
+.mentorship-feature__icon {
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.mentorship-feature h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+}
+
+.mentorship-feature p {
+  color: #666;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .mentorship-features {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .mentorship-feature {
+    padding: 1.5rem;
+  }
+}

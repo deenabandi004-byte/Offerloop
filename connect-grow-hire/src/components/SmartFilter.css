@@ -1,0 +1,51 @@
+.smart-filter {
+  background-color: #ffffff;
+}
+
+.smart-filter__content {
+  margin-top: 3rem;
+}
+
+.filter-demo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.filter-card {
+  background-color: #f8fafc;
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.filter-card:hover {
+  background-color: #ffffff;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px);
+}
+
+.filter-card h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+}
+
+.filter-card p {
+  color: #666;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .filter-demo {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .filter-card {
+    padding: 1.5rem;
+  }
+}
