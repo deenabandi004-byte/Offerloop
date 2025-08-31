@@ -2130,6 +2130,7 @@ def search_contacts_with_pdl(job_title, company, location, max_contacts=8):
 
 @app.route('/ping')
 def ping():
+    """Simple ping endpoint for health checking."""
     return "pong"
 
 @app.route('/health')
