@@ -8,7 +8,6 @@ import requests
 import datetime
 import csv
 from io import StringIO
-import openai
 import base64
 from email.mime.text import MIMEText
 import pickle
@@ -2135,7 +2134,7 @@ def ping():
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
+    """Health check endpoint - verifies API service status"""
     return jsonify({
         'status': 'healthy',
         'services': {
