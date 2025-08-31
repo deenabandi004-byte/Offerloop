@@ -21,6 +21,7 @@ from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import traceback
+from functools import lru_cache
 
 from dotenv import load_dotenv
 
@@ -309,6 +310,7 @@ def get_autocomplete_suggestions(query, data_type='job_title'):
 # SMART LOCATION STRATEGY
 # ========================================
 
+@lru_cache(maxsize=128)
 def determine_location_strategy(location_input):
     """Determine whether to use metro or locality search based on input location"""
     try:
@@ -598,6 +600,7 @@ def try_job_title_levels_search_enhanced(job_title_enrichment, company, city, st
         print(f"Enhanced job title levels search failed: {e}")
         return []
 
+@lru_cache(maxsize=64)
 def determine_job_level(job_title):
     """Determine job level from job title for JOB_TITLE_LEVELS search"""
     job_title_lower = job_title.lower()
@@ -1368,7 +1371,7 @@ def create_gmail_draft_for_user(contact, email_subject, email_body, tier='advanc
         message = MIMEText(email_body)
         message['to'] = recipient_email
         message['subject'] = email_subject
-        message['from'] = user_email  # Set the user's email as sender
+        message['from'] = user_email or 'noreply@recruitedge.com'  # Handle None case
         
         raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
         
