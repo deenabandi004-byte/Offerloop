@@ -35,6 +35,7 @@ const navigationItems = [
   { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
   { title: "Loop News", url: "/news", icon: Newspaper },
   { title: "Pricing", url: "/pricing", icon: CreditCard },
+  { title: "Devin AI", url: "/devin", icon: Zap },
 ];
 
 const settingsItems = [

@@ -31,12 +31,15 @@ load_dotenv()
 # Replace them with these lines:
 PEOPLE_DATA_LABS_API_KEY = os.getenv('PEOPLE_DATA_LABS_API_KEY')
 openai.api_key = os.getenv('OPENAI_API_KEY')
+DEVIN_API_KEY = os.getenv('DEVIN_API_KEY')
 
 # Add this validation
 if not PEOPLE_DATA_LABS_API_KEY:
     print("WARNING: PEOPLE_DATA_LABS_API_KEY not found in .env file")
 if not openai.api_key:
     print("WARNING: OPENAI_API_KEY not found in .env file")
+if not DEVIN_API_KEY:
+    print("WARNING: DEVIN_API_KEY not found in .env file")
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -45,6 +48,82 @@ CORS(app, origins=["https://d33d83bb2e38.ngrok-free.app", "*"])
 # PDL Configuration with your API key
 
 PDL_BASE_URL = 'https://api.peopledatalabs.com/v5'
+DEVIN_BASE_URL = 'https://api.devin.ai/v1'
+
+def create_devin_session(prompt, user_email=None):
+    """Create a new Devin session for automation tasks"""
+    headers = {
+        'Authorization': f'Bearer {DEVIN_API_KEY}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        'prompt': prompt,
+        'unlisted': True,  # Keep sessions private
+        'snapshot_id': None  # Use default environment
+    }
+    
+    try:
+        response = requests.post(
+            f'{DEVIN_BASE_URL}/sessions',
+            headers=headers,
+            json=payload
+        )
+        
+        if response.status_code == 200:
+            session_data = response.json()
+            return {
+                'session_id': session_data['session_id'],
+                'url': session_data['url'],
+                'success': True
+            }
+        else:
+            return {'success': False, 'error': response.text}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+def send_devin_message(session_id, message):
+    """Send a message to an existing Devin session"""
+    headers = {
+        'Authorization': f'Bearer {DEVIN_API_KEY}',
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        response = requests.post(
+            f'{DEVIN_BASE_URL}/sessions/{session_id}/message',
+            headers=headers,
+            json={'message': message}
+        )
+        
+        return response.status_code == 200
+    except Exception as e:
+        return False
+
+def store_devin_knowledge(title, content, folder="recruitedge-insights"):
+    """Store insights in Devin knowledge base"""
+    headers = {
+        'Authorization': f'Bearer {DEVIN_API_KEY}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        'name': title,
+        'body': content,
+        'parent_folder_id': folder,
+        'trigger_description': f"RecruitEdge insight: {title}"
+    }
+    
+    try:
+        response = requests.post(
+            f'{DEVIN_BASE_URL}/knowledge',
+            headers=headers,
+            json=payload
+        )
+        
+        return response.status_code == 200
+    except Exception as e:
+        return False
 
 
 # TIER CONFIGURATIONS (from your specs)
@@ -2140,9 +2219,317 @@ def health():
         'services': {
             'pdl': 'connected',
             'openai': 'connected',
+            'devin': 'connected' if DEVIN_API_KEY else 'unavailable',
             'gmail': 'connected' if get_gmail_service() else 'unavailable'
         }
     })
+
+@app.route('/api/devin/optimize-component', methods=['POST'])
+def optimize_component():
+    """Use Devin to optimize React components"""
+    try:
+        data = request.json
+        component_name = data.get('component_name')
+        optimization_type = data.get('optimization_type', 'performance')
+        
+        if not component_name:
+            return jsonify({'error': 'component_name is required'}), 400
+        
+        prompt = f"""
+        Analyze and optimize the {component_name} React component in the RecruitEdge application.
+        
+        Focus on {optimization_type} optimization:
+        1. Performance improvements (React.memo, useMemo, useCallback)
+        2. Accessibility compliance (WCAG 2.1)
+        3. User experience enhancements
+        4. Code quality and maintainability
+        5. Error handling and loading states
+        
+        The component is part of a recruiting automation platform with three tiers:
+        - Basic: 6 contacts, CSV export
+        - Advanced: 8 contacts, AI emails, Gmail drafts
+        - Pro: 12 contacts, resume analysis, similarity matching
+        
+        Provide specific code improvements and explain the reasoning.
+        """
+        
+        session = create_devin_session(prompt)
+        if session['success']:
+            store_devin_knowledge(
+                f"Component Optimization: {component_name}",
+                f"Optimization type: {optimization_type}\nSession ID: {session['session_id']}\nURL: {session['url']}"
+            )
+            
+            return jsonify({
+                'session_url': session['url'],
+                'session_id': session['session_id'],
+                'status': 'optimizing',
+                'component': component_name,
+                'type': optimization_type
+            })
+        else:
+            return jsonify({'error': 'Failed to create Devin session', 'details': session.get('error')}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devin/create-analytics', methods=['POST'])
+def create_advanced_analytics():
+    """Use Devin to build sophisticated recruiting analytics"""
+    try:
+        data = request.json
+        analytics_type = data.get('analytics_type', 'dashboard')
+        user_email = data.get('user_email', 'anonymous')
+        
+        prompt = f"""
+        Create advanced analytics components for the RecruitEdge recruiting platform.
+        
+        Analytics type: {analytics_type}
+        
+        Build the following analytics features:
+        1. Contact search success rate tracking by tier (Basic/Advanced/Pro)
+        2. Email response rate analytics with A/B testing insights
+        3. User engagement metrics and conversion funnels
+        4. Tier performance comparisons and upgrade recommendations
+        5. Predictive recruiting insights using historical data
+        
+        Technical requirements:
+        - Use Recharts library for visualizations (already installed)
+        - Integrate with existing Dashboard.tsx component structure
+        - Follow the existing design system (Tailwind CSS + shadcn/ui)
+        - Create responsive components for mobile and desktop
+        - Include real-time data updates and filtering capabilities
+        
+        The platform serves three tiers:
+        - Basic: 6 contacts, basic fields, CSV export
+        - Advanced: 8 contacts, enriched data, AI emails, Gmail drafts  
+        - Pro: 12 contacts, resume analysis, similarity engine, smart emails
+        
+        Generate complete React TypeScript components with proper interfaces.
+        """
+        
+        session = create_devin_session(prompt, user_email)
+        if session['success']:
+            store_devin_knowledge(
+                f"Analytics Enhancement: {analytics_type}",
+                f"User: {user_email}\nType: {analytics_type}\nSession ID: {session['session_id']}\nURL: {session['url']}"
+            )
+            
+            return jsonify({
+                'session_url': session['url'],
+                'session_id': session['session_id'],
+                'status': 'generating',
+                'analytics_type': analytics_type,
+                'message': f'Building {analytics_type} analytics components...'
+            })
+        else:
+            return jsonify({'error': 'Failed to create Devin session', 'details': session.get('error')}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devin/create-workflow', methods=['POST'])
+def create_automated_workflow():
+    """Use Devin to build automated recruiting workflows"""
+    try:
+        data = request.json
+        workflow_type = data.get('workflow_type')
+        parameters = data.get('parameters', {})
+        user_email = data.get('user_email', 'anonymous')
+        
+        if not workflow_type:
+            return jsonify({'error': 'workflow_type is required'}), 400
+        
+        workflow_prompts = {
+            'email_optimization': """
+            Create an automated email optimization workflow for RecruitEdge:
+            1. A/B test email templates automatically
+            2. Track response rates by industry and role
+            3. Generate optimized templates based on performance data
+            4. Integrate with existing OpenAI email generation system
+            5. Create performance dashboards and recommendations
+            """,
+            'contact_validation': """
+            Build an intelligent contact validation system:
+            1. Verify email deliverability using multiple services
+            2. Check LinkedIn profile authenticity and activity
+            3. Validate company information against multiple sources
+            4. Score contact quality (1-10) with detailed reasoning
+            5. Integrate with existing PDL contact processing pipeline
+            """,
+            'crm_integration': """
+            Generate a custom CRM integration builder:
+            1. Support for Salesforce, HubSpot, Pipedrive, and custom APIs
+            2. Import contacts from RecruitEdge CSV exports
+            3. Create leads and opportunities with proper field mapping
+            4. Track recruiting pipeline stages and conversion rates
+            5. Sync email interactions and response tracking
+            """,
+            'smart_scheduling': """
+            Create an intelligent scheduling and follow-up system:
+            1. Optimal timing for outreach based on industry and role
+            2. Automated follow-up sequences with personalization
+            3. Calendar integration for interview scheduling
+            4. Response tracking and engagement scoring
+            5. Integration with Gmail API for seamless workflow
+            """
+        }
+        
+        base_prompt = workflow_prompts.get(workflow_type, f"Create a custom workflow for: {workflow_type}")
+        
+        full_prompt = f"""
+        {base_prompt}
+        
+        Technical Integration Requirements:
+        - Integrate with existing Flask backend (app.py)
+        - Use existing authentication system (Google OAuth)
+        - Connect to People Data Labs API for contact data
+        - Leverage OpenAI API for intelligent processing
+        - Work with Gmail API for email management
+        - Support three-tier system (Basic/Advanced/Pro)
+        
+        Parameters: {parameters}
+        User: {user_email}
+        
+        Provide complete implementation with error handling, logging, and testing.
+        """
+        
+        session = create_devin_session(full_prompt, user_email)
+        if session['success']:
+            store_devin_knowledge(
+                f"Automated Workflow: {workflow_type}",
+                f"User: {user_email}\nType: {workflow_type}\nParameters: {parameters}\nSession ID: {session['session_id']}\nURL: {session['url']}"
+            )
+            
+            return jsonify({
+                'session_url': session['url'],
+                'session_id': session['session_id'],
+                'status': 'building',
+                'workflow_type': workflow_type,
+                'message': f'Building {workflow_type} automation workflow...'
+            })
+        else:
+            return jsonify({'error': 'Failed to create Devin session', 'details': session.get('error')}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devin/custom-integration', methods=['POST'])
+def create_custom_integration():
+    """Use Devin to build custom RecruitEdge integrations"""
+    try:
+        data = request.json
+        integration_type = data.get('integration_type')
+        description = data.get('description', '')
+        user_email = data.get('user_email', 'anonymous')
+        
+        if not integration_type:
+            return jsonify({'error': 'integration_type is required'}), 400
+        
+        prompt = f"""
+        Create a custom integration for the RecruitEdge recruiting platform.
+        
+        Integration Type: {integration_type}
+        Description: {description}
+        User: {user_email}
+        
+        RecruitEdge Platform Overview:
+        - Flask backend with three-tier system (Basic/Advanced/Pro)
+        - React frontend with TypeScript, Tailwind CSS, shadcn/ui
+        - People Data Labs API for contact search and enrichment
+        - OpenAI API for email generation and resume processing
+        - Gmail API for draft creation and email management
+        - Google OAuth authentication system
+        
+        Current Features:
+        - Contact search with smart location strategy
+        - AI-powered email generation (Advanced/Pro tiers)
+        - Resume analysis and similarity matching (Pro tier)
+        - Gmail draft creation with custom labels
+        - Scout chatbot for job title suggestions
+        - Analytics dashboard with progress tracking
+        
+        Integration Requirements:
+        1. Follow existing code patterns and architecture
+        2. Maintain compatibility with three-tier system
+        3. Use existing authentication and API integrations
+        4. Provide comprehensive error handling
+        5. Include proper TypeScript interfaces
+        6. Follow existing UI/UX design patterns
+        7. Add appropriate logging and monitoring
+        
+        Deliverables:
+        - Complete implementation code
+        - Integration documentation
+        - Testing strategy
+        - Deployment instructions
+        
+        Make this integration production-ready and user-friendly.
+        """
+        
+        session = create_devin_session(prompt, user_email)
+        if session['success']:
+            store_devin_knowledge(
+                f"Custom Integration: {integration_type}",
+                f"User: {user_email}\nType: {integration_type}\nDescription: {description}\nSession ID: {session['session_id']}\nURL: {session['url']}"
+            )
+            
+            return jsonify({
+                'session_url': session['url'],
+                'session_id': session['session_id'],
+                'status': 'building',
+                'integration_type': integration_type,
+                'message': f'Building custom {integration_type} integration...'
+            })
+        else:
+            return jsonify({'error': 'Failed to create Devin session', 'details': session.get('error')}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devin/session/<session_id>/status', methods=['GET'])
+def get_devin_session_status(session_id):
+    """Get status of a Devin session"""
+    try:
+        headers = {
+            'Authorization': f'Bearer {DEVIN_API_KEY}',
+            'Content-Type': 'application/json'
+        }
+        
+        response = requests.get(
+            f'{DEVIN_BASE_URL}/sessions/{session_id}',
+            headers=headers
+        )
+        
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({'error': 'Failed to get session status'}), response.status_code
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devin/knowledge', methods=['GET'])
+def list_devin_knowledge():
+    """List stored Devin knowledge"""
+    try:
+        headers = {
+            'Authorization': f'Bearer {DEVIN_API_KEY}',
+            'Content-Type': 'application/json'
+        }
+        
+        response = requests.get(
+            f'{DEVIN_BASE_URL}/knowledge',
+            headers=headers
+        )
+        
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({'error': 'Failed to get knowledge'}), response.status_code
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/basic-run', methods=['POST'])
 def basic_run():
