@@ -1,0 +1,124 @@
+.pricing {
+  background-color: #f8fafc;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.pricing-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+  border: 2px solid transparent;
+}
+
+.pricing-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.pricing-card--featured {
+  border-color: #6366f1;
+  transform: scale(1.05);
+}
+
+.pricing-card--featured:hover {
+  transform: scale(1.05) translateY(-5px);
+}
+
+.pricing-card__badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #6366f1;
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.pricing-card__header {
+  margin-bottom: 2rem;
+}
+
+.pricing-card__title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+}
+
+.pricing-card__price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.price {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #6366f1;
+}
+
+.period {
+  font-size: 1rem;
+  color: #666;
+}
+
+.pricing-card__features {
+  margin-bottom: 2rem;
+}
+
+.pricing-card__features ul {
+  list-style: none;
+  text-align: left;
+}
+
+.pricing-card__features li {
+  padding: 0.75rem 0;
+  color: #666;
+  position: relative;
+  padding-left: 2rem;
+}
+
+.pricing-card__features li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #6366f1;
+  font-weight: bold;
+}
+
+.btn--full {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .pricing-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .pricing-card--featured {
+    transform: none;
+  }
+  
+  .pricing-card--featured:hover {
+    transform: translateY(-5px);
+  }
+  
+  .pricing-card {
+    padding: 2rem 1.5rem;
+  }
+}
