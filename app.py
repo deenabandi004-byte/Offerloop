@@ -2134,7 +2134,7 @@ def ping():
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
+    """Health check endpoint - verifies API service status"""
     return jsonify({
         'status': 'healthy',
         'services': {
