@@ -1,5 +1,5 @@
 // src/services/api.ts
-const API_BASE_URL = 'http://192.168.1.237:5001/api';  // ✅ Fixed: Use the correct server IP
+const API_BASE_URL = 'http://localhost:5001/api';  // ✅ Fixed: Use localhost for development
 
 export interface ContactSearchRequest {
   jobTitle: string;
