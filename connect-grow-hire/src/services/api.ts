@@ -1,5 +1,5 @@
 // src/services/api.ts
-const API_BASE_URL = 'https://onboarding-tracker-app-tunnel-a01eetui.devinapps.com/api';  // ✅ Fixed: Use same tunnel domain as frontend, no port needed for tunnel
+const API_BASE_URL = 'https://onboarding-tracker-app-tunnel-sz8ze1n6.devinapps.com/api';  // ✅ Fixed: Use dedicated backend tunnel domain
 
 export interface ContactSearchRequest {
   jobTitle: string;
@@ -264,7 +264,7 @@ class ApiService {
     console.log(`📄 Parsing resume for onboarding: ${resumeFile.name} (${resumeFile.size} bytes)`);
 
     const headers: Record<string, string> = {
-      'Authorization': 'Basic ' + btoa('user:8799b5ee99450f8b56793e02bb0f20ab')
+      'Authorization': 'Basic ' + btoa('user:11392b6455e6b26db98ceb44de16af8b')
     };
     
     return this.makeRequest('/parse-resume-onboarding', {
