@@ -561,9 +561,9 @@ const Home = () => {
 
         {/* Scout Chatbot */}
         {isScoutChatOpen && (
-          <div className="fixed right-0 top-0 h-full w-80 bg-white shadow-2xl z-40 border-l border-gray-200">
+          <div className="fixed right-0 top-0 h-full w-80 bg-gray-900 shadow-2xl z-40 border-l border-gray-700">
             <div className="h-full flex flex-col">
-              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600">
+              <div className="p-4 border-b border-gray-700 bg-gradient-to-r from-blue-500 to-purple-500">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: '#fff6e2' }}>
