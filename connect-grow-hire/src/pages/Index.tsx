@@ -144,10 +144,17 @@ const Index = () => {
                 </div>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-2xl p-8 border border-blue-500/30">
-              <div className="text-center">
-                <div className="text-6xl font-bold text-blue-400 mb-4">2B+</div>
-                <div className="text-xl text-gray-300">Professional Contacts</div>
+            <div className="relative rounded-2xl overflow-hidden border border-blue-500/30">
+              <img 
+                src="/images/network-globe.jpg" 
+                alt="Global professional network visualization" 
+                className="w-full h-80 object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-transparent to-transparent flex items-end justify-center pb-8">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-white mb-2">2B+</div>
+                  <div className="text-lg text-gray-200">Professional Contacts</div>
+                </div>
               </div>
             </div>
           </div>
