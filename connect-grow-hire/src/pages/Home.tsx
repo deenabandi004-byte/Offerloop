@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutocompleteInput } from "@/components/AutocompleteInput";
 import ScoutChatbot from "@/components/ScoutChatbot";
 import LockedFeatureOverlay from "@/components/LockedFeatureOverlay";
@@ -288,27 +289,16 @@ const Home = () => {
           <main className="p-8">
             <div className="max-w-7xl mx-auto">
               
-              {/* Current Tier Display */}
+              {/* Tier Display */}
               <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      {userTier === 'pro' && <Crown className="h-5 w-5 text-yellow-400" />}
-                      <h2 className="text-2xl font-bold text-white">{currentTierConfig.name}</h2>
-                    </div>
-                    <Badge className="bg-gradient-to-r from-pink-500 to-purple-500 text-white border-0">
-                      {currentTierConfig.credits} credits
-                    </Badge>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    {userTier === 'pro' && <Crown className="h-5 w-5 text-yellow-400" />}
+                    <h2 className="text-2xl font-bold text-white">{currentTierConfig.name}</h2>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-sm text-gray-400">Available Features</p>
-                      <div className="flex items-center gap-4 mt-1">
-                        <span className="text-sm text-white">Coffee Chat Prep</span>
-                        <span className="text-sm text-white">Interview Prep</span>
-                      </div>
-                    </div>
-                  </div>
+                  <Badge className="bg-gradient-to-r from-pink-500 to-purple-500 text-white border-0">
+                    {currentTierConfig.credits} credits
+                  </Badge>
                 </div>
                 
                 <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
@@ -316,230 +306,257 @@ const Home = () => {
                 </div>
               </div>
 
-              {/* Coffee Chat Prep and Interview Prep */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {/* Coffee Chat Prep */}
-                <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700">
-                  <CardHeader className="border-b border-gray-700">
-                    <CardTitle className="text-lg text-white flex items-center gap-2">
-                      Coffee Chat Prep
-                      {currentTierConfig.coffeeChat && (
-                        <Badge variant="outline" className="text-green-400 border-green-400">
-                          Available
-                        </Badge>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    {currentTierConfig.coffeeChat ? (
-                      <div className="space-y-4">
+              {/* Tab Navigation */}
+              <Tabs defaultValue="find-candidates" className="mb-8">
+                <TabsList className="grid w-full grid-cols-3 bg-gray-800/50 border border-gray-700">
+                  <TabsTrigger 
+                    value="find-candidates"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white text-gray-300 hover:text-white transition-all"
+                  >
+                    Find Candidates
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="coffee-chat"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-blue-500 data-[state=active]:text-white text-gray-300 hover:text-white transition-all"
+                  >
+                    Coffee Chat Prep
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="interview-prep"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-300 hover:text-white transition-all"
+                  >
+                    Interview Prep
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Find Candidates Tab Content */}
+                <TabsContent value="find-candidates" className="mt-6">
+                  <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700">
+                    <CardHeader className="border-b border-gray-700">
+                      <CardTitle className="text-xl text-white">Find Candidates</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      {/* Main Search Inputs with Autocomplete */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
                         <div>
                           <label className="block text-sm font-medium mb-2 text-white">
-                            LinkedIn Profile URL
+                            Job Title <span className="text-red-400">*</span>
                           </label>
-                          <Input
-                            value={linkedinUrl}
-                            onChange={(e) => setLinkedinUrl(e.target.value)}
-                            placeholder="https://linkedin.com/in/username"
-                            className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500"
+                          <AutocompleteInput
+                            value={jobTitle}
+                            onChange={setJobTitle}
+                            placeholder="e.g., Software Engineer"
+                            dataType="job_title"
+                            disabled={isSearching}
+                            className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500 hover:border-purple-400 transition-colors"
                           />
                         </div>
-                        <p className="text-sm text-gray-400">
-                          Generate a PDF with all available information from the LinkedIn profile to help you prepare for your coffee chat.
-                        </p>
-                        <Button
-                          onClick={handleCoffeeChatSubmit}
-                          disabled={!linkedinUrl.trim()}
-                          className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Generate Coffee Chat PDF
-                        </Button>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-2 text-white">Company</label>
+                          <AutocompleteInput
+                            value={company}
+                            onChange={setCompany}
+                            placeholder="e.g., Google (optional)"
+                            dataType="company"
+                            disabled={isSearching}
+                            className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500 hover:border-purple-400 transition-colors"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-2 text-white">
+                            Location <span className="text-red-400">*</span>
+                          </label>
+                          <AutocompleteInput
+                            value={location}
+                            onChange={setLocation}
+                            placeholder="e.g., San Francisco, CA"
+                            dataType="location"
+                            disabled={isSearching}
+                            className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500 hover:border-purple-400 transition-colors"
+                          />
+                        </div>
                       </div>
-                    ) : (
-                      <LockedFeatureOverlay featureName="Coffee Chat Prep" requiredTier="Starter+">
+
+                      {/* Resume Upload for Pro tier only */}
+                      {userTier === 'pro' && (
+                        <div className="mb-6">
+                          <label className="block text-sm font-medium mb-2 text-white">
+                            Resume (Optional - for AI similarity matching)
+                          </label>
+                          <div className="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center hover:border-purple-400 transition-colors bg-gray-800/30">
+                            <input
+                              type="file"
+                              accept=".pdf"
+                              onChange={handleFileUpload}
+                              className="hidden"
+                              id="resume-upload"
+                              disabled={isSearching}
+                            />
+                            <label htmlFor="resume-upload" className={`cursor-pointer ${isSearching ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                              <Upload className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                              <p className="text-sm text-gray-300 mb-1">
+                                {uploadedFile ? uploadedFile.name : 'Upload resume for AI similarity matching'}
+                              </p>
+                              <p className="text-xs text-gray-400">PDF only, max 10MB</p>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Search Button */}
+                      <div className="flex items-center justify-between">
+                        <Button 
+                          onClick={handleSearch}
+                          disabled={!jobTitle.trim() || !location.trim() || isSearching}
+                          size="lg"
+                          className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-medium px-8 transition-all hover:scale-105"
+                        >
+                          {isSearching ? 'Searching...' : `Search ${currentTierConfig.name} Tier (${currentTierConfig.credits} credits)`}
+                        </Button>
+                        
+                        <div className="text-sm text-gray-400">
+                          <Download className="h-4 w-4 inline mr-2" />
+                          CSV with up to {currentTierConfig.maxContacts} contacts
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Coffee Chat Prep Tab Content */}
+                <TabsContent value="coffee-chat" className="mt-6">
+                  <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700">
+                    <CardHeader className="border-b border-gray-700">
+                      <CardTitle className="text-xl text-white flex items-center gap-2">
+                        Coffee Chat Prep
+                        {currentTierConfig.coffeeChat && (
+                          <Badge variant="outline" className="text-green-400 border-green-400">
+                            Available
+                          </Badge>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      {currentTierConfig.coffeeChat ? (
                         <div className="space-y-4">
                           <div>
                             <label className="block text-sm font-medium mb-2 text-white">
                               LinkedIn Profile URL
                             </label>
                             <Input
+                              value={linkedinUrl}
+                              onChange={(e) => setLinkedinUrl(e.target.value)}
                               placeholder="https://linkedin.com/in/username"
-                              className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400"
-                              disabled
+                              className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500"
                             />
                           </div>
                           <p className="text-sm text-gray-400">
-                            Generate a PDF with all available information from the LinkedIn profile.
+                            Generate a PDF with all available information from the LinkedIn profile to help you prepare for your coffee chat.
                           </p>
-                          <Button className="w-full" disabled>
+                          <Button
+                            onClick={handleCoffeeChatSubmit}
+                            disabled={!linkedinUrl.trim()}
+                            className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                          >
                             <Download className="h-4 w-4 mr-2" />
                             Generate Coffee Chat PDF
                           </Button>
                         </div>
-                      </LockedFeatureOverlay>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Interview Prep */}
-                <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700">
-                  <CardHeader className="border-b border-gray-700">
-                    <CardTitle className="text-lg text-white flex items-center gap-2">
-                      Interview Prep
-                      {currentTierConfig.interviewPrep && (
-                        <Badge variant="outline" className="text-green-400 border-green-400">
-                          Available
-                        </Badge>
+                      ) : (
+                        <LockedFeatureOverlay featureName="Coffee Chat Prep" requiredTier="Starter+">
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium mb-2 text-white">
+                                LinkedIn Profile URL
+                              </label>
+                              <Input
+                                placeholder="https://linkedin.com/in/username"
+                                className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400"
+                                disabled
+                              />
+                            </div>
+                            <p className="text-sm text-gray-400">
+                              Generate a PDF with all available information from the LinkedIn profile.
+                            </p>
+                            <Button className="w-full" disabled>
+                              <Download className="h-4 w-4 mr-2" />
+                              Generate Coffee Chat PDF
+                            </Button>
+                          </div>
+                        </LockedFeatureOverlay>
                       )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    {currentTierConfig.interviewPrep ? (
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-2 text-white">
-                            Job Post URL
-                          </label>
-                          <Input
-                            value={jobPostUrl}
-                            onChange={(e) => setJobPostUrl(e.target.value)}
-                            placeholder="https://company.com/jobs/position"
-                            className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500"
-                          />
-                        </div>
-                        <p className="text-sm text-gray-400">
-                          Generate a PDF with job analysis and a separate prep section with materials to help you succeed in the interview.
-                        </p>
-                        <Button
-                          onClick={handleInterviewPrepSubmit}
-                          disabled={!jobPostUrl.trim()}
-                          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Generate Interview Prep
-                        </Button>
-                      </div>
-                    ) : (
-                      <LockedFeatureOverlay featureName="Interview Prep" requiredTier="Pro">
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Interview Prep Tab Content */}
+                <TabsContent value="interview-prep" className="mt-6">
+                  <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700">
+                    <CardHeader className="border-b border-gray-700">
+                      <CardTitle className="text-xl text-white flex items-center gap-2">
+                        Interview Prep
+                        {currentTierConfig.interviewPrep && (
+                          <Badge variant="outline" className="text-green-400 border-green-400">
+                            Available
+                          </Badge>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      {currentTierConfig.interviewPrep ? (
                         <div className="space-y-4">
                           <div>
                             <label className="block text-sm font-medium mb-2 text-white">
                               Job Post URL
                             </label>
                             <Input
+                              value={jobPostUrl}
+                              onChange={(e) => setJobPostUrl(e.target.value)}
                               placeholder="https://company.com/jobs/position"
-                              className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400"
-                              disabled
+                              className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500"
                             />
                           </div>
                           <p className="text-sm text-gray-400">
-                            Generate a PDF with job analysis and prep materials.
+                            Generate a PDF with job analysis and a separate prep section with materials to help you succeed in the interview.
                           </p>
-                          <Button className="w-full" disabled>
+                          <Button
+                            onClick={handleInterviewPrepSubmit}
+                            disabled={!jobPostUrl.trim()}
+                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                          >
                             <Download className="h-4 w-4 mr-2" />
                             Generate Interview Prep
                           </Button>
                         </div>
-                      </LockedFeatureOverlay>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-              
-              {/* Search Form */}
-              <Card className="mb-8 bg-gray-800/50 backdrop-blur-sm border-gray-700">
-                <CardHeader className="border-b border-gray-700">
-                  <CardTitle className="text-xl text-white">Find Candidates</CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {/* Main Search Inputs with Autocomplete */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-white">
-                        Job Title <span className="text-red-400">*</span>
-                      </label>
-                      <AutocompleteInput
-                        value={jobTitle}
-                        onChange={setJobTitle}
-                        placeholder="e.g., Software Engineer"
-                        dataType="job_title"
-                        disabled={isSearching}
-                        className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500 hover:border-purple-400 transition-colors"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-white">Company</label>
-                      <AutocompleteInput
-                        value={company}
-                        onChange={setCompany}
-                        placeholder="e.g., Google (optional)"
-                        dataType="company"
-                        disabled={isSearching}
-                        className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500 hover:border-purple-400 transition-colors"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-white">
-                        Location <span className="text-red-400">*</span>
-                      </label>
-                      <AutocompleteInput
-                        value={location}
-                        onChange={setLocation}
-                        placeholder="e.g., San Francisco, CA"
-                        dataType="location"
-                        disabled={isSearching}
-                        className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500 hover:border-purple-400 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Resume Upload for Pro tier only */}
-                  {userTier === 'pro' && (
-                    <div className="mb-6">
-                      <label className="block text-sm font-medium mb-2 text-white">
-                        Resume (Optional - for AI similarity matching)
-                      </label>
-                      <div className="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center hover:border-purple-400 transition-colors bg-gray-800/30">
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          onChange={handleFileUpload}
-                          className="hidden"
-                          id="resume-upload"
-                          disabled={isSearching}
-                        />
-                        <label htmlFor="resume-upload" className={`cursor-pointer ${isSearching ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                          <Upload className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-                          <p className="text-sm text-gray-300 mb-1">
-                            {uploadedFile ? uploadedFile.name : 'Upload resume for AI similarity matching'}
-                          </p>
-                          <p className="text-xs text-gray-400">PDF only, max 10MB</p>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Search Button */}
-                  <div className="flex items-center justify-between">
-                    <Button 
-                      onClick={handleSearch}
-                      disabled={!jobTitle.trim() || !location.trim() || isSearching}
-                      size="lg"
-                      className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-medium px-8 transition-all hover:scale-105"
-                    >
-                      {isSearching ? 'Searching...' : `Search ${currentTierConfig.name} Tier (${currentTierConfig.credits} credits)`}
-                    </Button>
-                    
-                    <div className="text-sm text-gray-400">
-                      <Download className="h-4 w-4 inline mr-2" />
-                      CSV with up to {currentTierConfig.maxContacts} contacts
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                      ) : (
+                        <LockedFeatureOverlay featureName="Interview Prep" requiredTier="Pro">
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium mb-2 text-white">
+                                Job Post URL
+                              </label>
+                              <Input
+                                placeholder="https://company.com/jobs/position"
+                                className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400"
+                                disabled
+                              />
+                            </div>
+                            <p className="text-sm text-gray-400">
+                              Generate a PDF with job analysis and prep materials.
+                            </p>
+                            <Button className="w-full" disabled>
+                              <Download className="h-4 w-4 mr-2" />
+                              Generate Interview Prep
+                            </Button>
+                          </div>
+                        </LockedFeatureOverlay>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
 
               {/* Search Progress */}
               {isSearching && (
