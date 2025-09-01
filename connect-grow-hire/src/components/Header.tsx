@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useState } from "react";
+import OnboardingModal from "@/components/OnboardingModal";
 
 const Header = () => {
   const navigate = useNavigate();
   const { user, signOut, isLoading } = useAuth();
+  const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
 
   const handleSignOut = () => {
     signOut();
@@ -12,7 +15,9 @@ const Header = () => {
   };
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 relative z-10">
+    <>
+      <OnboardingModal open={onboardingModalOpen} onOpenChange={setOnboardingModalOpen} />
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 relative z-10">
       <div className="container flex h-16 items-center justify-between px-6 relative">
         <div className="flex items-center h-full overflow-hidden">
           <img 
@@ -61,7 +66,7 @@ const Header = () => {
               <Button variant="ghost" onClick={() => navigate("/signin")}>
                 Sign In
               </Button>
-              <Button onClick={() => navigate("/signin")}>
+              <Button onClick={() => setOnboardingModalOpen(true)}>
                 Sign Up
               </Button>
             </>
@@ -69,6 +74,7 @@ const Header = () => {
         </div>
       </div>
     </header>
+    </>
   );
 };
 
