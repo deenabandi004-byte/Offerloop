@@ -1063,17 +1063,19 @@ def parse_resume_info(resume_text):
         prompt = f"""
 Extract the following information from this resume text:
 - Full Name
-- Year in school (e.g., "Junior", "Senior", "Graduate Student", "Class of 2027")
+- Graduation Year (extract the 4-digit year from graduation date, e.g., "2022", "2023", "2024")
 - Major/Field of Study
 - University/School name
 
 Return as JSON format:
 {{
     "name": "Full Name",
-    "year": "Year in school",
+    "year": "2022",
     "major": "Major/Field",
     "university": "University Name"
 }}
+
+If graduation year is not found, use "Unknown" for the year field.
 
 Resume text:
 {clean_text}
@@ -1106,6 +1108,13 @@ Resume text:
             for field in required_fields:
                 if field not in result or not result[field]:
                     result[field] = f"[Your {field.capitalize()}]"
+            
+            if result['year'] and result['year'] != "[Your Year]":
+                year_match = re.search(r'\b(19|20)\d{2}\b', result['year'])
+                if year_match:
+                    result['year'] = year_match.group()
+                elif result['year'].lower() in ['graduated', 'unknown', 'n/a']:
+                    result['year'] = ""
             
             print(f"Parsed resume info: {result['name']} - {result['year']} {result['major']} at {result['university']}")
             return result
