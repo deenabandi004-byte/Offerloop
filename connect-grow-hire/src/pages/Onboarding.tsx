@@ -10,8 +10,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as z from "zod";
+import { useResumeData } from "@/contexts/ResumeDataContext";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -624,6 +625,8 @@ const universities = [
 const Onboarding = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const { resumeData } = useResumeData();
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -632,6 +635,32 @@ const Onboarding = () => {
       university: "",
     },
   });
+
+  useEffect(() => {
+    if (resumeData) {
+      const updates: Partial<FormData> = {};
+      
+      if (resumeData.firstName) {
+        updates.firstName = resumeData.firstName;
+      } else if (resumeData.name) {
+        const nameParts = resumeData.name.split(' ');
+        updates.firstName = nameParts[0] || '';
+        updates.lastName = nameParts.slice(1).join(' ') || '';
+      }
+      
+      if (resumeData.lastName && !updates.lastName) {
+        updates.lastName = resumeData.lastName;
+      }
+      
+      if (resumeData.university) {
+        updates.university = resumeData.university;
+      }
+      
+      Object.keys(updates).forEach(key => {
+        form.setValue(key as keyof FormData, updates[key as keyof FormData] as string);
+      });
+    }
+  }, [resumeData, form]);
 
   const onSubmit = (data: FormData) => {
     console.log("Form submitted:", data);
@@ -644,7 +673,7 @@ const Onboarding = () => {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/resume-upload")}
         className="absolute top-6 left-6 flex items-center gap-2"
       >
         <ArrowLeft className="h-4 w-4" />

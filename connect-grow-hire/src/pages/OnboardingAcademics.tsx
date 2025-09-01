@@ -11,8 +11,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as z from "zod";
+import { useResumeData } from "@/contexts/ResumeDataContext";
 
 const formSchema = z.object({
   graduationMonth: z.string().optional(),
@@ -28,6 +29,7 @@ const OnboardingAcademics = () => {
   const navigate = useNavigate();
   const [showCustomDegree, setShowCustomDegree] = useState(false);
   const [openFieldOfStudy, setOpenFieldOfStudy] = useState(false);
+  const { resumeData } = useResumeData();
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -39,6 +41,24 @@ const OnboardingAcademics = () => {
       customDegree: "",
     },
   });
+
+  useEffect(() => {
+    if (resumeData) {
+      const updates: Partial<FormData> = {};
+      
+      if (resumeData.major) {
+        updates.fieldOfStudy = resumeData.major;
+      }
+      
+      if (resumeData.year) {
+        updates.graduationYear = resumeData.year;
+      }
+      
+      Object.keys(updates).forEach(key => {
+        form.setValue(key as keyof FormData, updates[key as keyof FormData] as string);
+      });
+    }
+  }, [resumeData, form]);
 
   const onSubmit = (data: FormData) => {
     console.log("Academics form submitted:", data);

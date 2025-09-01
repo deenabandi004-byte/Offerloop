@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Progress } from "@/components/ui/progress";
+import ScoutChatbot from "@/components/ScoutChatbot";
 
 // Badge tier definitions
 const badgeTiers = [
@@ -131,8 +132,12 @@ const Dashboard = () => {
 
   const chartData = timeframe === "monthly" ? monthlyData : allTimeData;
 
+  const handleJobTitleSuggestion = (jobTitle: string) => {
+    console.log("Job title suggested:", jobTitle);
+  };
+
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background p-6 relative">
       {/* Back Arrow */}
       <div className="max-w-7xl mx-auto mb-4">
         <Button 
@@ -284,6 +289,8 @@ const Dashboard = () => {
           </Card>
         </div>
       </div>
+      
+      <ScoutChatbot onJobTitleSuggestion={handleJobTitleSuggestion} />
     </div>
   );
 };

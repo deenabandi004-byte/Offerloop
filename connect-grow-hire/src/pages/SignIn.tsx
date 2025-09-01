@@ -38,7 +38,7 @@ const SignIn = () => {
   };
 
   const handleCreateAccount = () => {
-    navigate("/onboarding");
+    navigate("/resume-upload");
   };
 
   return (
