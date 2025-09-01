@@ -871,7 +871,7 @@ Customize the email by:
 - Keep [Your Name], [Your year/major], [Your University], and [Your Full Name] as placeholders for the sender to fill in
 """
         
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at writing personalized networking emails for Advanced tier. Keep emails warm, professional, and follow the template exactly."},
@@ -956,7 +956,7 @@ Customize the email by:
 - For relating judge which ones will make the outreach more personable and for interests make it specific where possible and show genuine interest
 """
         
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at writing personalized networking emails for Pro tier. Keep emails concise, warm, and professional with natural similarity integration."},
@@ -1079,7 +1079,7 @@ Resume text:
 {clean_text}
 """
         
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at extracting structured information from resumes. Return only valid JSON with no extra text."},
@@ -1242,7 +1242,7 @@ Contact Background:
 Generate ONE sentence highlighting the most relevant similarity:
 """
         
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at finding meaningful connections between people's backgrounds. Write concise, specific similarities."},
@@ -2368,6 +2368,35 @@ def enrich_job_title_api():
     except Exception as e:
         print(f"Job title enrichment API error: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/parse-resume', methods=['POST'])
+def parse_resume():
+    """Parse uploaded resume and extract user information"""
+    try:
+        if 'resume' not in request.files:
+            return jsonify({'error': 'No resume file provided'}), 400
+        
+        file = request.files['resume']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'Only PDF files are supported'}), 400
+        
+        resume_text = extract_text_from_pdf(file)
+        if not resume_text:
+            return jsonify({'error': 'Could not extract text from PDF'}), 400
+        
+        parsed_info = parse_resume_info(resume_text)
+        
+        return jsonify({
+            'success': True,
+            'data': parsed_info
+        })
+        
+    except Exception as e:
+        print(f"Resume parsing error: {e}")
+        return jsonify({'error': 'Failed to parse resume'}), 500
 
 # Frontend routes
 @app.route('/')

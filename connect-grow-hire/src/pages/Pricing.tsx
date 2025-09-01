@@ -198,7 +198,7 @@ const Pricing = () => {
                 <Button 
                   className="w-full mb-6" 
                   variant={plan.buttonVariant}
-                  onClick={() => plan.name === "Enterprise" ? navigate("/contact") : navigate("/onboarding")}
+                  onClick={() => plan.name === "Enterprise" ? navigate("/contact") : navigate("/onboarding/resume-upload")}
                 >
                   {plan.buttonText}
                 </Button>

@@ -29,12 +29,23 @@ const OnboardingAcademics = () => {
   const [showCustomDegree, setShowCustomDegree] = useState(false);
   const [openFieldOfStudy, setOpenFieldOfStudy] = useState(false);
   
+  const getResumeData = () => {
+    try {
+      const resumeData = localStorage.getItem('resumeData');
+      return resumeData ? JSON.parse(resumeData) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const resumeData = getResumeData();
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       graduationMonth: "",
-      graduationYear: "",
-      fieldOfStudy: "",
+      graduationYear: resumeData?.year?.match(/\d{4}/)?.[0] || "",
+      fieldOfStudy: resumeData?.major || "",
       degreeType: "",
       customDegree: "",
     },
@@ -118,7 +129,7 @@ const OnboardingAcademics = () => {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigate("/onboarding")}
+        onClick={() => navigate("/onboarding/resume-upload")}
         className="absolute top-6 left-6 flex items-center gap-2"
       >
         <ArrowLeft className="h-4 w-4" />

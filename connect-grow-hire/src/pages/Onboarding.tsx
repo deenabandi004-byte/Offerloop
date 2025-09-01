@@ -624,12 +624,24 @@ const universities = [
 const Onboarding = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  
+  const getResumeData = () => {
+    try {
+      const resumeData = localStorage.getItem('resumeData');
+      return resumeData ? JSON.parse(resumeData) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const resumeData = getResumeData();
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
-      university: "",
+      firstName: resumeData?.name?.split(' ')[0] || "",
+      lastName: resumeData?.name?.split(' ').slice(1).join(' ') || "",
+      university: resumeData?.university || "",
     },
   });
 
