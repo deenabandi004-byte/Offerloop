@@ -16,13 +16,13 @@ const Index = () => {
       <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center h-full overflow-hidden">
-  <span 
-    className="text-2xl font-bold text-white cursor-pointer"
-    onClick={() => navigate("/home")}
-  >
-    Offerloop.ai
-  </span>
-</div>
+            <span 
+              className="text-2xl font-bold text-white cursor-pointer"
+              onClick={() => navigate("/home")}
+            >
+              Offer<span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">loop</span>.ai
+            </span>
+          </div>
           <div className="flex items-center gap-6">
             <nav className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-gray-300 hover:text-white transition-colors">Features</a>
@@ -53,52 +53,54 @@ const Index = () => {
               Join the <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Loop</span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-gray-300 mb-12 leading-relaxed max-w-4xl mx-auto">
-              We're here to help you land better offers, faster—by taking the tedious, repetitive work out of recruiting. Spend <span className="font-bold text-white">less time</span> stuck behind a screen and more time where it matters: connecting with professionals and <span className="font-bold text-white">living your life</span>. We handle the busywork, so you can focus on your growth, your passions, and your next big opportunity.
+            <p className="text-xl md:text-2xl text-gray-300 mb-16 leading-relaxed max-w-4xl mx-auto">
+              We take the tedious, repetitive work out of recruiting. Spend less time stuck behind a screen and more time connecting with professionals and living your life.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 hover:border-blue-500/50 transition-all duration-300">
+          <div className="grid md:grid-cols-3 gap-12 mb-20">
+            <div className="text-center">
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <Send className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-semibold mb-4">Instant Outreach</h3>
               <p className="text-gray-400 leading-relaxed">
-                Automate personalized applications and messages to top employers with a single click—no more copy-pasting or repetitive forms.
+                Outreach in a single click - curated emails that show up instantly in your email drafts.
               </p>
             </div>
             
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 hover:border-purple-500/50 transition-all duration-300">
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                <Calendar className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-4">Effortless Scheduling</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Seamlessly coordinate interviews and networking calls without the back-and-forth. Our smart scheduler handles all the logistics for you.
-              </p>
-            </div>
-            
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 hover:border-pink-500/50 transition-all duration-300">
+            <div className="text-center">
               <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-red-500 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <Handshake className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-semibold mb-4">Meaningful Connections</h3>
               <p className="text-gray-400 leading-relaxed">
-                Jump straight to real conversations with professionals and hiring managers—skip the small talk and get to what matters most.
+                Maximize your ability to get and prepare for coffee chats.
               </p>
             </div>
 
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 hover:border-green-500/50 transition-all duration-300">
+            <div className="text-center">
               <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <BarChart className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-semibold mb-4">Progress Tracking</h3>
               <p className="text-gray-400 leading-relaxed">
-                Visualize your job search journey, track every application and response, and stay organized all the way to your next offer.
+                Visualize your job search journey, track every application response, and stay organized all the way to your next offer.
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* New Section Above Why Choose */}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-8">
+            Offerloop Fundamentally changes how you recruit
+          </h2>
+          <p className="text-xl text-gray-300 max-w-5xl mx-auto leading-relaxed">
+            Offerloop automates outreach, follow-ups, tracking, coffee chat prep and interview prep, essentially streamlining the whole process, saving the user from hundreds of hours of tedious tasks and be more intentional with your time.
+          </p>
         </div>
       </section>
 
@@ -116,9 +118,9 @@ const Index = () => {
 
           <div className="grid md:grid-cols-2 gap-16 items-center mb-20">
             <div>
-              <h3 className="text-3xl font-bold mb-6 text-blue-400">Smart Matching</h3>
+              <h3 className="text-3xl font-bold mb-6 text-blue-400">Smart Filter</h3>
               <p className="text-xl text-gray-300 mb-8">
-                Our AI-powered algorithm connects the right talent with the right opportunities based on skills, experience, and culture fit.
+                Our AI-powered algorithm connects the right talent with the right opportunities from 2 billion+ professionals based on skills, experience, and culture fit.
               </p>
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
                 <div className="space-y-4">
@@ -151,42 +153,61 @@ const Index = () => {
               </div>
             </div>
             <div className="md:order-2">
-              <h3 className="text-3xl font-bold mb-6 text-purple-400">Seamless Communication</h3>
+              <h3 className="text-3xl font-bold mb-6 text-purple-400">AI Personalizations</h3>
               <p className="text-xl text-gray-300 mb-8">
-                Built-in messaging and video interview tools make it easy to connect and communicate with candidates.
+                Maximize your response rate and recruitment success with hyper personalized emails curated to capture attention.
               </p>
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
                 <p className="text-gray-300 italic">
-                  "Schedule your interview for next Tuesday at 2 PM with Sarah from Engineering. Calendar invite sent automatically."
+                  "Personalized outreach messages crafted specifically for each professional to maximize engagement and response rates."
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-16 items-center">
+          <div className="grid md:grid-cols-2 gap-16 items-center mb-20">
             <div>
-              <h3 className="text-3xl font-bold mb-6 text-green-400">Analytics & Insights</h3>
+              <h3 className="text-3xl font-bold mb-6 text-green-400">Personal Mentorship</h3>
               <p className="text-xl text-gray-300 mb-8">
-                Track your hiring metrics, measure success rates, and optimize your recruitment process with detailed analytics.
+                Schedule calls with current analysts and analyst interns to better prepare for recruiting.
               </p>
               <div className="space-y-4">
                 <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700 flex items-center justify-between">
-                  <span className="text-gray-300">Applications Sent</span>
-                  <span className="text-green-400 text-lg font-bold">247</span>
+                  <span className="text-gray-300">Mentorship Sessions</span>
+                  <span className="text-green-400 text-lg font-bold">24</span>
                 </div>
                 <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700 flex items-center justify-between">
-                  <span className="text-gray-300">Response Rate</span>
-                  <span className="text-blue-400 text-lg font-bold">34%</span>
+                  <span className="text-gray-300">Success Rate</span>
+                  <span className="text-blue-400 text-lg font-bold">89%</span>
                 </div>
                 <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700 flex items-center justify-between">
-                  <span className="text-gray-300">Interviews Scheduled</span>
-                  <span className="text-purple-400 text-lg font-bold">12</span>
+                  <span className="text-gray-300">Industry Experts</span>
+                  <span className="text-purple-400 text-lg font-bold">150+</span>
                 </div>
               </div>
             </div>
             <div className="bg-gradient-to-br from-green-500/20 to-blue-500/20 rounded-2xl p-8 backdrop-blur-sm border border-gray-700">
               <div className="w-full h-64 bg-gray-700/50 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-16 h-16 text-gray-400" />
+                <Users className="w-16 h-16 text-gray-400" />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl p-8 backdrop-blur-sm border border-gray-700 md:order-1">
+              <div className="w-full h-64 bg-gray-700/50 rounded-xl flex items-center justify-center">
+                <Target className="w-16 h-16 text-gray-400" />
+              </div>
+            </div>
+            <div className="md:order-2">
+              <h3 className="text-3xl font-bold mb-6 text-purple-400">Top-tier mentorship</h3>
+              <p className="text-xl text-gray-300 mb-8">
+                Get counseling from top talent and professionals across multiple industries to maximize your opportunity at landing your dream job.
+              </p>
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
+                <p className="text-gray-300 italic">
+                  "Connect with industry leaders and experienced professionals who can guide you through your career journey."
+                </p>
               </div>
             </div>
           </div>
@@ -207,15 +228,15 @@ const Index = () => {
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
-              <h3 className="text-2xl font-bold mb-2">Starter</h3>
+              <h3 className="text-2xl font-bold mb-2">Free Trial</h3>
               <div className="mb-6">
-                <span className="text-4xl font-bold">$29</span>
+                <span className="text-4xl font-bold">$0</span>
                 <span className="text-gray-400">/month</span>
               </div>
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span className="text-gray-300">50 applications per month</span>
+                  <span className="text-gray-300">5 applications per month</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
@@ -241,15 +262,15 @@ const Index = () => {
                   Most popular
                 </span>
               </div>
-              <h3 className="text-2xl font-bold mb-2">Professional</h3>
+              <h3 className="text-2xl font-bold mb-2">Starter</h3>
               <div className="mb-6">
-                <span className="text-4xl font-bold">$79</span>
+                <span className="text-4xl font-bold">$24.99</span>
                 <span className="text-gray-400">/month</span>
               </div>
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span className="text-gray-300">Unlimited applications</span>
+                  <span className="text-gray-300">50 applications per month</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
@@ -274,23 +295,23 @@ const Index = () => {
             </div>
 
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
-              <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
+              <h3 className="text-2xl font-bold mb-2">Pro</h3>
               <div className="mb-6">
-                <span className="text-4xl font-bold">$199</span>
+                <span className="text-4xl font-bold">$39.99</span>
                 <span className="text-gray-400">/month</span>
               </div>
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span className="text-gray-300">Everything in Professional</span>
+                  <span className="text-gray-300">Unlimited applications</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span className="text-gray-300">Team collaboration</span>
+                  <span className="text-gray-300">Premium analytics</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span className="text-gray-300">Custom integrations</span>
+                  <span className="text-gray-300">Personal mentorship</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
@@ -298,8 +319,76 @@ const Index = () => {
                 </li>
               </ul>
               <button className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-medium transition-colors">
-                Contact Sales
+                Get Started
               </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Reviews Section */}
+      <section className="py-20 px-6 bg-gray-800/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              What Our Users Say
+            </h2>
+            <p className="text-xl text-gray-300">
+              Reviews coming soon - we're collecting feedback from our amazing users!
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <span className="text-white font-bold text-xl">★</span>
+              </div>
+              <p className="text-gray-400 italic mb-4">Reviews coming soon...</p>
+              <p className="text-gray-500 text-sm">- User testimonials will appear here</p>
+            </div>
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <span className="text-white font-bold text-xl">★</span>
+              </div>
+              <p className="text-gray-400 italic mb-4">Reviews coming soon...</p>
+              <p className="text-gray-500 text-sm">- User testimonials will appear here</p>
+            </div>
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-red-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <span className="text-white font-bold text-xl">★</span>
+              </div>
+              <p className="text-gray-400 italic mb-4">Reviews coming soon...</p>
+              <p className="text-gray-500 text-sm">- User testimonials will appear here</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About Offerloop AI Section */}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              About Offerloop AI
+            </h2>
+            <p className="text-xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
+              We're revolutionizing the recruitment process by combining cutting-edge AI technology with human expertise. Our platform empowers professionals to focus on what matters most - building meaningful connections and advancing their careers.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div>
+              <h3 className="text-2xl font-bold mb-6">Our Mission</h3>
+              <p className="text-gray-300 mb-6 leading-relaxed">
+                To eliminate the tedious, time-consuming aspects of job searching and recruiting, allowing professionals to spend more time on strategic relationship building and career development.
+              </p>
+              <h3 className="text-2xl font-bold mb-6">Our Vision</h3>
+              <p className="text-gray-300 leading-relaxed">
+                A world where every professional has access to personalized, intelligent tools that accelerate their career growth and help them land their dream opportunities.
+              </p>
+            </div>
+            <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl p-8 backdrop-blur-sm border border-gray-700">
+              <div className="w-full h-64 bg-gray-700/50 rounded-xl flex items-center justify-center">
+                <Target className="w-16 h-16 text-gray-400" />
+              </div>
             </div>
           </div>
         </div>
@@ -360,37 +449,55 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 border-t border-gray-800">
+      <footer className="bg-gray-800/50 py-16 px-6 border-t border-gray-700">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-8 items-start mb-8">
-            <div className="flex items-center gap-8">
-              <img 
-                src="logo.png" 
-                alt="Offerloop.ai" 
-                className="h-28 w-auto object-contain"
-              />
-              <p className="text-gray-400 text-lg leading-relaxed ml-4">
-                Connecting <span className="font-bold text-white">talent</span> with <span className="font-bold text-white">opportunity</span> through intelligent recruiting solutions.
+          <div className="grid md:grid-cols-4 gap-8 mb-12">
+            <div>
+              <h3 className="text-xl font-bold mb-4">
+                Offer<span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">loop</span>.ai
+              </h3>
+              <p className="text-gray-400 mb-4">
+                Revolutionizing recruitment with AI-powered automation and personalized outreach.
               </p>
             </div>
-            
-            <div className="flex justify-center">
-              <div>
-                <h3 className="font-semibold mb-4 text-white">Company</h3>
-                <ul className="space-y-2 text-gray-400">
-                  <li><a href="/about" className="hover:text-white transition-colors">About Us</a></li>
-                  <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
-                  <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                  <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
-                </ul>
-              </div>
+            <div>
+              <h4 className="font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="/about" className="hover:text-white transition-colors">About Us</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="/privacy" className="hover:text-white transition-colors">Privacy</a></li>
+                <li><a href="/terms" className="hover:text-white transition-colors">Terms</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Connect</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="https://linkedin.com/company/offerloop" className="hover:text-white transition-colors">LinkedIn</a></li>
+                <li><a href="https://twitter.com/offerloop" className="hover:text-white transition-colors">Twitter</a></li>
+                <li><a href="https://instagram.com/offerloop" className="hover:text-white transition-colors">Instagram</a></li>
+                <li><a href="mailto:contact@offerloop.ai" className="hover:text-white transition-colors">Email</a></li>
+              </ul>
             </div>
           </div>
-          
-          <div className="border-t border-gray-800 pt-8 text-center">
-            <p className="text-gray-400">
-              © 2024 Offerloop.ai. All rights reserved.
-            </p>
+          <div className="border-t border-gray-700 pt-8">
+            <div className="text-center mb-6">
+              <h4 className="font-semibold mb-4 text-white">Contact Information</h4>
+              <div className="space-y-2 text-gray-400">
+                <p>Email: contact@offerloop.ai</p>
+                <p>Phone: +1 (555) 123-4567</p>
+                <p>Address: 123 Innovation Drive, Tech City, TC 12345</p>
+              </div>
+            </div>
+            <div className="text-center text-gray-400">
+              <p>&copy; 2024 Offerloop.ai. All rights reserved.</p>
+            </div>
           </div>
         </div>
       </footer>
