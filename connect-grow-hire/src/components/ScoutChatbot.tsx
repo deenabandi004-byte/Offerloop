@@ -285,138 +285,77 @@ const ScoutChatbot: React.FC<ScoutChatbotProps> = ({ onJobTitleSuggestion }) => 
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      {/* Chat Window */}
-      {isOpen && (
-        <div className="mb-4 w-80 h-96 bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: '#fff6e2' }}>
-                <img 
-                  src="/scout-mascot.png" 
-                  alt="Scout AI" 
-                  className="w-6 h-6 object-contain"
-                />
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm">Scout AI</h3>
-                <p className="text-xs opacity-90">Job Title Assistant</p>
+    <div className="h-full flex flex-col">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[80%] p-3 rounded-lg text-sm ${
+                message.type === 'user'
+                  ? 'bg-blue-500 text-white rounded-br-sm'
+                  : message.type === 'suggestion'
+                  ? 'bg-green-50 text-green-800 border border-green-200 cursor-pointer hover:bg-green-100 transition-colors rounded-bl-sm'
+                  : 'bg-gray-50 text-gray-800 rounded-bl-sm border border-gray-100'
+              }`}
+              onClick={message.type === 'suggestion' && message.jobTitle ? () => handleSuggestionClick(message.jobTitle) : undefined}
+            >
+              {message.content}
+              {message.type === 'suggestion' && (
+                <div className="mt-1 text-xs text-green-600 flex items-center">
+                  <ArrowUp className="w-3 h-3 mr-1" />
+                  Click to use
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+        
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-gray-50 text-gray-800 p-3 rounded-lg rounded-bl-sm max-w-[80%] border border-gray-100">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-white/80 hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] p-3 rounded-lg text-sm ${
-                    message.type === 'user'
-                      ? 'bg-blue-500 text-white rounded-br-sm'
-                      : message.type === 'suggestion'
-                      ? 'bg-green-50 text-green-800 border border-green-200 cursor-pointer hover:bg-green-100 transition-colors rounded-bl-sm'
-                      : 'bg-gray-50 text-gray-800 rounded-bl-sm border border-gray-100'
-                  }`}
-                  onClick={message.type === 'suggestion' && message.jobTitle ? () => handleSuggestionClick(message.jobTitle) : undefined}
-                >
-                  {message.content}
-                  {message.type === 'suggestion' && (
-                    <div className="mt-1 text-xs text-green-600 flex items-center">
-                      <ArrowUp className="w-3 h-3 mr-1" />
-                      Click to use
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-gray-50 text-gray-800 p-3 rounded-lg rounded-bl-sm max-w-[80%] border border-gray-100">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex space-x-2">
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type your message..."
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                disabled={isTyping}
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={!inputMessage.trim() || isTyping}
-                className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
-            <button
-              onClick={resetConversation}
-              className="mt-2 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              Start over
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Toggle Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${
-          isOpen
-            ? 'bg-gray-600 hover:bg-gray-700'
-            : 'hover:shadow-xl border border-gray-200'
-        }`}
-        style={{
-          backgroundColor: isOpen ? undefined : '#fff6e2'
-        }}
-      >
-        {isOpen ? (
-          <X className="w-6 h-6 text-white" />
-        ) : (
-          <div className="relative">
-            <img 
-              src="/scout-mascot.png" 
-              alt="Scout AI" 
-              className="w-8 h-8 object-contain"
-            />
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
           </div>
         )}
-      </button>
+        <div ref={messagesEndRef} />
+      </div>
 
-      {/* Tooltip */}
-      {!isOpen && (
-        <div className="absolute bottom-16 right-0 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-          Ask Scout for job title help
+      {/* Input */}
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex space-x-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type your message..."
+            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            disabled={isTyping}
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={!inputMessage.trim() || isTyping}
+            className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Send className="w-4 h-4" />
+          </button>
         </div>
-      )}
+        <button
+          onClick={resetConversation}
+          className="mt-2 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          Start over
+        </button>
+      </div>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { Upload, Download, Zap, Crown } from "lucide-react";
+import { Upload, Download, Zap, Crown, ExternalLink, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,8 +8,10 @@ import { Progress } from "@/components/ui/progress";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { AutocompleteInput } from "@/components/AutocompleteInput";
+import ScoutChatbot from "@/components/ScoutChatbot";
+import LockedFeatureOverlay from "@/components/LockedFeatureOverlay";
 
 const BACKEND_URL = 'http://localhost:5001';
 
@@ -18,19 +20,25 @@ const TIER_CONFIGS = {
     maxContacts: 4,
     name: 'Free',
     credits: 500,
-    description: 'Basic search - 4 contacts'
+    description: 'Basic search - 4 contacts',
+    coffeeChat: false,
+    interviewPrep: false
   },
   starter: {
     maxContacts: 6,
     name: 'Starter',
     credits: 1000,
-    description: 'Advanced search - 6 contacts + Email drafts'
+    description: 'Advanced search - 6 contacts + Email drafts',
+    coffeeChat: true,
+    interviewPrep: false
   },
   pro: {
     maxContacts: 8,
     name: 'Pro',
     credits: 2000,
-    description: 'Full search - 8 contacts + Resume matching'
+    description: 'Full search - 8 contacts + Resume matching',
+    coffeeChat: true,
+    interviewPrep: true
   }
 };
 
@@ -38,14 +46,17 @@ const Home = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Tier selection
-  const [selectedTier, setSelectedTier] = useState<'free' | 'starter' | 'pro'>('free');
+  const [userTier] = useState<'free' | 'starter' | 'pro'>('free');
   
   // Form state
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
   const [location, setLocation] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [jobPostUrl, setJobPostUrl] = useState("");
+  const [isScoutChatOpen, setIsScoutChatOpen] = useState(false);
   
   // Search state
   const [isSearching, setIsSearching] = useState(false);
@@ -56,10 +67,11 @@ const Home = () => {
     credits: 8450,
     maxCredits: 10000,
     name: 'Sarah Chen',
-    email: 'sarah@example.com'
+    email: 'sarah@example.com',
+    tier: userTier
   };
 
-  const currentTierConfig = TIER_CONFIGS[selectedTier];
+  const currentTierConfig = TIER_CONFIGS[userTier];
 
   // Test backend connection on mount
   useEffect(() => {
@@ -112,18 +124,18 @@ const Home = () => {
       formData.append('jobTitle', jobTitle.trim());
       formData.append('company', company.trim() || '');
       formData.append('location', location.trim());
-      formData.append('tier', selectedTier);
+      formData.append('tier', userTier);
       formData.append('userEmail', mockUser.email);
       
-      if (uploadedFile && selectedTier === 'pro') {
+      if (uploadedFile && userTier === 'pro') {
         formData.append('resume', uploadedFile);
       }
 
       // Map tier to endpoint
       let endpoint = '/api/basic-run';
-      if (selectedTier === 'starter') {
+      if (userTier === 'starter') {
         endpoint = '/api/advanced-run';
-      } else if (selectedTier === 'pro') {
+      } else if (userTier === 'pro') {
         endpoint = '/api/pro-run';
       }
 
@@ -142,7 +154,7 @@ const Home = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `offerloop-${selectedTier}-${Date.now()}.csv`;
+      a.download = `offerloop-${userTier}-${Date.now()}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -194,12 +206,52 @@ const Home = () => {
     }
   };
 
+  const handleCoffeeChatSubmit = () => {
+    if (!linkedinUrl.trim()) {
+      toast({
+        title: "Missing LinkedIn URL",
+        description: "Please enter a LinkedIn profile URL.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Coffee Chat Prep Started",
+      description: "Generating PDF with available LinkedIn information...",
+    });
+  };
+
+  const handleInterviewPrepSubmit = () => {
+    if (!jobPostUrl.trim()) {
+      toast({
+        title: "Missing Job Post URL",
+        description: "Please enter a job posting URL.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Interview Prep Started",
+      description: "Generating PDF and prep materials...",
+    });
+  };
+
+  const handleJobTitleSuggestion = (suggestedTitle: string) => {
+    setJobTitle(suggestedTitle);
+    toast({
+      title: "Job Title Updated",
+      description: `Set job title to "${suggestedTitle}"`,
+    });
+  };
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-gray-900 text-white">
         <AppSidebar />
         
-        <div className="flex-1">
+        <div className={`flex-1 transition-all duration-300 ${isScoutChatOpen ? 'mr-80' : ''}`}>
           {/* Header */}
           <header className="h-16 flex items-center justify-between border-b border-gray-800 px-6 bg-gray-900/80 backdrop-blur-sm">
             <div className="flex items-center gap-4">
@@ -212,6 +264,16 @@ const Home = () => {
                 <Zap className="h-4 w-4 text-blue-400" />
                 <span className="text-gray-300">{mockUser.credits.toLocaleString()} credits</span>
               </div>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsScoutChatOpen(!isScoutChatOpen)}
+                className="border-gray-600 text-gray-300 hover:bg-gray-800"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Scout
+              </Button>
               
               <Button 
                 size="sm" 
@@ -226,55 +288,163 @@ const Home = () => {
           <main className="p-8">
             <div className="max-w-7xl mx-auto">
               
-              {/* Tier Selection Tabs */}
+              {/* Current Tier Display */}
               <div className="mb-6">
-                <Tabs value={selectedTier} onValueChange={(value) => setSelectedTier(value as 'free' | 'starter' | 'pro')}>
-                  <TabsList className="grid w-full grid-cols-3 bg-gray-800">
-                    <TabsTrigger 
-                      value="free" 
-                      className="transition-all hover:bg-gradient-to-r hover:from-pink-500 hover:to-purple-500 hover:-translate-y-px data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500"
-                    >
-                      <span className="font-medium">Free</span>
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="starter" 
-                      className="transition-all hover:bg-gradient-to-r hover:from-pink-500 hover:to-purple-500 hover:-translate-y-px data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500"
-                    >
-                      <span className="font-medium">Starter</span>
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="pro" 
-                      className="transition-all hover:bg-gradient-to-r hover:from-pink-500 hover:to-purple-500 hover:-translate-y-px data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500"
-                    >
-                      <div className="flex items-center gap-1">
-                        <Crown className="h-3 w-3 text-yellow-400" />
-                        <span className="font-medium">Pro</span>
-                      </div>
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                
-                {/* Tier Features */}
-                <div className="mt-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-white">{currentTierConfig.name} Tier Selected</h3>
-                      <p className="text-sm text-gray-400 mt-1">{currentTierConfig.description}</p>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      {userTier === 'pro' && <Crown className="h-5 w-5 text-yellow-400" />}
+                      <h2 className="text-2xl font-bold text-white">{currentTierConfig.name}</h2>
                     </div>
                     <Badge className="bg-gradient-to-r from-pink-500 to-purple-500 text-white border-0">
                       {currentTierConfig.credits} credits
                     </Badge>
                   </div>
-                  
-                  {selectedTier === 'starter' && (
-                    <p className="text-sm text-green-400 mt-2">✓ Includes email draft generation</p>
-                  )}
-                  {selectedTier === 'pro' && (
-                    <>
-                      <p className="text-sm text-green-400 mt-2">✓ Includes email drafts + resume similarity matching</p>
-                    </>
-                  )}
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm text-gray-400">Available Features</p>
+                      <div className="flex items-center gap-4 mt-1">
+                        <span className="text-sm text-white">Coffee Chat Prep</span>
+                        <span className="text-sm text-white">Interview Prep</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+                
+                <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                  <p className="text-sm text-gray-400">{currentTierConfig.description}</p>
+                </div>
+              </div>
+
+              {/* Coffee Chat Prep and Interview Prep */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {/* Coffee Chat Prep */}
+                <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700">
+                  <CardHeader className="border-b border-gray-700">
+                    <CardTitle className="text-lg text-white flex items-center gap-2">
+                      Coffee Chat Prep
+                      {currentTierConfig.coffeeChat && (
+                        <Badge variant="outline" className="text-green-400 border-green-400">
+                          Available
+                        </Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    {currentTierConfig.coffeeChat ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2 text-white">
+                            LinkedIn Profile URL
+                          </label>
+                          <Input
+                            value={linkedinUrl}
+                            onChange={(e) => setLinkedinUrl(e.target.value)}
+                            placeholder="https://linkedin.com/in/username"
+                            className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500"
+                          />
+                        </div>
+                        <p className="text-sm text-gray-400">
+                          Generate a PDF with all available information from the LinkedIn profile to help you prepare for your coffee chat.
+                        </p>
+                        <Button
+                          onClick={handleCoffeeChatSubmit}
+                          disabled={!linkedinUrl.trim()}
+                          className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Generate Coffee Chat PDF
+                        </Button>
+                      </div>
+                    ) : (
+                      <LockedFeatureOverlay featureName="Coffee Chat Prep" requiredTier="Starter+">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2 text-white">
+                              LinkedIn Profile URL
+                            </label>
+                            <Input
+                              placeholder="https://linkedin.com/in/username"
+                              className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400"
+                              disabled
+                            />
+                          </div>
+                          <p className="text-sm text-gray-400">
+                            Generate a PDF with all available information from the LinkedIn profile.
+                          </p>
+                          <Button className="w-full" disabled>
+                            <Download className="h-4 w-4 mr-2" />
+                            Generate Coffee Chat PDF
+                          </Button>
+                        </div>
+                      </LockedFeatureOverlay>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Interview Prep */}
+                <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700">
+                  <CardHeader className="border-b border-gray-700">
+                    <CardTitle className="text-lg text-white flex items-center gap-2">
+                      Interview Prep
+                      {currentTierConfig.interviewPrep && (
+                        <Badge variant="outline" className="text-green-400 border-green-400">
+                          Available
+                        </Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    {currentTierConfig.interviewPrep ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2 text-white">
+                            Job Post URL
+                          </label>
+                          <Input
+                            value={jobPostUrl}
+                            onChange={(e) => setJobPostUrl(e.target.value)}
+                            placeholder="https://company.com/jobs/position"
+                            className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500"
+                          />
+                        </div>
+                        <p className="text-sm text-gray-400">
+                          Generate a PDF with job analysis and a separate prep section with materials to help you succeed in the interview.
+                        </p>
+                        <Button
+                          onClick={handleInterviewPrepSubmit}
+                          disabled={!jobPostUrl.trim()}
+                          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Generate Interview Prep
+                        </Button>
+                      </div>
+                    ) : (
+                      <LockedFeatureOverlay featureName="Interview Prep" requiredTier="Pro">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2 text-white">
+                              Job Post URL
+                            </label>
+                            <Input
+                              placeholder="https://company.com/jobs/position"
+                              className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400"
+                              disabled
+                            />
+                          </div>
+                          <p className="text-sm text-gray-400">
+                            Generate a PDF with job analysis and prep materials.
+                          </p>
+                          <Button className="w-full" disabled>
+                            <Download className="h-4 w-4 mr-2" />
+                            Generate Interview Prep
+                          </Button>
+                        </div>
+                      </LockedFeatureOverlay>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
               
               {/* Search Form */}
@@ -327,7 +497,7 @@ const Home = () => {
                   </div>
 
                   {/* Resume Upload for Pro tier only */}
-                  {selectedTier === 'pro' && (
+                  {userTier === 'pro' && (
                     <div className="mb-6">
                       <label className="block text-sm font-medium mb-2 text-white">
                         Resume (Optional - for AI similarity matching)
@@ -388,6 +558,42 @@ const Home = () => {
             </div>
           </main>
         </div>
+
+        {/* Scout Chatbot */}
+        {isScoutChatOpen && (
+          <div className="fixed right-0 top-0 h-full w-80 bg-white shadow-2xl z-40 border-l border-gray-200">
+            <div className="h-full flex flex-col">
+              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: '#fff6e2' }}>
+                      <img 
+                        src="/scout-mascot.png" 
+                        alt="Scout AI" 
+                        className="w-8 h-8 object-contain"
+                      />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white">Scout AI</h3>
+                      <p className="text-xs text-white/80">Job Title Assistant</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsScoutChatOpen(false)}
+                    className="text-white/80 hover:text-white hover:bg-white/10"
+                  >
+                    ×
+                  </Button>
+                </div>
+              </div>
+              <div className="flex-1">
+                <ScoutChatbot onJobTitleSuggestion={handleJobTitleSuggestion} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </SidebarProvider>
   );
