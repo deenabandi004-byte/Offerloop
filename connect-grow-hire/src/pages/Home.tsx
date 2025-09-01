@@ -1,5 +1,6 @@
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import React from "react";
 import { Upload, Download, Zap, Crown, ExternalLink, MessageCircle, ChevronRight, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,23 @@ const TIER_CONFIGS = {
 };
 
 const Home = () => {
+  const waveKeyframes = `
+    @keyframes wave {
+      0%, 100% { transform: rotate(-8deg); }
+      50% { transform: rotate(8deg); }
+    }
+  `;
+
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = waveKeyframes;
+    document.head.appendChild(style);
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, [waveKeyframes]);
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -266,19 +284,6 @@ const Home = () => {
                 <span className="text-gray-300">{mockUser.credits.toLocaleString()} credits</span>
               </div>
               
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsScoutChatOpen(!isScoutChatOpen)}
-                className="border-gray-600 text-gray-300 hover:bg-gray-800 p-2"
-                title={isScoutChatOpen ? "Close Scout" : "Open Scout"}
-              >
-                {isScoutChatOpen ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <ChevronLeft className="h-4 w-4" />
-                )}
-              </Button>
               
               <Button 
                 size="sm" 
@@ -290,6 +295,48 @@ const Home = () => {
             </div>
           </header>
           
+          {/* Scout Chat Button */}
+          <div className="px-8 pt-4">
+            <div className="max-w-7xl mx-auto">
+              <div 
+                onClick={() => setIsScoutChatOpen(!isScoutChatOpen)}
+                className="group cursor-pointer bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20 border border-blue-500/30 hover:border-blue-400/50 rounded-xl p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-blue-500/20"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden animate-pulse" style={{ backgroundColor: '#fff6e2' }}>
+                      <img 
+                        src="/scout-mascot.png" 
+                        alt="Scout AI" 
+                        className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300"
+                        style={{
+                          animation: 'wave 2.5s ease-in-out infinite',
+                          transformOrigin: 'center bottom'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white group-hover:text-blue-300 transition-colors">Talk to Scout</h3>
+                      <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Get help with job titles and search</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">
+                      {isScoutChatOpen ? 'Close' : 'Open'}
+                    </div>
+                    <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-full p-2 group-hover:from-blue-400 group-hover:to-purple-400 transition-all duration-300 group-hover:scale-110">
+                      {isScoutChatOpen ? (
+                        <ChevronRight className="h-5 w-5 text-white" />
+                      ) : (
+                        <ChevronLeft className="h-5 w-5 text-white" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <main className="p-8">
             <div className="max-w-7xl mx-auto">
               
