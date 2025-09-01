@@ -10,6 +10,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutocompleteInput } from "@/components/AutocompleteInput";
+import ScoutChatbot from "@/components/ScoutChatbot";
 
 const BACKEND_URL = 'http://localhost:5001';
 
@@ -60,6 +61,10 @@ const Home = () => {
   };
 
   const currentTierConfig = TIER_CONFIGS[selectedTier];
+
+  const handleJobTitleSuggestion = (jobTitle: string) => {
+    setJobTitle(jobTitle);
+  };
 
   // Test backend connection on mount
   useEffect(() => {
@@ -389,6 +394,8 @@ const Home = () => {
           </main>
         </div>
       </div>
+      
+      <ScoutChatbot onJobTitleSuggestion={handleJobTitleSuggestion} />
     </SidebarProvider>
   );
 };

@@ -16,7 +16,7 @@ interface Message {
 }
 
 const ScoutChatbot: React.FC<ScoutChatbotProps> = ({ onJobTitleSuggestion }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const { resumeData } = useResumeData();
   const [hasLoadedRecommendations, setHasLoadedRecommendations] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
