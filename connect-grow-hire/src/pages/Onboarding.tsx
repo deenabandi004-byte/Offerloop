@@ -655,23 +655,42 @@ const Onboarding = () => {
     setIsParsingResume(true);
     setParseError(null);
     
+    console.log('Starting resume parsing for file:', file.name, 'Size:', file.size);
+    
     try {
       const parsedData = await apiService.parseResumeForOnboarding(file);
       
-      if (parsedData.firstName) form.setValue('firstName', parsedData.firstName);
-      if (parsedData.lastName) form.setValue('lastName', parsedData.lastName);
-      if (parsedData.university) form.setValue('university', parsedData.university);
+      console.log('Resume parsing result:', parsedData);
       
-      const onboardingData = {
-        graduationYear: parsedData.graduationYear,
-        fieldOfStudy: parsedData.fieldOfStudy,
-        resumeParsed: true
-      };
-      localStorage.setItem('onboardingData', JSON.stringify(onboardingData));
+      if (parsedData.success) {
+        if (parsedData.firstName) {
+          form.setValue('firstName', parsedData.firstName);
+          console.log('Set firstName to:', parsedData.firstName);
+        }
+        if (parsedData.lastName) {
+          form.setValue('lastName', parsedData.lastName);
+          console.log('Set lastName to:', parsedData.lastName);
+        }
+        if (parsedData.university) {
+          form.setValue('university', parsedData.university);
+          console.log('Set university to:', parsedData.university);
+        }
+        
+        const onboardingData = {
+          graduationYear: parsedData.graduationYear,
+          fieldOfStudy: parsedData.fieldOfStudy,
+          resumeParsed: true
+        };
+        localStorage.setItem('onboardingData', JSON.stringify(onboardingData));
+        console.log('Stored parsed data in localStorage:', onboardingData);
+      } else {
+        console.error('Resume parsing failed - success=false');
+        setParseError('Failed to parse resume. You can continue filling out the form manually.');
+      }
       
     } catch (error) {
-      console.error('Resume parsing failed:', error);
-      setParseError('Failed to parse resume. You can continue filling out the form manually.');
+      console.error('Resume parsing failed with error:', error);
+      setParseError(`Failed to parse resume: ${error instanceof Error ? error.message : 'Unknown error'}. You can continue filling out the form manually.`);
     } finally {
       setIsParsingResume(false);
     }
