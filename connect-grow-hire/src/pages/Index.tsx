@@ -45,7 +45,7 @@ const Index = () => {
               Sign In
             </button>
             <button 
-              onClick={() => navigate("/signin")}
+              onClick={() => navigate("/onboarding/resume-upload")}
               className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 px-6 py-2 rounded-lg font-medium transition-colors"
             >
               Sign Up
@@ -329,7 +329,10 @@ const Index = () => {
                 </li>
               </ul>
               
-              <button className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-colors">
+              <button 
+                onClick={() => navigate("/onboarding/resume-upload")}
+                className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-colors"
+              >
                 Start Free Trial
               </button>
             </div>
@@ -372,7 +375,10 @@ const Index = () => {
                 </li>
               </ul>
               
-              <button className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white py-3 px-6 rounded-xl font-semibold transition-all">
+              <button 
+                onClick={() => navigate("/onboarding/resume-upload")}
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white py-3 px-6 rounded-xl font-semibold transition-all"
+              >
                 Get Started
               </button>
             </div>
@@ -413,7 +419,10 @@ const Index = () => {
                 </li>
               </ul>
               
-              <button className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-colors">
+              <button 
+                onClick={() => navigate("/onboarding/resume-upload")}
+                className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-colors"
+              >
                 Get Started
               </button>
             </div>
