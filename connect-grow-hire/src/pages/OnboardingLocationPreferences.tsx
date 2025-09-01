@@ -41,7 +41,15 @@ const OnboardingLocationPreferences = () => {
       locations: selectedLocations,
       jobTypes: selectedJobTypes 
     });
-    // Navigate to sign-up page
+    
+    const existingData = JSON.parse(localStorage.getItem('onboardingData') || '{}');
+    const updatedData = {
+      ...existingData,
+      workLocations: selectedLocations,
+      jobTypes: selectedJobTypes,
+    };
+    localStorage.setItem('onboardingData', JSON.stringify(updatedData));
+    
     navigate("/onboarding/signup");
   };
 

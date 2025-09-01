@@ -246,6 +246,31 @@ class ApiService {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
   }
+
+  /**
+   * Parse resume for onboarding autofill
+   */
+  async parseResumeForOnboarding(resumeFile: File): Promise<{
+    firstName: string;
+    lastName: string;
+    university: string;
+    graduationYear: string;
+    fieldOfStudy: string;
+    success: boolean;
+  }> {
+    const formData = new FormData();
+    formData.append('resume', resumeFile);
+
+    console.log(`📄 Parsing resume for onboarding: ${resumeFile.name} (${resumeFile.size} bytes)`);
+
+    const headers: Record<string, string> = {};
+    
+    return this.makeRequest('/parse-resume-onboarding', {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+  }
 }
 
 export const apiService = new ApiService();

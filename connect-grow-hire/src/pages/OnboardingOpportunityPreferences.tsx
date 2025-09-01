@@ -46,7 +46,17 @@ const OnboardingOpportunityPreferences = () => {
       finalIndustries[finalIndustries.indexOf("Other")] = customIndustry;
     }
     console.log("Opportunity preferences form submitted:", { ...data, industries: finalIndustries });
-    // Navigate to next onboarding step
+    
+    const existingData = JSON.parse(localStorage.getItem('onboardingData') || '{}');
+    const updatedData = {
+      ...existingData,
+      industries: finalIndustries,
+      customIndustry: data.customJobRole,
+      jobRoles: data.jobRole,
+      customJobRole: data.customJobRole,
+    };
+    localStorage.setItem('onboardingData', JSON.stringify(updatedData));
+    
     navigate("/onboarding/location-preferences");
   };
 

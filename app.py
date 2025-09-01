@@ -2408,6 +2408,43 @@ def handle_exception(e):
 # MAIN ENTRY POINT
 # ========================================
 
+@app.route('/api/parse-resume-onboarding', methods=['POST'])
+def parse_resume_onboarding():
+    """Parse resume for onboarding autofill - separate from Pro tier search"""
+    try:
+        if 'resume' not in request.files:
+            return jsonify({'error': 'No resume file provided'}), 400
+        
+        resume_file = request.files['resume']
+        if resume_file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not resume_file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'Only PDF files are supported'}), 400
+        
+        # Extract text from PDF
+        resume_text = extract_text_from_pdf(resume_file)
+        if not resume_text:
+            return jsonify({'error': 'Could not extract text from PDF'}), 400
+        
+        resume_info = parse_resume_info(resume_text)
+        
+        onboarding_data = {
+            'firstName': resume_info.get('name', '').split(' ')[0] if resume_info.get('name') else '',
+            'lastName': ' '.join(resume_info.get('name', '').split(' ')[1:]) if resume_info.get('name') and len(resume_info.get('name', '').split(' ')) > 1 else '',
+            'university': resume_info.get('university', ''),
+            'graduationYear': resume_info.get('year', ''),
+            'fieldOfStudy': resume_info.get('major', ''),
+            'success': True
+        }
+        
+        log_api_usage('resume_parse_onboarding', 'onboarding_user', 1, 0)
+        return jsonify(onboarding_data)
+        
+    except Exception as e:
+        print(f"Resume parsing for onboarding failed: {e}")
+        return jsonify({'error': f'Resume parsing failed: {str(e)}'}), 500
+
 if __name__ == '__main__':
     print("=" * 50)
     print("Initializing RecruitEdge server with Enhanced PDL Search...")
@@ -2422,6 +2459,7 @@ if __name__ == '__main__':
     print("New endpoints:")
     print("- Autocomplete: /api/autocomplete/<type>?query=<text>")
     print("- Job title enrichment: /api/enrich-job-title")
+    print("- Resume parsing for onboarding: /api/parse-resume-onboarding")
     print("=" * 50 + "\n")
     
     app.run(host='0.0.0.0', port=5001, debug=True)

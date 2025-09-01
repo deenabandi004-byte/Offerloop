@@ -29,12 +29,23 @@ const OnboardingAcademics = () => {
   const [showCustomDegree, setShowCustomDegree] = useState(false);
   const [openFieldOfStudy, setOpenFieldOfStudy] = useState(false);
   
+  const getStoredOnboardingData = () => {
+    try {
+      const stored = localStorage.getItem('onboardingData');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  };
+  
+  const storedData = getStoredOnboardingData();
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       graduationMonth: "",
-      graduationYear: "",
-      fieldOfStudy: "",
+      graduationYear: storedData.graduationYear || "",
+      fieldOfStudy: storedData.fieldOfStudy || "",
       degreeType: "",
       customDegree: "",
     },
@@ -42,7 +53,18 @@ const OnboardingAcademics = () => {
 
   const onSubmit = (data: FormData) => {
     console.log("Academics form submitted:", data);
-    // Navigate to next onboarding step
+    
+    const existingData = JSON.parse(localStorage.getItem('onboardingData') || '{}');
+    const updatedData = {
+      ...existingData,
+      graduationMonth: data.graduationMonth,
+      graduationYear: data.graduationYear,
+      fieldOfStudy: data.fieldOfStudy,
+      degreeType: data.degreeType,
+      customDegree: data.customDegree,
+    };
+    localStorage.setItem('onboardingData', JSON.stringify(updatedData));
+    
     navigate("/onboarding/opportunity-preferences");
   };
 
