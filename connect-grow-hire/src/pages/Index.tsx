@@ -160,10 +160,17 @@ const Index = () => {
           </div>
 
           <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl p-8 border border-purple-500/30">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-purple-400 mb-4">AI Powered</div>
-                <div className="text-xl text-gray-300">Personalization Engine</div>
+            <div className="relative rounded-2xl overflow-hidden border border-purple-500/30">
+              <img 
+                src="/images/ai-personalization.png" 
+                alt="AI-powered personalization engine visualization" 
+                className="w-full h-80 object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-transparent to-transparent flex items-end justify-center pb-8">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-white mb-2">AI Powered</div>
+                  <div className="text-lg text-gray-200">Personalization Engine</div>
+                </div>
               </div>
             </div>
             <div>
