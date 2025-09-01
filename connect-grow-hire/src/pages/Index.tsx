@@ -162,7 +162,7 @@ const Index = () => {
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="relative rounded-2xl overflow-hidden border border-purple-500/30">
               <img 
-                src="/images/ai-personalization.png" 
+                src="/images/ai-personalization-engine.png" 
                 alt="AI-powered personalization engine visualization" 
                 className="w-full h-80 object-cover"
               />
