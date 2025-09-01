@@ -5,10 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ResumeDataProvider } from "./contexts/ResumeDataContext";
 import Index from "./pages/Index";
 import Home from "./pages/Home";
 import SignIn from "./pages/SignIn";
-import AuthCallback from "./pages/AuthCallback"; // Add this import
+import AuthCallback from "./pages/AuthCallback";
+import ResumeUpload from "./pages/ResumeUpload";
 import Onboarding from "./pages/Onboarding";
 import OnboardingAcademics from "./pages/OnboardingAcademics";
 import OnboardingOpportunityPreferences from "./pages/OnboardingOpportunityPreferences";
@@ -33,33 +35,35 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/signin" element={<SignIn />} />
-              <Route path="/auth/callback" element={<AuthCallback />} /> {/* Add this route */}
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/onboarding/academics" element={<OnboardingAcademics />} />
-              <Route path="/onboarding/opportunity-preferences" element={<OnboardingOpportunityPreferences />} />
-              <Route path="/onboarding/location-preferences" element={<OnboardingLocationPreferences />} />
-              <Route path="/onboarding/signup" element={<OnboardingSignUp />} />
-              <Route path="/about" element={<AboutUs />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/contact-us" element={<ContactUs />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/terms-of-service" element={<TermsOfServiceSettings />} />
-              <Route path="/account-settings" element={<AccountSettings />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/news" element={<News />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <ResumeDataProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/signin" element={<SignIn />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/resume-upload" element={<ResumeUpload />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/onboarding/academics" element={<OnboardingAcademics />} />
+                <Route path="/onboarding/opportunity-preferences" element={<OnboardingOpportunityPreferences />} />
+                <Route path="/onboarding/location-preferences" element={<OnboardingLocationPreferences />} />
+                <Route path="/onboarding/signup" element={<OnboardingSignUp />} />
+                <Route path="/about" element={<AboutUs />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/contact-us" element={<ContactUs />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/terms-of-service" element={<TermsOfServiceSettings />} />
+                <Route path="/account-settings" element={<AccountSettings />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/news" element={<News />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </ResumeDataProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

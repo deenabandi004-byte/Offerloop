@@ -1,6 +1,7 @@
 // src/components/ScoutChatbot.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Sparkles, ArrowUp } from 'lucide-react';
+import { useResumeData } from '@/contexts/ResumeDataContext';
 
 interface ScoutChatbotProps {
   onJobTitleSuggestion: (jobTitle: string) => void;
@@ -16,6 +17,8 @@ interface Message {
 
 const ScoutChatbot: React.FC<ScoutChatbotProps> = ({ onJobTitleSuggestion }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { resumeData } = useResumeData();
+  const [hasLoadedRecommendations, setHasLoadedRecommendations] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -44,6 +47,60 @@ const ScoutChatbot: React.FC<ScoutChatbotProps> = ({ onJobTitleSuggestion }) => 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (isOpen && !hasLoadedRecommendations) {
+      loadPersonalizedRecommendations();
+      setHasLoadedRecommendations(true);
+    }
+  }, [isOpen, hasLoadedRecommendations]);
+
+  const loadPersonalizedRecommendations = async () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      const onboardingData = JSON.parse(localStorage.getItem('onboardingData') || '{}');
+      
+      const response = await fetch('http://localhost:5001/api/scout-recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          resumeText: resumeData?.fullText || '',
+          onboardingData: onboardingData,
+          userName: userData.name || resumeData?.firstName || 'there'
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        setTimeout(() => {
+          const personalizedMessage: Message = {
+            id: Date.now(),
+            type: 'bot',
+            content: data.greeting,
+            timestamp: new Date()
+          };
+          
+          setMessages([personalizedMessage]);
+          
+          setTimeout(() => {
+            const recommendationsMessage: Message = {
+              id: Date.now() + 1,
+              type: 'bot',
+              content: `Here are some job titles perfect for your background:\n\n${data.recommendations.map((title: string, index: number) => `${index + 1}. ${title}`).join('\n')}\n\nFeel free to ask me for resume feedback, job search strategies, or more specific recommendations!`,
+              timestamp: new Date()
+            };
+            
+            setMessages(prev => [...prev, recommendationsMessage]);
+          }, 1500);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Failed to load personalized recommendations:', error);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && inputRef.current) {

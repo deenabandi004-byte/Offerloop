@@ -8,10 +8,8 @@ const OnboardingSignUp = () => {
   const navigate = useNavigate();
 
   const handleGoogleSignUp = () => {
-    // TODO: Implement Google sign-up with Supabase
     console.log("Google sign-up clicked");
-    // For now, just navigate to home
-    navigate("/home");
+    navigate("/dashboard");
   };
 
   const handleGoogleSignUpLink = () => {

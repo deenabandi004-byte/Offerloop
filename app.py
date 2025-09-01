@@ -8,7 +8,6 @@ import requests
 import datetime
 import csv
 from io import StringIO
-import openai
 import base64
 from email.mime.text import MIMEText
 import pickle
@@ -2144,6 +2143,118 @@ def health():
             'gmail': 'connected' if get_gmail_service() else 'unavailable'
         }
     })
+
+@app.route('/api/upload-resume', methods=['POST'])
+def upload_resume():
+    """Upload and parse resume endpoint"""
+    try:
+        if 'resume' not in request.files:
+            return jsonify({"error": "No resume file provided"}), 400
+        
+        file = request.files['resume']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({"error": "Only PDF files are supported"}), 400
+        
+        # Extract text from PDF
+        resume_text = extract_text_from_pdf(file)
+        if not resume_text:
+            return jsonify({"error": "Could not extract text from PDF"}), 400
+        
+        parsed_info = parse_resume_info(resume_text)
+        
+        parsed_info['fullText'] = resume_text
+        
+        return jsonify(parsed_info)
+        
+    except Exception as e:
+        print(f"Resume upload error: {e}")
+        return jsonify({"error": "Failed to process resume"}), 500
+
+@app.route('/api/scout-recommendations', methods=['POST'])
+def scout_recommendations():
+    """Generate personalized Scout recommendations"""
+    try:
+        data = request.get_json()
+        resume_text = data.get('resumeText', '')
+        onboarding_data = data.get('onboardingData', {})
+        user_name = data.get('userName', 'there')
+        
+        context = f"""
+        User Profile:
+        - Name: {user_name}
+        - University: {onboarding_data.get('university', 'Not specified')}
+        - Major: {onboarding_data.get('major', 'Not specified')}
+        - Graduation Year: {onboarding_data.get('graduationYear', 'Not specified')}
+        - Preferred Industries: {', '.join(onboarding_data.get('industries', []))}
+        - Preferred Job Types: {', '.join(onboarding_data.get('jobTypes', []))}
+        - Preferred Locations: {', '.join(onboarding_data.get('locations', []))}
+        
+        Resume Content:
+        {resume_text[:1000] if resume_text else 'No resume provided'}
+        """
+        
+        prompt = f"""
+        Based on the user profile and resume, generate 4-5 specific job titles that would be perfect for networking and job searching. 
+        Focus on entry-level to mid-level positions that match their background and preferences.
+        
+        Return as a JSON array of job titles only, like: ["Software Engineer", "Product Manager", "Data Analyst"]
+        
+        User Context:
+        {context}
+        """
+        
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a career advisor helping students find relevant job titles for networking. Return only a JSON array of job titles."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=200,
+            temperature=0.7
+        )
+        
+        recommendations_text = response.choices[0].message.content.strip()
+        
+        try:
+            recommendations = json.loads(recommendations_text)
+            if not isinstance(recommendations, list):
+                raise ValueError("Response is not a list")
+        except:
+            # Fallback recommendations
+            recommendations = [
+                "Software Engineer",
+                "Product Manager", 
+                "Data Analyst",
+                "Marketing Associate",
+                "Business Analyst"
+            ]
+        
+        # Generate personalized greeting
+        greeting = f"Hi {user_name}! 👋 Based on your {onboarding_data.get('major', 'background')} studies"
+        if onboarding_data.get('university'):
+            greeting += f" at {onboarding_data.get('university')}"
+        greeting += ", here are some job titles perfect for networking:"
+        
+        return jsonify({
+            "greeting": greeting,
+            "recommendations": recommendations
+        })
+        
+    except Exception as e:
+        print(f"Scout recommendations error: {e}")
+        return jsonify({
+            "greeting": f"Hi {data.get('userName', 'there')}! 👋 Here are some great job titles to explore:",
+            "recommendations": [
+                "Software Engineer",
+                "Product Manager",
+                "Data Analyst", 
+                "Marketing Associate",
+                "Business Analyst"
+            ]
+        })
 
 @app.route('/api/basic-run', methods=['POST'])
 def basic_run():
