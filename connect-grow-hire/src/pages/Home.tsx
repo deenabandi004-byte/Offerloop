@@ -1,6 +1,6 @@
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { Upload, Download, Zap, Crown, ExternalLink, MessageCircle } from "lucide-react";
+import { Upload, Download, Zap, Crown, ExternalLink, MessageCircle, ChevronRight, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -270,10 +270,14 @@ const Home = () => {
                 size="sm"
                 variant="outline"
                 onClick={() => setIsScoutChatOpen(!isScoutChatOpen)}
-                className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                className="border-gray-600 text-gray-300 hover:bg-gray-800 p-2"
+                title={isScoutChatOpen ? "Close Scout" : "Open Scout"}
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Scout
+                {isScoutChatOpen ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronLeft className="h-4 w-4" />
+                )}
               </Button>
               
               <Button 
