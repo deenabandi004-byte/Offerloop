@@ -25,6 +25,16 @@ const Index = () => {
             <nav className="hidden md:flex items-center gap-6">
               <a href="#features" className="text-gray-300 hover:text-white transition-colors">Features</a>
               <a href="#pricing" className="text-gray-300 hover:text-white transition-colors">Pricing</a>
+              <a 
+                href="#about" 
+                className="text-gray-300 hover:text-white transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                About
+              </a>
             </nav>
           </div>
           <div className="flex items-center gap-6">
