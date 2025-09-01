@@ -40,11 +40,26 @@ const OnboardingAcademics = () => {
 
   const resumeData = getResumeData();
   
+  const extractGraduationYear = (yearData: string | undefined): string => {
+    if (!yearData) return "";
+    
+    const yearMatch = yearData.match(/\b(19|20)\d{2}\b/);
+    if (yearMatch) {
+      return yearMatch[0];
+    }
+    
+    if (/^\d{4}$/.test(yearData)) {
+      return yearData;
+    }
+    
+    return "";
+  };
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       graduationMonth: "",
-      graduationYear: resumeData?.year?.match(/\d{4}/)?.[0] || "",
+      graduationYear: extractGraduationYear(resumeData?.year) || "",
       fieldOfStudy: resumeData?.major || "",
       degreeType: "",
       customDegree: "",
