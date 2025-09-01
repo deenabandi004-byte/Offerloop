@@ -1,5 +1,5 @@
 // src/services/api.ts
-const API_BASE_URL = 'https://user:8799b5ee99450f8b56793e02bb0f20ab@onboarding-tracker-app-tunnel-a01eetui.devinapps.com:5001/api';  // ✅ Fixed: Use same tunnel domain as frontend with backend port
+const API_BASE_URL = 'https://onboarding-tracker-app-tunnel-a01eetui.devinapps.com:5001/api';  // ✅ Fixed: Use same tunnel domain as frontend with backend port, credentials in headers only
 
 export interface ContactSearchRequest {
   jobTitle: string;
