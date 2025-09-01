@@ -14,6 +14,7 @@ import OnboardingAcademics from "./pages/OnboardingAcademics";
 import OnboardingOpportunityPreferences from "./pages/OnboardingOpportunityPreferences";
 import OnboardingLocationPreferences from "./pages/OnboardingLocationPreferences";
 import OnboardingSignUp from "./pages/OnboardingSignUp";
+import DevinIntegration from "./pages/DevinIntegration";
 import AboutUs from "./pages/AboutUs";
 import Contact from "./pages/Contact";
 import ContactUs from "./pages/ContactUs";
@@ -54,6 +55,7 @@ const App: React.FC = () => {
               <Route path="/terms-of-service" element={<TermsOfServiceSettings />} />
               <Route path="/account-settings" element={<AccountSettings />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/devin" element={<DevinIntegration />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/news" element={<News />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

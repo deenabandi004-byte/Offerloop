@@ -92,14 +92,32 @@ const OnboardingAcademics = () => {
 
   const degreeOptions = [
     { category: "Undergraduate", options: [
-      { value: "associate", label: "Associate's Degree (AA, AS, etc.)" },
-      { value: "bachelor", label: "Bachelor's Degree (BA, BS, BBA, BFA, etc.)" },
+      { value: "associate", label: "Associate's Degree (AA, AS, AAS, AAA)" },
+      { value: "bachelor", label: "Bachelor's Degree (BA, BS, BBA, BFA, BSc, BEng)" },
+      { value: "bachelor-honors", label: "Bachelor's with Honors (BA Hons, BS Hons)" },
     ]},
     { category: "Graduate", options: [
-      { value: "master", label: "Master's Degree (MA, MS, MBA, MPA, MFA, etc.)" },
-      { value: "doctorate", label: "Doctorate/PhD (PhD, EdD, DBA, etc.)" },
+      { value: "master", label: "Master's Degree (MA, MS, MBA, MPA, MFA, MEd, MSc, MEng)" },
+      { value: "master-research", label: "Master's by Research (MRes, MPhil)" },
+      { value: "doctorate", label: "Doctorate/PhD (PhD, EdD, DBA, ScD, MD, JD)" },
+      { value: "professional-doctorate", label: "Professional Doctorate (DPT, PharmD, DNP, PsyD)" },
+    ]},
+    { category: "Professional & Certificate", options: [
+      { value: "certificate", label: "Certificate Program" },
+      { value: "diploma", label: "Diploma" },
+      { value: "professional-cert", label: "Professional Certification" },
+      { value: "trade-cert", label: "Trade/Vocational Certificate" },
+    ]},
+    { category: "International", options: [
+      { value: "foundation", label: "Foundation Degree" },
+      { value: "honours", label: "Honours Degree" },
+      { value: "postgrad-cert", label: "Postgraduate Certificate" },
+      { value: "postgrad-diploma", label: "Postgraduate Diploma" },
     ]},
     { category: "Other", options: [
+      { value: "in-progress", label: "Currently Enrolled" },
+      { value: "some-college", label: "Some College (No Degree)" },
+      { value: "high-school", label: "High School Diploma/GED" },
       { value: "unsure", label: "Unsure" },
       { value: "other", label: "Other" },
     ]},
@@ -198,6 +216,7 @@ const OnboardingAcademics = () => {
                       )}
                     />
                 </div>
+                </div>
 
                 <FormField
                   control={form.control}
@@ -260,7 +279,6 @@ const OnboardingAcademics = () => {
                     </FormItem>
                   )}
                 />
-                </div>
 
                 <FormField
                   control={form.control}
