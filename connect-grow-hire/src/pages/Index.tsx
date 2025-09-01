@@ -146,7 +146,7 @@ const Index = () => {
             </div>
             <div className="relative rounded-2xl overflow-hidden border border-blue-500/30">
               <img 
-                src="/images/network-globe.jpg" 
+                src="/images/globe-network.png" 
                 alt="Global professional network visualization" 
                 className="w-full h-80 object-cover"
               />
