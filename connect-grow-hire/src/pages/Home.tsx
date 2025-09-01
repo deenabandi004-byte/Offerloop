@@ -71,6 +71,7 @@ const Home = () => {
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
   const [location, setLocation] = useState("");
+  const [collegeAlumni, setCollegeAlumni] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   
   const [linkedinUrl, setLinkedinUrl] = useState("");
@@ -364,7 +365,7 @@ const Home = () => {
                     value="find-candidates"
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white text-gray-300 hover:text-white transition-all"
                   >
-                    Find Candidates
+                    Professional Search
                   </TabsTrigger>
                   <TabsTrigger 
                     value="coffee-chat"
@@ -384,11 +385,11 @@ const Home = () => {
                 <TabsContent value="find-candidates" className="mt-6">
                   <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700">
                     <CardHeader className="border-b border-gray-700">
-                      <CardTitle className="text-xl text-white">Find Candidates</CardTitle>
+                      <CardTitle className="text-xl text-white">Professional Search</CardTitle>
                     </CardHeader>
                     <CardContent className="p-6">
                       {/* Main Search Inputs with Autocomplete */}
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                         <div>
                           <label className="block text-sm font-medium mb-2 text-white">
                             Job Title <span className="text-red-400">*</span>
@@ -424,6 +425,18 @@ const Home = () => {
                             onChange={setLocation}
                             placeholder="e.g., San Francisco, CA"
                             dataType="location"
+                            disabled={isSearching}
+                            className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500 hover:border-purple-400 transition-colors"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-2 text-white">College Alumni</label>
+                          <AutocompleteInput
+                            value={collegeAlumni}
+                            onChange={setCollegeAlumni}
+                            placeholder="e.g., Stanford University (optional)"
+                            dataType="school"
                             disabled={isSearching}
                             className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-pink-500 hover:border-purple-400 transition-colors"
                           />
