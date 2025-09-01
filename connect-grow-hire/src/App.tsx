@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Home from "./pages/Home";
 import SignIn from "./pages/SignIn";
 import AuthCallback from "./pages/AuthCallback"; // Add this import
+import OnboardingResumeUpload from "./pages/OnboardingResumeUpload";
 import Onboarding from "./pages/Onboarding";
 import OnboardingAcademics from "./pages/OnboardingAcademics";
 import OnboardingOpportunityPreferences from "./pages/OnboardingOpportunityPreferences";
@@ -41,6 +42,7 @@ const App: React.FC = () => {
               <Route path="/home" element={<Home />} />
               <Route path="/signin" element={<SignIn />} />
               <Route path="/auth/callback" element={<AuthCallback />} /> {/* Add this route */}
+              <Route path="/onboarding/resume-upload" element={<OnboardingResumeUpload />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/onboarding/academics" element={<OnboardingAcademics />} />
               <Route path="/onboarding/opportunity-preferences" element={<OnboardingOpportunityPreferences />} />

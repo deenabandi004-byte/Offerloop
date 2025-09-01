@@ -8,6 +8,7 @@ const OnboardingSignUp = () => {
   const navigate = useNavigate();
 
   const handleGoogleSignUp = () => {
+    localStorage.removeItem('resumeData');
     // TODO: Implement Google sign-up with Supabase
     console.log("Google sign-up clicked");
     // For now, just navigate to home

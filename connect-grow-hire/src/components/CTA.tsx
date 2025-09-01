@@ -19,7 +19,7 @@ const CTA = () => {
               size="lg" 
               variant="secondary" 
               className="h-12 px-8"
-              onClick={() => navigate("/onboarding")}
+              onClick={() => navigate("/onboarding/resume-upload")}
             >
               Start Free Trial
             </Button>
