@@ -1,5 +1,5 @@
 // src/services/api.ts
-const API_BASE_URL = 'http://192.168.1.237:5001/api';  // ✅ Fixed: Use the correct server IP
+const API_BASE_URL = 'https://user:8799b5ee99450f8b56793e02bb0f20ab@onboarding-tracker-app-tunnel-qb3tl47d.devinapps.com/api';  // ✅ Fixed: Use public backend URL
 
 export interface ContactSearchRequest {
   jobTitle: string;
