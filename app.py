@@ -42,8 +42,9 @@ if not openai.api_key:
 app = Flask(__name__)
 CORS(app, 
      origins=["https://d33d83bb2e38.ngrok-free.app", "https://onboarding-tracker-app-tunnel-a01eetui.devinapps.com", "https://onboarding-tracker-app-tunnel-sz8ze1n6.devinapps.com", "*"],
-     allow_headers=["Content-Type", "Authorization"],
-     methods=["GET", "POST", "OPTIONS"])
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     methods=["GET", "POST", "OPTIONS"],
+     supports_credentials=True)
 
 # PDL Configuration with your API key
 
@@ -2466,9 +2467,17 @@ def handle_exception(e):
 # MAIN ENTRY POINT
 # ========================================
 
-@app.route('/api/parse-resume-onboarding', methods=['POST'])
+@app.route('/api/parse-resume-onboarding', methods=['POST', 'OPTIONS'])
 def parse_resume_onboarding():
     """Parse resume for onboarding autofill - separate from Pro tier search"""
+    if request.method == 'OPTIONS':
+        from flask import make_response
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization")
+        response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS")
+        return response
+    
     try:
         if 'resume' not in request.files:
             return jsonify({'error': 'No resume file provided'}), 400
