@@ -40,7 +40,11 @@ if not openai.api_key:
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app, origins=["https://d33d83bb2e38.ngrok-free.app", "*"])
+CORS(app, 
+     origins=["https://d33d83bb2e38.ngrok-free.app", "https://onboarding-tracker-app-tunnel-a01eetui.devinapps.com", "https://onboarding-tracker-app-tunnel-sz8ze1n6.devinapps.com", "*"],
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     methods=["GET", "POST", "OPTIONS"],
+     supports_credentials=True)
 
 # PDL Configuration with your API key
 
@@ -871,7 +875,10 @@ Customize the email by:
 - Keep [Your Name], [Your year/major], [Your University], and [Your Full Name] as placeholders for the sender to fill in
 """
         
-        response = openai.ChatCompletion.create(
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at writing personalized networking emails for Advanced tier. Keep emails warm, professional, and follow the template exactly."},
@@ -956,7 +963,10 @@ Customize the email by:
 - For relating judge which ones will make the outreach more personable and for interests make it specific where possible and show genuine interest
 """
         
-        response = openai.ChatCompletion.create(
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at writing personalized networking emails for Pro tier. Keep emails concise, warm, and professional with natural similarity integration."},
@@ -981,7 +991,7 @@ Similarity: {similarity}
 Just give the subject line no citations, reasoning or explanations.
 """
         
-        subject_response = openai.ChatCompletion.create(
+        subject_response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at writing compelling email subject lines that get responses. Be concise and personal."},
@@ -1005,34 +1015,77 @@ Just give the subject line no citations, reasoning or explanations.
 # ========================================
 
 def extract_text_from_pdf(pdf_file):
-    """Extract text from PDF using PyPDF2 with improved encoding handling"""
+    """Extract text from PDF using PyPDF2 with improved error handling and fallback methods"""
     try:
         print("Extracting text from PDF...")
         
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
             pdf_file.save(temp_file.name)
             
-            with open(temp_file.name, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                text = ""
+            try:
+                with open(temp_file.name, 'rb') as file:
+                    pdf_reader = PyPDF2.PdfReader(file, strict=False)
+                    text = ""
+                    
+                    for page in pdf_reader.pages:
+                        try:
+                            page_text = page.extract_text()
+                            if page_text:
+                                # Clean and encode the text properly
+                                cleaned_text = ''.join(char for char in page_text if char.isprintable() or char.isspace())
+                                # Normalize unicode characters
+                                cleaned_text = cleaned_text.encode('utf-8', errors='ignore').decode('utf-8')
+                                text += cleaned_text + "\n"
+                        except Exception as page_error:
+                            print(f"Error extracting text from page: {page_error}")
+                            continue
                 
-                for page in pdf_reader.pages:
-                    page_text = page.extract_text()
-                    # Clean and encode the text properly
-                    if page_text:
-                        # Remove non-printable characters and fix encoding issues
-                        cleaned_text = ''.join(char for char in page_text if char.isprintable() or char.isspace())
-                        # Normalize unicode characters
-                        cleaned_text = cleaned_text.encode('utf-8', errors='ignore').decode('utf-8')
-                        text += cleaned_text + "\n"
+                if text.strip():
+                    # Final cleanup - remove extra whitespace and normalize
+                    text = ' '.join(text.split())
+                    print(f"Extracted {len(text)} characters from PDF using PyPDF2")
+                    os.unlink(temp_file.name)
+                    return text.strip()
+                    
+            except Exception as pypdf2_error:
+                print(f"PyPDF2 extraction failed: {pypdf2_error}")
+            
+            # Method 2: Fallback - try to extract text using pdftotext if available
+            try:
+                import subprocess
+                result = subprocess.run(['pdftotext', temp_file.name, '-'], 
+                                      capture_output=True, text=True, timeout=30)
+                if result.returncode == 0 and result.stdout.strip():
+                    text = result.stdout.strip()
+                    print(f"Extracted {len(text)} characters from PDF using pdftotext")
+                    os.unlink(temp_file.name)
+                    return text
+            except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError) as e:
+                print(f"pdftotext fallback failed: {e}")
+            
+            try:
+                with open(temp_file.name, 'rb') as file:
+                    content = file.read()
+                    # Look for text streams in the PDF
+                    if b'stream' in content and b'endstream' in content:
+                        # Try to extract readable text from the raw content
+                        content_str = content.decode('latin-1', errors='ignore')
+                        
+                        import re
+                        text_matches = re.findall(r'[A-Za-z][A-Za-z0-9\s.,;:!?\-\'\"]{10,}', content_str)
+                        if text_matches:
+                            text = ' '.join(text_matches)
+                            text = ' '.join(text.split())  # Normalize whitespace
+                            if len(text) > 20:  # Only return if we found substantial text
+                                print(f"Extracted {len(text)} characters from PDF using text extraction fallback")
+                                os.unlink(temp_file.name)
+                                return text
+            except Exception as fallback_error:
+                print(f"Text extraction fallback failed: {fallback_error}")
             
             os.unlink(temp_file.name)
-            
-            # Final cleanup - remove extra whitespace and normalize
-            text = ' '.join(text.split())
-            
-            print(f"Extracted {len(text)} characters from PDF")
-            return text.strip() if text.strip() else None
+            print("All PDF text extraction methods failed")
+            return None
             
     except Exception as e:
         print(f"PDF text extraction failed: {e}")
@@ -1079,7 +1132,10 @@ Resume text:
 {clean_text}
 """
         
-        response = openai.ChatCompletion.create(
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at extracting structured information from resumes. Return only valid JSON with no extra text."},
@@ -1242,7 +1298,10 @@ Contact Background:
 Generate ONE sentence highlighting the most relevant similarity:
 """
         
-        response = openai.ChatCompletion.create(
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at finding meaningful connections between people's backgrounds. Write concise, specific similarities."},
@@ -2408,6 +2467,60 @@ def handle_exception(e):
 # MAIN ENTRY POINT
 # ========================================
 
+@app.route('/api/parse-resume-onboarding', methods=['POST', 'OPTIONS'])
+def parse_resume_onboarding():
+    """Parse resume for onboarding autofill - separate from Pro tier search"""
+    if request.method == 'OPTIONS':
+        from flask import make_response
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add('Access-Control-Allow-Headers', "Content-Type")
+        response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS")
+        return response
+    
+    try:
+        auth_user = request.form.get('auth_user')
+        auth_pass = request.form.get('auth_pass')
+        
+        if not auth_user or not auth_pass:
+            return jsonify({'error': 'Authentication required'}), 401
+            
+        if auth_user != 'user' or auth_pass != '11392b6455e6b26db98ceb44de16af8b':
+            return jsonify({'error': 'Invalid credentials'}), 401
+            
+        if 'resume' not in request.files:
+            return jsonify({'error': 'No resume file provided'}), 400
+        
+        resume_file = request.files['resume']
+        if resume_file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not resume_file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'Only PDF files are supported'}), 400
+        
+        # Extract text from PDF
+        resume_text = extract_text_from_pdf(resume_file)
+        if not resume_text:
+            return jsonify({'error': 'Could not extract text from PDF'}), 400
+        
+        resume_info = parse_resume_info(resume_text)
+        
+        onboarding_data = {
+            'firstName': resume_info.get('name', '').split(' ')[0] if resume_info.get('name') else '',
+            'lastName': ' '.join(resume_info.get('name', '').split(' ')[1:]) if resume_info.get('name') and len(resume_info.get('name', '').split(' ')) > 1 else '',
+            'university': resume_info.get('university', ''),
+            'graduationYear': resume_info.get('year', ''),
+            'fieldOfStudy': resume_info.get('major', ''),
+            'success': True
+        }
+        
+        log_api_usage('resume_parse_onboarding', 'onboarding_user', 1, 0)
+        return jsonify(onboarding_data)
+        
+    except Exception as e:
+        print(f"Resume parsing for onboarding failed: {e}")
+        return jsonify({'error': f'Resume parsing failed: {str(e)}'}), 500
+
 if __name__ == '__main__':
     print("=" * 50)
     print("Initializing RecruitEdge server with Enhanced PDL Search...")
@@ -2422,6 +2535,7 @@ if __name__ == '__main__':
     print("New endpoints:")
     print("- Autocomplete: /api/autocomplete/<type>?query=<text>")
     print("- Job title enrichment: /api/enrich-job-title")
+    print("- Resume parsing for onboarding: /api/parse-resume-onboarding")
     print("=" * 50 + "\n")
     
     app.run(host='0.0.0.0', port=5001, debug=True)

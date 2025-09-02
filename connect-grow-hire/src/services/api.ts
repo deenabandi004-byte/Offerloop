@@ -1,5 +1,5 @@
 // src/services/api.ts
-const API_BASE_URL = 'http://192.168.1.237:5001/api';  // ✅ Fixed: Use the correct server IP
+const API_BASE_URL = '/api';  // Use relative URL to avoid CORS issues
 
 export interface ContactSearchRequest {
   jobTitle: string;
@@ -245,6 +245,31 @@ class ApiService {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Parse resume for onboarding autofill
+   */
+  async parseResumeForOnboarding(resumeFile: File): Promise<{
+    firstName: string;
+    lastName: string;
+    university: string;
+    graduationYear: string;
+    fieldOfStudy: string;
+    success: boolean;
+  }> {
+    const formData = new FormData();
+    formData.append('resume', resumeFile);
+    
+    formData.append('auth_user', 'user');
+    formData.append('auth_pass', '11392b6455e6b26db98ceb44de16af8b');
+
+    console.log(`📄 Parsing resume for onboarding: ${resumeFile.name} (${resumeFile.size} bytes)`);
+
+    return this.makeRequest('/parse-resume-onboarding', {
+      method: 'POST',
+      body: formData,
+    });
   }
 }
 

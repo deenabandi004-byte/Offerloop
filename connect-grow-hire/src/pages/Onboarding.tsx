@@ -8,10 +8,11 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
+import { ArrowLeft, Check, ChevronsUpDown, Upload, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import * as z from "zod";
+import { apiService } from "@/services/api";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -624,6 +625,10 @@ const universities = [
 const Onboarding = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isParsingResume, setIsParsingResume] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -633,8 +638,76 @@ const Onboarding = () => {
     },
   });
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        setParseError('Please select a PDF file');
+        return;
+      }
+      setSelectedFile(file);
+      setParseError(null);
+      parseResume(file);
+    }
+  };
+
+  const parseResume = async (file: File) => {
+    setIsParsingResume(true);
+    setParseError(null);
+    
+    console.log('Starting resume parsing for file:', file.name, 'Size:', file.size);
+    
+    try {
+      const parsedData = await apiService.parseResumeForOnboarding(file);
+      
+      console.log('Resume parsing result:', parsedData);
+      
+      if (parsedData.success) {
+        if (parsedData.firstName) {
+          form.setValue('firstName', parsedData.firstName);
+          console.log('Set firstName to:', parsedData.firstName);
+        }
+        if (parsedData.lastName) {
+          form.setValue('lastName', parsedData.lastName);
+          console.log('Set lastName to:', parsedData.lastName);
+        }
+        if (parsedData.university) {
+          form.setValue('university', parsedData.university);
+          console.log('Set university to:', parsedData.university);
+        }
+        
+        const onboardingData = {
+          graduationYear: parsedData.graduationYear,
+          fieldOfStudy: parsedData.fieldOfStudy,
+          resumeParsed: true
+        };
+        localStorage.setItem('onboardingData', JSON.stringify(onboardingData));
+        console.log('Stored parsed data in localStorage:', onboardingData);
+      } else {
+        console.error('Resume parsing failed - success=false');
+        setParseError('Failed to parse resume. You can continue filling out the form manually.');
+      }
+      
+    } catch (error) {
+      console.error('Resume parsing failed with error:', error);
+      setParseError(`Failed to parse resume: ${error instanceof Error ? error.message : 'Unknown error'}. You can continue filling out the form manually.`);
+    } finally {
+      setIsParsingResume(false);
+    }
+  };
+
   const onSubmit = (data: FormData) => {
     console.log("Form submitted:", data);
+    
+    const existingData = JSON.parse(localStorage.getItem('onboardingData') || '{}');
+    const updatedData = {
+      ...existingData,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      university: data.university,
+    };
+    localStorage.setItem('onboardingData', JSON.stringify(updatedData));
+    
     // Navigate to academics onboarding page
     navigate("/onboarding/academics");
   };
@@ -661,6 +734,57 @@ const Onboarding = () => {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Resume Upload Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Speed up your profile (Optional)</h3>
+                <p className="text-sm text-muted-foreground">Upload your resume to automatically fill out your profile</p>
+                
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
+                  <div className="text-center">
+                    {isParsingResume ? (
+                      <div className="flex flex-col items-center">
+                        <FileText className="mx-auto h-12 w-12 text-blue-500 animate-pulse" />
+                        <div className="mt-4">
+                          <p className="text-sm font-medium text-blue-600">Parsing your resume...</p>
+                          <p className="text-xs text-muted-foreground mt-1">This may take a few seconds</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                        <div className="mt-4">
+                          <label htmlFor="resume-upload" className="cursor-pointer">
+                            <span className="text-sm font-medium text-primary hover:text-primary/80">
+                              Upload your resume
+                            </span>
+                            <input
+                              id="resume-upload"
+                              type="file"
+                              accept=".pdf"
+                              onChange={handleFileChange}
+                              className="hidden"
+                            />
+                          </label>
+                          <p className="text-xs text-muted-foreground mt-1">PDF files only</p>
+                        </div>
+                      </>
+                    )}
+                    
+                    {selectedFile && !isParsingResume && (
+                      <div className="mt-2 text-sm text-green-600">
+                        ✓ {selectedFile.name} processed
+                      </div>
+                    )}
+                    
+                    {parseError && (
+                      <div className="mt-2 text-sm text-red-600">
+                        {parseError}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">What's your name?</h3>
                 <div className="grid grid-cols-2 gap-4">

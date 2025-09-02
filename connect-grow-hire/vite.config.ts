@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const NGROK_HOST = env.NGROK_HOST || '' // e.g. 2f8651b5bfbe.ngrok-free.app
 
-  const allowed = ['localhost', '127.0.0.1', 'd33d83bb2e38.ngrok-free.app']
+  const allowed = ['localhost', '127.0.0.1', 'd33d83bb2e38.ngrok-free.app', 'onboarding-tracker-app-tunnel-a01eetui.devinapps.com']
   if (NGROK_HOST) allowed.push(NGROK_HOST)
 
   return {
@@ -20,6 +20,13 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 8080,
       allowedHosts: allowed,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:5001',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
       // Optional: smoother HMR over https/ngrok
       hmr: NGROK_HOST
         ? { protocol: 'wss', host: NGROK_HOST, clientPort: 443 }
