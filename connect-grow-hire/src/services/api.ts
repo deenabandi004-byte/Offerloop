@@ -1,5 +1,5 @@
 // src/services/api.ts
-const API_BASE_URL = 'https://onboarding-tracker-app-tunnel-wieroemk.devinapps.com/api';  // Clean URL without embedded credentials
+const API_BASE_URL = '/api';  // Use relative URL to avoid CORS issues
 
 export interface ContactSearchRequest {
   jobTitle: string;
@@ -266,13 +266,8 @@ class ApiService {
 
     console.log(`📄 Parsing resume for onboarding: ${resumeFile.name} (${resumeFile.size} bytes)`);
 
-    const headers = {
-      'Authorization': 'Basic ' + btoa('user:5212b22bd05002159bacc5a8ae60a087')
-    };
-
     return this.makeRequest('/parse-resume-onboarding', {
       method: 'POST',
-      headers,
       body: formData,
     });
   }
