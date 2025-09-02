@@ -2474,11 +2474,20 @@ def parse_resume_onboarding():
         from flask import make_response
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization")
+        response.headers.add('Access-Control-Allow-Headers', "Content-Type")
         response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS")
         return response
     
     try:
+        auth_user = request.form.get('auth_user')
+        auth_pass = request.form.get('auth_pass')
+        
+        if not auth_user or not auth_pass:
+            return jsonify({'error': 'Authentication required'}), 401
+            
+        if auth_user != 'user' or auth_pass != '11392b6455e6b26db98ceb44de16af8b':
+            return jsonify({'error': 'Invalid credentials'}), 401
+            
         if 'resume' not in request.files:
             return jsonify({'error': 'No resume file provided'}), 400
         
