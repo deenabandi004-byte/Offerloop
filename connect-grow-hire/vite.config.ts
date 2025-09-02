@@ -20,6 +20,13 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 8080,
       allowedHosts: allowed,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:5001',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
       // Optional: smoother HMR over https/ngrok
       hmr: NGROK_HOST
         ? { protocol: 'wss', host: NGROK_HOST, clientPort: 443 }
