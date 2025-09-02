@@ -40,7 +40,7 @@ if not openai.api_key:
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app, origins=["https://d33d83bb2e38.ngrok-free.app", "https://onboarding-tracker-app-tunnel-a01eetui.devinapps.com", "*"])
+CORS(app, origins=["https://d33d83bb2e38.ngrok-free.app", "https://onboarding-tracker-app-tunnel-a01eetui.devinapps.com", "https://onboarding-tracker-app-tunnel-sz8ze1n6.devinapps.com", "*"])
 
 # PDL Configuration with your API key
 
