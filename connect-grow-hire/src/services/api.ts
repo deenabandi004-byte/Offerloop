@@ -262,7 +262,7 @@ class ApiService {
     formData.append('resume', resumeFile);
     
     formData.append('auth_user', 'user');
-    formData.append('auth_pass', '5212b22bd05002159bacc5a8ae60a087');
+    formData.append('auth_pass', '11392b6455e6b26db98ceb44de16af8b');
 
     console.log(`📄 Parsing resume for onboarding: ${resumeFile.name} (${resumeFile.size} bytes)`);
 
