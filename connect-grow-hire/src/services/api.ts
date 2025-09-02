@@ -1,5 +1,5 @@
 // src/services/api.ts
-const API_BASE_URL = 'https://user:5212b22bd05002159bacc5a8ae60a087@onboarding-tracker-app-tunnel-wieroemk.devinapps.com/api';  // ✅ Fixed: Use correct backend tunnel domain
+const API_BASE_URL = 'https://onboarding-tracker-app-tunnel-wieroemk.devinapps.com/api';  // ✅ Fixed: Remove embedded credentials from URL
 
 export interface ContactSearchRequest {
   jobTitle: string;
@@ -262,7 +262,7 @@ class ApiService {
     formData.append('resume', resumeFile);
     
     formData.append('auth_user', 'user');
-    formData.append('auth_pass', '11392b6455e6b26db98ceb44de16af8b');
+    formData.append('auth_pass', '5212b22bd05002159bacc5a8ae60a087');
 
     console.log(`📄 Parsing resume for onboarding: ${resumeFile.name} (${resumeFile.size} bytes)`);
 
