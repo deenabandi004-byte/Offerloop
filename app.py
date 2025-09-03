@@ -1,7 +1,7 @@
 # app.py
 # RECRUITEDGE COMPLETE IMPLEMENTATION - PDL OPTIMIZED WITH ENHANCED SEARCH
 # Based on your product specifications and PDL best practices
-import openai
+
 import os
 import json
 import requests
@@ -23,18 +23,26 @@ from werkzeug.utils import secure_filename
 import traceback
 
 from dotenv import load_dotenv
+from openai import OpenAI   # new SDK import
 
-# Load environment variables
+# Load environment variables from .env
 load_dotenv()
 
+# Grab API key
+API_KEY = os.getenv("OPENAI_API_KEY")
+if not API_KEY:
+    raise RuntimeError("OPENAI_API_KEY is missing. Check your .env file formatting.")
+
+# Initialize OpenAI client
+client = OpenAI(api_key=API_KEY)
 
 # Replace them with these lines:
 PEOPLE_DATA_LABS_API_KEY = os.getenv('PEOPLE_DATA_LABS_API_KEY')
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Add this validation
 if not PEOPLE_DATA_LABS_API_KEY:
     print("WARNING: PEOPLE_DATA_LABS_API_KEY not found in .env file")
+
 if not openai.api_key:
     print("WARNING: OPENAI_API_KEY not found in .env file")
 
