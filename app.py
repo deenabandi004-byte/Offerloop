@@ -29,12 +29,10 @@ from openai import OpenAI   # new SDK import
 load_dotenv()
 
 # Grab API key
-API_KEY = os.getenv("OPENAI_API_KEY")
-if not API_KEY:
-    raise RuntimeError("OPENAI_API_KEY is missing. Check your .env file formatting.")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Initialize OpenAI client
-client = OpenAI(api_key=API_KEY)
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Replace them with these lines:
 PEOPLE_DATA_LABS_API_KEY = os.getenv('PEOPLE_DATA_LABS_API_KEY')
@@ -43,7 +41,7 @@ PEOPLE_DATA_LABS_API_KEY = os.getenv('PEOPLE_DATA_LABS_API_KEY')
 if not PEOPLE_DATA_LABS_API_KEY:
     print("WARNING: PEOPLE_DATA_LABS_API_KEY not found in .env file")
 
-if not openai.api_key:
+if not OPENAI_API_KEY:
     print("WARNING: OPENAI_API_KEY not found in .env file")
 
 # Initialize Flask app
@@ -879,7 +877,7 @@ Customize the email by:
 - Keep [Your Name], [Your year/major], [Your University], and [Your Full Name] as placeholders for the sender to fill in
 """
         
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at writing personalized networking emails for Advanced tier. Keep emails warm, professional, and follow the template exactly."},
@@ -964,7 +962,7 @@ Customize the email by:
 - For relating judge which ones will make the outreach more personable and for interests make it specific where possible and show genuine interest
 """
         
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at writing personalized networking emails for Pro tier. Keep emails concise, warm, and professional with natural similarity integration."},
@@ -1089,7 +1087,7 @@ Resume text:
 {clean_text}
 """
         
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at extracting structured information from resumes. Return only valid JSON with no extra text."},
@@ -1259,7 +1257,7 @@ Contact Background:
 Generate ONE sentence highlighting the most relevant similarity:
 """
         
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at finding meaningful connections between people's backgrounds. Write concise, specific similarities."},
@@ -1831,8 +1829,9 @@ def validate_api_keys():
     if not PEOPLE_DATA_LABS_API_KEY or PEOPLE_DATA_LABS_API_KEY == 'your_pdl_api_key':
         missing_keys.append('PEOPLE_DATA_LABS_API_KEY')
     
-    if not openai.api_key or 'your_openai_api_key' in openai.api_key:
+    if not OPENAI_API_KEY or 'your_openai_api_key' in OPENAI_API_KEY:
         missing_keys.append('OPENAI_API_KEY')
+
     
     if missing_keys:
         print(f"WARNING: Missing API keys: {', '.join(missing_keys)}")
