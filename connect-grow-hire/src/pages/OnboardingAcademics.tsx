@@ -41,15 +41,31 @@ const OnboardingAcademics = () => {
   const resumeData = getResumeData();
   
   const extractGraduationYear = (yearData: string | undefined): string => {
-    if (!yearData) return "";
+    if (!yearData || typeof yearData !== 'string') return "";
     
+    // First, check if it's already a 4-digit year
+    if (/^\d{4}$/.test(yearData.trim())) {
+      return yearData.trim();
+    }
+    
+    // Try to extract a 4-digit year from the string
     const yearMatch = yearData.match(/\b(19|20)\d{2}\b/);
     if (yearMatch) {
       return yearMatch[0];
     }
     
-    if (/^\d{4}$/.test(yearData)) {
-      return yearData;
+    // Check for class year indicators (e.g., "Senior" -> estimate year)
+    const currentYear = new Date().getFullYear();
+    const lowerYear = yearData.toLowerCase();
+    
+    if (lowerYear.includes('senior') || lowerYear.includes('fourth')) {
+      return String(currentYear + 1);
+    } else if (lowerYear.includes('junior') || lowerYear.includes('third')) {
+      return String(currentYear + 2);
+    } else if (lowerYear.includes('sophomore') || lowerYear.includes('second')) {
+      return String(currentYear + 3);
+    } else if (lowerYear.includes('freshman') || lowerYear.includes('first')) {
+      return String(currentYear + 4);
     }
     
     return "";
@@ -144,7 +160,7 @@ const OnboardingAcademics = () => {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigate("/onboarding/resume-upload")}
+        onClick={() => navigate("/onboarding")}
         className="absolute top-6 left-6 flex items-center gap-2"
       >
         <ArrowLeft className="h-4 w-4" />
