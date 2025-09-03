@@ -51,13 +51,22 @@ const OnboardingResumeUpload = () => {
         throw new Error(result.error || 'Failed to parse resume');
       }
 
-      localStorage.setItem('resumeData', JSON.stringify(result.data));
+      // Store the parsed data in localStorage with the correct structure
+      const resumeData = {
+        name: result.data.name || '',
+        year: result.data.year || '',
+        major: result.data.major || '',
+        university: result.data.university || ''
+      };
+      
+      localStorage.setItem('resumeData', JSON.stringify(resumeData));
 
       toast({
         title: "Resume Uploaded Successfully!",
         description: "Your information has been extracted and will pre-fill the forms.",
       });
 
+      // Navigate to the main onboarding page
       navigate("/onboarding");
 
     } catch (err) {
@@ -74,6 +83,7 @@ const OnboardingResumeUpload = () => {
   };
 
   const handleSkip = () => {
+    // Clear any existing resume data when skipping
     localStorage.removeItem('resumeData');
     navigate("/onboarding");
   };

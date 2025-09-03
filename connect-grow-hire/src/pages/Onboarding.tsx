@@ -636,11 +636,32 @@ const Onboarding = () => {
 
   const resumeData = getResumeData();
   
+  // Better name parsing
+  const parseName = (fullName: string | undefined) => {
+    if (!fullName || typeof fullName !== 'string') {
+      return { firstName: "", lastName: "" };
+    }
+    
+    const nameParts = fullName.trim().split(' ');
+    if (nameParts.length === 0) {
+      return { firstName: "", lastName: "" };
+    } else if (nameParts.length === 1) {
+      return { firstName: nameParts[0], lastName: "" };
+    } else {
+      return { 
+        firstName: nameParts[0], 
+        lastName: nameParts.slice(1).join(' ')
+      };
+    }
+  };
+  
+  const { firstName, lastName } = parseName(resumeData?.name);
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      firstName: resumeData?.name?.split(' ')[0] || "",
-      lastName: resumeData?.name?.split(' ').slice(1).join(' ') || "",
+      firstName: firstName,
+      lastName: lastName,
       university: resumeData?.university || "",
     },
   });
