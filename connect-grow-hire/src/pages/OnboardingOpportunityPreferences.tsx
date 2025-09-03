@@ -14,6 +14,7 @@ import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import * as z from "zod";
+import { updateProfile } from "@/hooks/useProfile";
 
 const formSchema = z.object({
   industries: z.array(z.string()).optional(),
@@ -46,7 +47,7 @@ const OnboardingOpportunityPreferences = () => {
       finalIndustries[finalIndustries.indexOf("Other")] = customIndustry;
     }
     console.log("Opportunity preferences form submitted:", { ...data, industries: finalIndustries });
-    // Navigate to next onboarding step
+    updateProfile({ industries: finalIndustries, jobRole: data.customJobRole || data.jobRole || '' });
     navigate("/onboarding/location-preferences");
   };
 

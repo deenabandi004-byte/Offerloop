@@ -13,6 +13,7 @@ import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import * as z from "zod";
+import { updateProfile } from "@/hooks/useProfile";
 
 const formSchema = z.object({
   graduationMonth: z.string().optional(),
@@ -84,7 +85,13 @@ const OnboardingAcademics = () => {
 
   const onSubmit = (data: FormData) => {
     console.log("Academics form submitted:", data);
-    // Navigate to next onboarding step
+    const degree = data.degreeType === 'other' ? (data.customDegree || '') : (data.degreeType || '');
+    updateProfile({
+      graduationMonth: data.graduationMonth || '',
+      graduationYear: data.graduationYear || '',
+      fieldOfStudy: data.fieldOfStudy || '',
+      degreeType: degree,
+    });
     navigate("/onboarding/opportunity-preferences");
   };
 

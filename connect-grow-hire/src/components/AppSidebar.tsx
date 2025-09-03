@@ -12,6 +12,8 @@ import {
   ChevronDown
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { getProfile } from "@/hooks/useProfile";
 
 import {
   Sidebar,
@@ -50,6 +52,10 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const { user } = useAuth();
+  const profile = getProfile();
+  const displayName = user?.name?.trim() || [profile.firstName, profile.lastName].filter(Boolean).join(' ') || '';
+  const initial = (displayName || 'U').trim().charAt(0).toUpperCase();
 
   const isActive = (path: string) => currentPath === path;
   const isSettingsActive = settingsItems.some(item => isActive(item.url));
@@ -175,11 +181,11 @@ export function AppSidebar() {
           {/* User Profile */}
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
-              <AvatarFallback>N</AvatarFallback>
+              <AvatarFallback>{initial}</AvatarFallback>
             </Avatar>
             {state !== "collapsed" && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Nicholas</p>
+                <p className="text-sm font-medium truncate">{displayName || 'Your profile'}</p>
               </div>
             )}
           </div>

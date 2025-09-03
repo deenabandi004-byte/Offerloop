@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Upload, Check, X } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { updateProfile } from "@/hooks/useProfile";
 
 const OnboardingResumeUpload = () => {
   const navigate = useNavigate();
@@ -60,6 +61,15 @@ const OnboardingResumeUpload = () => {
       };
       
       localStorage.setItem('resumeData', JSON.stringify(resumeData));
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        updateProfile({
+          resume: { name: selectedFile.name, dataUrl }
+        });
+      };
+      reader.readAsDataURL(selectedFile);
 
       toast({
         title: "Resume Uploaded Successfully!",
