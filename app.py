@@ -21,6 +21,8 @@ from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import traceback
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 from dotenv import load_dotenv
 from openai import OpenAI   # new SDK import
@@ -43,6 +45,16 @@ if not PEOPLE_DATA_LABS_API_KEY:
 
 if not OPENAI_API_KEY:
     print("WARNING: OPENAI_API_KEY not found in .env file")
+
+# Initialize Firebase
+try:
+    cred = credentials.Certificate('./firebase-creds.json')
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    print("✅ Firebase initialized successfully")
+except Exception as e:
+    print(f"❌ Firebase initialization failed: {e}")
+    db = None
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -153,7 +165,7 @@ def clean_company_name(company):
                 'api_key': PEOPLE_DATA_LABS_API_KEY,
                 'name': company
             },
-            timeout=10
+            timeout=30
         )
         
         if response.status_code == 200:
@@ -179,7 +191,7 @@ def clean_location_name(location):
                 'api_key': PEOPLE_DATA_LABS_API_KEY,
                 'location': location
             },
-            timeout=10
+            timeout=30
         )
         
         if response.status_code == 200:
@@ -209,7 +221,7 @@ def enrich_job_title_with_pdl(job_title):
                 'api_key': PEOPLE_DATA_LABS_API_KEY,
                 'job_title': job_title
             },
-            timeout=10
+            timeout=30
         )
         
         if response.status_code == 200:
@@ -268,7 +280,7 @@ def get_autocomplete_suggestions(query, data_type='job_title'):
                 'text': query,
                 'size': 10
             },
-            timeout=15
+            timeout=30
         )
         
         print(f"PDL autocomplete response: {response.status_code}")
@@ -636,7 +648,7 @@ def execute_pdl_search(elasticsearch_query, search_type):
         response = requests.get(
             f"{PDL_BASE_URL}/person/search",
             params=search_params,
-            timeout=15
+            timeout=45
         )
         
         print(f"{search_type.title()} search response: {response.status_code}")
@@ -1938,12 +1950,14 @@ def run_basic_tier_enhanced(job_title, company, location, user_email=None):
         for contact in basic_contacts:
             writer.writerow(contact)
         
+        csv_content = csv_file.getvalue()
+        
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         user_prefix = user_email.split('@')[0] if user_email else 'user'
         csv_filename = f"RecruitEdge_Basic_{user_prefix}_{timestamp}.csv"
         
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_file.getvalue())
+            f.write(csv_content)
         
         log_api_usage('basic', user_email, len(basic_contacts))
         
@@ -1951,6 +1965,7 @@ def run_basic_tier_enhanced(job_title, company, location, user_email=None):
         return {
             'contacts': basic_contacts,
             'csv_file': csv_filename,
+            'csv_content': csv_content,
             'tier': 'basic',
             'user_email': user_email,
             'contact_count': len(basic_contacts)
@@ -2000,11 +2015,13 @@ def run_advanced_tier_enhanced(job_title, company, location, user_email=None):
         for contact in advanced_contacts:
             writer.writerow(contact)
         
+        csv_content = csv_file.getvalue()
+        
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         csv_filename = f"RecruitEdge_Advanced_{timestamp}.csv"
         
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_file.getvalue())
+            f.write(csv_content)
         
         log_api_usage('advanced', user_email, len(advanced_contacts), len(advanced_contacts))
         
@@ -2012,6 +2029,7 @@ def run_advanced_tier_enhanced(job_title, company, location, user_email=None):
         return {
             'contacts': advanced_contacts,
             'csv_file': csv_filename,
+            'csv_content': csv_content,
             'successful_drafts': successful_drafts,
             'tier': 'advanced',
             'contact_count': len(advanced_contacts)
@@ -2080,11 +2098,13 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
         for contact in pro_contacts:
             writer.writerow(contact)
         
+        csv_content = csv_file.getvalue()
+        
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         csv_filename = f"RecruitEdge_Pro_{timestamp}.csv"
         
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_file.getvalue())
+            f.write(csv_content)
         
         log_api_usage('pro', user_email, len(pro_contacts), len(pro_contacts))
         
@@ -2094,6 +2114,7 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
         return {
             'contacts': pro_contacts,
             'csv_file': csv_filename,
+            'csv_content': csv_content,
             'successful_drafts': successful_drafts,
             'resume_info': resume_info,
             'tier': 'pro',
@@ -2125,7 +2146,7 @@ def startup_checks():
                 'api_key': PEOPLE_DATA_LABS_API_KEY,
                 'query': '{"query":{"bool":{"must":[{"exists":{"field":"emails"}}]}},"size":1}'
             },
-            timeout=10
+            timeout=30
         )
         if test_response.status_code in [200, 402]:
             print("PDL API connection: OK")
@@ -2197,6 +2218,10 @@ def basic_run():
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
         
+        want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
+        if want_json:
+            return jsonify(result)
+        
         return send_file(result['csv_file'], as_attachment=True)
         
     except Exception as e:
@@ -2240,6 +2265,10 @@ def advanced_run():
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
+        
+        want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
+        if want_json:
+            return jsonify(result)
             
         return send_file(result['csv_file'], as_attachment=True)
         
@@ -2306,6 +2335,10 @@ def pro_run():
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
+        
+        want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
+        if want_json:
+            return jsonify(result)
             
         return send_file(result['csv_file'], as_attachment=True)
         
@@ -2413,6 +2446,208 @@ def parse_resume():
     except Exception as e:
         print(f"Resume parsing error: {e}")
         return jsonify({'error': 'Failed to parse resume'}), 500
+
+@app.route('/api/contacts', methods=['GET'])
+def get_contacts():
+    """Get all contacts for a user"""
+    try:
+        user_id = request.args.get('userId')
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        contacts_ref = db.collection('users').document(user_id).collection('contacts')
+        docs = contacts_ref.order_by('createdAt', direction=firestore.Query.DESCENDING).stream()
+        
+        items = []
+        for doc in docs:
+            d = doc.to_dict()
+            d['id'] = doc.id
+            items.append(d)
+        
+        return jsonify({'contacts': items})
+        
+    except Exception as e:
+        print(f"Error getting contacts: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts', methods=['POST'])
+def create_contact():
+    """Create a new contact"""
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+        
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        today = datetime.datetime.now().strftime('%m/%d/%Y')
+        contact = {
+            'firstName': data.get('firstName', ''),
+            'lastName': data.get('lastName', ''),
+            'linkedinUrl': data.get('linkedinUrl', ''),
+            'email': data.get('email', ''),
+            'company': data.get('company', ''),
+            'jobTitle': data.get('jobTitle', ''),
+            'college': data.get('college', ''),
+            'location': data.get('location', ''),
+            'firstContactDate': today,
+            'status': 'Not Contacted',
+            'lastContactDate': today,
+            'userId': user_id,
+            'createdAt': today,
+        }
+        
+        doc_ref = db.collection('users').document(user_id).collection('contacts').add(contact)
+        contact['id'] = doc_ref[1].id
+        
+        return jsonify({'contact': contact}), 201
+        
+    except Exception as e:
+        print(f"Error creating contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts/<contact_id>', methods=['PUT'])
+def update_contact(contact_id):
+    """Update an existing contact"""
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+        
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        ref = db.collection('users').document(user_id).collection('contacts').document(contact_id)
+        doc = ref.get()
+        
+        if not doc.exists:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        update = {k: data[k] for k in ['firstName', 'lastName', 'linkedinUrl', 'email', 'company', 'jobTitle', 'college', 'location'] if k in data}
+        
+        if 'status' in data:
+            current = doc.to_dict()
+            if current.get('status') != data['status']:
+                update['lastContactDate'] = datetime.datetime.now().strftime('%m/%d/%Y')
+            update['status'] = data['status']
+        
+        ref.update(update)
+        out = ref.get().to_dict()
+        out['id'] = contact_id
+        
+        return jsonify({'contact': out})
+        
+    except Exception as e:
+        print(f"Error updating contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts/<contact_id>', methods=['DELETE'])
+def delete_contact(contact_id):
+    """Delete a contact"""
+    try:
+        user_id = request.args.get('userId')
+        
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        ref = db.collection('users').document(user_id).collection('contacts').document(contact_id)
+        
+        if not ref.get().exists:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        ref.delete()
+        
+        return jsonify({'message': 'Contact deleted successfully'})
+        
+    except Exception as e:
+        print(f"Error deleting contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts/bulk', methods=['POST'])
+def bulk_create_contacts():
+    """Bulk create contacts with deduplication"""
+    try:
+        data = request.get_json() or {}
+        user_id = (data.get('userId') or '').strip()
+        raw_contacts = data.get('contacts') or []
+        
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+
+        contacts_ref = db.collection('users').document(user_id).collection('contacts')
+        created = 0
+        skipped = 0
+        created_contacts = []
+        today = datetime.datetime.now().strftime('%m/%d/%Y')
+
+        for rc in raw_contacts:
+            first_name = (rc.get('FirstName') or rc.get('firstName') or '').strip()
+            last_name = (rc.get('LastName') or rc.get('lastName') or '').strip()
+            email = (rc.get('Email') or rc.get('WorkEmail') or rc.get('PersonalEmail') or rc.get('email') or '').strip()
+            linkedin = (rc.get('LinkedIn') or rc.get('linkedinUrl') or '').strip()
+            company = (rc.get('Company') or rc.get('company') or '').strip()
+            job_title = (rc.get('Title') or rc.get('jobTitle') or '').strip()
+            college = (rc.get('College') or rc.get('college') or '').strip()
+            city = (rc.get('City') or '').strip()
+            state = (rc.get('State') or '').strip()
+            location = (rc.get('location') or ', '.join([v for v in [city, state] if v]) or '').strip()
+
+            is_dup = False
+            if email:
+                dup_q = contacts_ref.where('email', '==', email).limit(1).stream()
+                is_dup = any(True for _ in dup_q)
+            if not is_dup and linkedin:
+                dup_q2 = contacts_ref.where('linkedinUrl', '==', linkedin).limit(1).stream()
+                is_dup = any(True for _ in dup_q2)
+
+            if is_dup:
+                skipped += 1
+                continue
+
+            doc_data = {
+                'firstName': first_name,
+                'lastName': last_name,
+                'linkedinUrl': linkedin,
+                'email': email,
+                'company': company,
+                'jobTitle': job_title,
+                'college': college,
+                'location': location,
+                'firstContactDate': today,
+                'status': 'Not Contacted',
+                'lastContactDate': today,
+                'userId': user_id,
+                'createdAt': today,
+            }
+            doc_ref = contacts_ref.add(doc_data)[1]
+            doc_data['id'] = doc_ref.id
+            created_contacts.append(doc_data)
+            created += 1
+
+        return jsonify({
+            'created': created,
+            'skipped': skipped,
+            'contacts': created_contacts
+        }), 201
+
+    except Exception as e:
+        print(f"Bulk create error: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 # Frontend routes
 @app.route('/')
