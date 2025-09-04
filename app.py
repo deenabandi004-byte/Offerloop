@@ -165,7 +165,7 @@ def clean_company_name(company):
                 'api_key': PEOPLE_DATA_LABS_API_KEY,
                 'name': company
             },
-            timeout=10
+            timeout=30
         )
         
         if response.status_code == 200:
@@ -191,7 +191,7 @@ def clean_location_name(location):
                 'api_key': PEOPLE_DATA_LABS_API_KEY,
                 'location': location
             },
-            timeout=10
+            timeout=30
         )
         
         if response.status_code == 200:
@@ -221,7 +221,7 @@ def enrich_job_title_with_pdl(job_title):
                 'api_key': PEOPLE_DATA_LABS_API_KEY,
                 'job_title': job_title
             },
-            timeout=10
+            timeout=30
         )
         
         if response.status_code == 200:
@@ -280,7 +280,7 @@ def get_autocomplete_suggestions(query, data_type='job_title'):
                 'text': query,
                 'size': 10
             },
-            timeout=15
+            timeout=30
         )
         
         print(f"PDL autocomplete response: {response.status_code}")
@@ -648,7 +648,7 @@ def execute_pdl_search(elasticsearch_query, search_type):
         response = requests.get(
             f"{PDL_BASE_URL}/person/search",
             params=search_params,
-            timeout=15
+            timeout=45
         )
         
         print(f"{search_type.title()} search response: {response.status_code}")
@@ -2146,7 +2146,7 @@ def startup_checks():
                 'api_key': PEOPLE_DATA_LABS_API_KEY,
                 'query': '{"query":{"bool":{"must":[{"exists":{"field":"emails"}}]}},"size":1}'
             },
-            timeout=10
+            timeout=30
         )
         if test_response.status_code in [200, 402]:
             print("PDL API connection: OK")
