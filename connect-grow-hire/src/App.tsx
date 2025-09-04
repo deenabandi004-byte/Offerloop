@@ -17,6 +17,7 @@ import OnboardingLocationPreferences from "./pages/OnboardingLocationPreferences
 import OnboardingSignUp from "./pages/OnboardingSignUp";
 import AboutUs from "./pages/AboutUs";
 import Contact from "./pages/Contact";
+import ContactDirectory from "./pages/ContactDirectory";
 import ContactUs from "./pages/ContactUs";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
@@ -50,6 +51,7 @@ const App: React.FC = () => {
               <Route path="/onboarding/signup" element={<OnboardingSignUp />} />
               <Route path="/about" element={<AboutUs />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/contact-directory" element={<ContactDirectory />} />
               <Route path="/contact-us" element={<ContactUs />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
