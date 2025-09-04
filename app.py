@@ -24,6 +24,8 @@ import traceback
 
 from dotenv import load_dotenv
 from openai import OpenAI   # new SDK import
+import sqlite3
+from contextlib import contextmanager
 
 # Load environment variables from .env
 load_dotenv()
@@ -47,6 +49,119 @@ if not OPENAI_API_KEY:
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app, origins=["https://d33d83bb2e38.ngrok-free.app", "*"])
+
+DB_PATH = os.path.join(os.path.dirname(__file__), 'contacts.db')
+
+@contextmanager
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+def init_db():
+    with get_db() as db:
+        db.execute("""
+        CREATE TABLE IF NOT EXISTS contacts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_email TEXT NOT NULL,
+          first_name TEXT,
+          last_name TEXT,
+          linkedin TEXT,
+          email TEXT,
+          title TEXT,
+          company TEXT,
+          city TEXT,
+          state TEXT,
+          college TEXT,
+          phone TEXT,
+          personal_email TEXT,
+          work_email TEXT,
+          social_profiles TEXT,
+          education_top TEXT,
+          volunteer_history TEXT,
+          work_summary TEXT,
+          grp TEXT,
+          hometown TEXT,
+          similarity TEXT,
+          status TEXT DEFAULT 'Not Contacted',
+          first_contact_date TEXT,
+          last_contact_date TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+        db.execute("CREATE INDEX IF NOT EXISTS idx_contacts_user_email ON contacts(user_email);")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_contacts_linkedin ON contacts(linkedin);")
+        db.commit()
+
+def normalize_contact(c: dict) -> dict:
+    today = datetime.date.today().strftime("%m/%d/%Y")
+    return {
+      'FirstName': c.get('FirstName',''),
+      'LastName': c.get('LastName',''),
+      'LinkedIn': c.get('LinkedIn',''),
+      'Email': c.get('Email',''),
+      'Title': c.get('Title',''),
+      'Company': c.get('Company',''),
+      'City': c.get('City',''),
+      'State': c.get('State',''),
+      'College': c.get('College',''),
+      'Phone': c.get('Phone',''),
+      'PersonalEmail': c.get('PersonalEmail',''),
+      'WorkEmail': c.get('WorkEmail',''),
+      'SocialProfiles': c.get('SocialProfiles',''),
+      'EducationTop': c.get('EducationTop',''),
+      'VolunteerHistory': c.get('VolunteerHistory',''),
+      'WorkSummary': c.get('WorkSummary',''),
+      'Group': c.get('Group',''),
+      'Hometown': c.get('Hometown',''),
+      'Similarity': c.get('Similarity',''),
+      'Status': c.get('Status','Not Contacted'),
+      'FirstContactDate': c.get('FirstContactDate', today),
+      'LastContactDate': c.get('LastContactDate', today),
+    }
+
+def save_contacts_sqlite(user_email: str, contacts: list) -> int:
+    if not user_email or not contacts:
+        return 0
+    rows = [normalize_contact(c) for c in contacts]
+    with get_db() as db:
+        cur = db.cursor()
+        for r in rows:
+            existing = cur.execute("""
+              SELECT id FROM contacts WHERE user_email=? AND
+                (linkedin=? AND linkedin<>'') OR (email=? AND email<>'')
+            """, (user_email, r['LinkedIn'], r['Email'])).fetchone()
+            if existing:
+                continue
+            cur.execute("""
+              INSERT INTO contacts (
+                user_email, first_name, last_name, linkedin, email, title, company, city, state, college,
+                phone, personal_email, work_email, social_profiles, education_top, volunteer_history,
+                work_summary, grp, hometown, similarity, status, first_contact_date, last_contact_date
+              ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, (
+              user_email, r['FirstName'], r['LastName'], r['LinkedIn'], r['Email'], r['Title'], r['Company'],
+              r['City'], r['State'], r['College'], r['Phone'], r['PersonalEmail'], r['WorkEmail'],
+              r['SocialProfiles'], r['EducationTop'], r['VolunteerHistory'], r['WorkSummary'],
+              r['Group'], r['Hometown'], r['Similarity'], r['Status'], r['FirstContactDate'], r['LastContactDate']
+            ))
+        db.commit()
+        return cur.rowcount or 0
+
+def list_contacts_sqlite(user_email: str) -> list:
+    if not user_email:
+        return []
+    with get_db() as db:
+        rows = db.execute("""
+          SELECT id, user_email, first_name, last_name, linkedin, email, title, company, city, state,
+                 college, phone, personal_email, work_email, social_profiles, education_top, volunteer_history,
+                 work_summary, grp, hometown, similarity, status, first_contact_date, last_contact_date, created_at
+          FROM contacts WHERE user_email=? ORDER BY created_at DESC
+        """, (user_email,)).fetchall()
+        return [dict(r) for r in rows]
 
 # PDL Configuration with your API key
 
@@ -2113,6 +2228,13 @@ def startup_checks():
     """Run startup validation checks"""
     print("Running startup checks...")
     
+    # Initialize database
+    try:
+        init_db()
+        print("SQLite database initialized: OK")
+    except Exception as e:
+        print(f"SQLite database initialization: FAILED - {e}")
+    
     if not validate_api_keys():
         print("WARNING: Some API keys are missing or invalid")
     
@@ -2160,6 +2282,21 @@ def health():
         }
     })
 
+@app.route('/api/directory/contacts', methods=['GET'])
+def get_directory_contacts():
+    user_email = (request.args.get('userEmail') or '').strip()
+    return jsonify({'contacts': list_contacts_sqlite(user_email)})
+
+@app.route('/api/directory/contacts', methods=['POST'])
+def post_directory_contacts():
+    data = request.get_json(silent=True) or {}
+    user_email = (data.get('userEmail') or '').strip()
+    contacts = data.get('contacts') or []
+    if not isinstance(contacts, list):
+        return jsonify({'error': 'contacts must be an array'}), 400
+    saved = save_contacts_sqlite(user_email, contacts)
+    return jsonify({'saved': saved})
+
 @app.route('/api/basic-run', methods=['POST'])
 def basic_run():
     """Enhanced Basic endpoint with validation and logging - FIXED to handle form data"""
@@ -2197,6 +2334,43 @@ def basic_run():
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
         
+        # Check if we should save to directory
+        save_flag = False
+        if request.is_json:
+            data = request.json or {}
+            save_flag = bool(data.get('saveToDirectory'))
+        else:
+            save_flag = (request.form.get('saveToDirectory') == 'true')
+
+        if save_flag and user_email:
+            contacts = result.get('contacts', [])
+            if not contacts:
+                # Fallback: parse from CSV if result doesn't include contacts
+                try:
+                    parsed = []
+                    with open(result['csv_file'], newline='', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            parsed.append({
+                                'FirstName': row.get('FirstName') or row.get('First Name',''),
+                                'LastName': row.get('LastName') or row.get('Last Name',''),
+                                'LinkedIn': row.get('LinkedIn') or row.get('LinkedIn URL',''),
+                                'Email': row.get('Email') or row.get('Email Address',''),
+                                'Title': row.get('Title') or row.get('Job Title',''),
+                                'Company': row.get('Company',''),
+                                'City': row.get('City',''),
+                                'State': row.get('State',''),
+                                'College': row.get('College',''),
+                            })
+                    contacts = parsed
+                except Exception as e:
+                    print(f"Warning: failed to parse contacts from CSV for save: {e}")
+            try:
+                saved = save_contacts_sqlite(user_email, contacts)
+                print(f"Saved {saved} contacts to directory for {user_email}")
+            except Exception as e:
+                print(f"Warning: failed to save directory contacts: {e}")
+
         return send_file(result['csv_file'], as_attachment=True)
         
     except Exception as e:
@@ -2241,6 +2415,43 @@ def advanced_run():
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
             
+        # Check if we should save to directory
+        save_flag = False
+        if request.is_json:
+            data = request.json or {}
+            save_flag = bool(data.get('saveToDirectory'))
+        else:
+            save_flag = (request.form.get('saveToDirectory') == 'true')
+
+        if save_flag and user_email:
+            contacts = result.get('contacts', [])
+            if not contacts:
+                # Fallback: parse from CSV if result doesn't include contacts
+                try:
+                    parsed = []
+                    with open(result['csv_file'], newline='', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            parsed.append({
+                                'FirstName': row.get('FirstName') or row.get('First Name',''),
+                                'LastName': row.get('LastName') or row.get('Last Name',''),
+                                'LinkedIn': row.get('LinkedIn') or row.get('LinkedIn URL',''),
+                                'Email': row.get('Email') or row.get('Email Address',''),
+                                'Title': row.get('Title') or row.get('Job Title',''),
+                                'Company': row.get('Company',''),
+                                'City': row.get('City',''),
+                                'State': row.get('State',''),
+                                'College': row.get('College',''),
+                            })
+                    contacts = parsed
+                except Exception as e:
+                    print(f"Warning: failed to parse contacts from CSV for save: {e}")
+            try:
+                saved = save_contacts_sqlite(user_email, contacts)
+                print(f"Saved {saved} contacts to directory for {user_email}")
+            except Exception as e:
+                print(f"Warning: failed to save directory contacts: {e}")
+
         return send_file(result['csv_file'], as_attachment=True)
         
     except Exception as e:
@@ -2307,6 +2518,43 @@ def pro_run():
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
             
+        # Check if we should save to directory
+        save_flag = False
+        if request.is_json:
+            data = request.json or {}
+            save_flag = bool(data.get('saveToDirectory'))
+        else:
+            save_flag = (request.form.get('saveToDirectory') == 'true')
+
+        if save_flag and user_email:
+            contacts = result.get('contacts', [])
+            if not contacts:
+                # Fallback: parse from CSV if result doesn't include contacts
+                try:
+                    parsed = []
+                    with open(result['csv_file'], newline='', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            parsed.append({
+                                'FirstName': row.get('FirstName') or row.get('First Name',''),
+                                'LastName': row.get('LastName') or row.get('Last Name',''),
+                                'LinkedIn': row.get('LinkedIn') or row.get('LinkedIn URL',''),
+                                'Email': row.get('Email') or row.get('Email Address',''),
+                                'Title': row.get('Title') or row.get('Job Title',''),
+                                'Company': row.get('Company',''),
+                                'City': row.get('City',''),
+                                'State': row.get('State',''),
+                                'College': row.get('College',''),
+                            })
+                    contacts = parsed
+                except Exception as e:
+                    print(f"Warning: failed to parse contacts from CSV for save: {e}")
+            try:
+                saved = save_contacts_sqlite(user_email, contacts)
+                print(f"Saved {saved} contacts to directory for {user_email}")
+            except Exception as e:
+                print(f"Warning: failed to save directory contacts: {e}")
+
         return send_file(result['csv_file'], as_attachment=True)
         
     except Exception as e:
@@ -2469,4 +2717,5 @@ if __name__ == '__main__':
     print("- Job title enrichment: /api/enrich-job-title")
     print("=" * 50 + "\n")
     
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    port = int(os.environ.get('PORT', 5001))
+    app.run(host='0.0.0.0', port=port, debug=True)

@@ -1,11 +1,14 @@
 // src/services/api.ts
-const API_BASE_URL = 'http://192.168.1.237:5001/api';  // ✅ Fixed: Use the correct server IP
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  `${window.location.protocol}//${window.location.hostname}:5001/api`;
 
 export interface ContactSearchRequest {
   jobTitle: string;
   company: string;
   location: string;
   uid?: string;
+  saveToDirectory?: boolean;
 }
 
 export interface ProContactSearchRequest extends ContactSearchRequest {
@@ -125,6 +128,7 @@ class ApiService {
       company: request.company,
       location: request.location,
       userEmail: userEmail,
+      saveToDirectory: request.saveToDirectory ?? false,
     };
 
     console.log(`🔵 Basic Search Request:`, backendRequest); // ✅ Added: Debug logging
@@ -155,6 +159,7 @@ class ApiService {
       company: request.company,
       location: request.location,
       userEmail: userEmail,
+      saveToDirectory: request.saveToDirectory ?? false,
     };
 
     console.log(`🟡 Advanced Search Request:`, backendRequest); // ✅ Added: Debug logging
@@ -186,6 +191,7 @@ class ApiService {
     formData.append('location', request.location);
     formData.append('resume', request.resume);
     formData.append('userEmail', userEmail);
+    formData.append('saveToDirectory', String(!!request.saveToDirectory));
 
     console.log(`🟣 Pro Search Request - FormData contents:`); // ✅ Added: Debug logging
     console.log(`  jobTitle: "${request.jobTitle}"`);
@@ -245,6 +251,21 @@ class ApiService {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+  }
+
+  async getDirectoryContacts(): Promise<{contacts: Contact[]}> {
+    const user = localStorage.getItem('user');
+    const email = user ? JSON.parse(user).email : 'anonymous';
+    return this.makeRequest(`/directory/contacts?userEmail=${encodeURIComponent(email)}`);
+  }
+
+  async saveContactsToDirectory(contacts: Contact[]): Promise<{saved:number}> {
+    const user = localStorage.getItem('user');
+    const email = user ? JSON.parse(user).email : 'anonymous';
+    return this.makeRequest(`/directory/contacts`, {
+      method: 'POST',
+      body: JSON.stringify({ userEmail: email, contacts }),
+    });
   }
 }
 

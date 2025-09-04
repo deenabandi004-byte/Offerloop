@@ -30,6 +30,7 @@ export const ContactSearchForm = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [saveToDirectory, setSaveToDirectory] = useState(true);
   const { toast } = useToast();
   const { user, signIn } = useAuth();
   const isSignedIn = !!user;
@@ -92,7 +93,8 @@ export const ContactSearchForm = () => {
         jobTitle: data.jobTitle,
         company: data.company,
         location: data.location,
-        uid: user.email, // Use email as unique identifier
+        uid: user.email,
+        saveToDirectory,
       };
 
       let csvBlob: Blob;
@@ -330,11 +332,11 @@ export const ContactSearchForm = () => {
                     <Check className="h-4 w-4" />
                     Pro Features Active
                   </div>
-                  <p className="text-purple-700 text-sm">
-                    ✓ Resume analysis & similarity matching<br/>
-                    ✓ Smart personalized emails in: <strong>{user?.email}</strong><br/>
-                    ✓ Advanced contact enrichment
-                  </p>
+                  <div className="text-purple-700 text-sm">
+                    <div>✓ Resume analysis & similarity matching</div>
+                    <div>✓ Smart personalized emails in: <strong>{user?.email}</strong></div>
+                    <div>✓ Advanced contact enrichment</div>
+                  </div>
                 </div>
               )}
 
@@ -414,6 +416,19 @@ export const ContactSearchForm = () => {
                   </div>
                 </div>
               )}
+
+              <div className="flex items-center gap-2 mb-4">
+                <input 
+                  id="save-dir" 
+                  type="checkbox" 
+                  checked={saveToDirectory}
+                  onChange={(e) => setSaveToDirectory(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <label htmlFor="save-dir" className="text-sm text-muted-foreground">
+                  Save results to your Contact Directory
+                </label>
+              </div>
 
               <Button type="submit" disabled={isLoading} className="w-full" size="lg">
                 {isLoading ? (
