@@ -25,6 +25,7 @@ import AccountSettings from "./pages/AccountSettings";
 import Pricing from "./pages/Pricing";
 import News from "./pages/News";
 import Dashboard from "./pages/Dashboard";
+import ContactDirectory from "./pages/ContactDirectory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ const App: React.FC = () => {
               <Route path="/account-settings" element={<AccountSettings />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/contact-directory" element={<ContactDirectory />} />
               <Route path="/news" element={<News />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

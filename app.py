@@ -21,6 +21,8 @@ from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import traceback
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 from dotenv import load_dotenv
 from openai import OpenAI   # new SDK import
@@ -43,6 +45,16 @@ if not PEOPLE_DATA_LABS_API_KEY:
 
 if not OPENAI_API_KEY:
     print("WARNING: OPENAI_API_KEY not found in .env file")
+
+# Initialize Firebase
+try:
+    cred = credentials.Certificate('./firebase-creds.json')
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    print("✅ Firebase initialized successfully")
+except Exception as e:
+    print(f"❌ Firebase initialization failed: {e}")
+    db = None
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -2413,6 +2425,133 @@ def parse_resume():
     except Exception as e:
         print(f"Resume parsing error: {e}")
         return jsonify({'error': 'Failed to parse resume'}), 500
+
+@app.route('/api/contacts', methods=['GET'])
+def get_contacts():
+    """Get all contacts for a user"""
+    try:
+        user_id = request.args.get('userId')
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        contacts_ref = db.collection('users').document(user_id).collection('contacts')
+        docs = contacts_ref.order_by('createdAt', direction=firestore.Query.DESCENDING).stream()
+        
+        items = []
+        for doc in docs:
+            d = doc.to_dict()
+            d['id'] = doc.id
+            items.append(d)
+        
+        return jsonify({'contacts': items})
+        
+    except Exception as e:
+        print(f"Error getting contacts: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts', methods=['POST'])
+def create_contact():
+    """Create a new contact"""
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+        
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        today = datetime.datetime.now().strftime('%m/%d/%Y')
+        contact = {
+            'firstName': data.get('firstName', ''),
+            'lastName': data.get('lastName', ''),
+            'linkedinUrl': data.get('linkedinUrl', ''),
+            'email': data.get('email', ''),
+            'company': data.get('company', ''),
+            'jobTitle': data.get('jobTitle', ''),
+            'college': data.get('college', ''),
+            'location': data.get('location', ''),
+            'firstContactDate': today,
+            'status': 'Not Contacted',
+            'lastContactDate': today,
+            'userId': user_id,
+            'createdAt': today,
+        }
+        
+        doc_ref = db.collection('users').document(user_id).collection('contacts').add(contact)
+        contact['id'] = doc_ref[1].id
+        
+        return jsonify({'contact': contact}), 201
+        
+    except Exception as e:
+        print(f"Error creating contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts/<contact_id>', methods=['PUT'])
+def update_contact(contact_id):
+    """Update an existing contact"""
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+        
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        ref = db.collection('users').document(user_id).collection('contacts').document(contact_id)
+        doc = ref.get()
+        
+        if not doc.exists:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        update = {k: data[k] for k in ['firstName', 'lastName', 'linkedinUrl', 'email', 'company', 'jobTitle', 'college', 'location'] if k in data}
+        
+        if 'status' in data:
+            current = doc.to_dict()
+            if current.get('status') != data['status']:
+                update['lastContactDate'] = datetime.datetime.now().strftime('%m/%d/%Y')
+            update['status'] = data['status']
+        
+        ref.update(update)
+        out = ref.get().to_dict()
+        out['id'] = contact_id
+        
+        return jsonify({'contact': out})
+        
+    except Exception as e:
+        print(f"Error updating contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts/<contact_id>', methods=['DELETE'])
+def delete_contact(contact_id):
+    """Delete a contact"""
+    try:
+        user_id = request.args.get('userId')
+        
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        ref = db.collection('users').document(user_id).collection('contacts').document(contact_id)
+        
+        if not ref.get().exists:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        ref.delete()
+        
+        return jsonify({'message': 'Contact deleted successfully'})
+        
+    except Exception as e:
+        print(f"Error deleting contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 # Frontend routes
 @app.route('/')

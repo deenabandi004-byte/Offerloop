@@ -6,3 +6,7 @@ token.pickle
 .DS_Store
 *.pyc
 __pycache__/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
