@@ -1950,12 +1950,14 @@ def run_basic_tier_enhanced(job_title, company, location, user_email=None):
         for contact in basic_contacts:
             writer.writerow(contact)
         
+        csv_content = csv_file.getvalue()
+        
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         user_prefix = user_email.split('@')[0] if user_email else 'user'
         csv_filename = f"RecruitEdge_Basic_{user_prefix}_{timestamp}.csv"
         
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_file.getvalue())
+            f.write(csv_content)
         
         log_api_usage('basic', user_email, len(basic_contacts))
         
@@ -1963,6 +1965,7 @@ def run_basic_tier_enhanced(job_title, company, location, user_email=None):
         return {
             'contacts': basic_contacts,
             'csv_file': csv_filename,
+            'csv_content': csv_content,
             'tier': 'basic',
             'user_email': user_email,
             'contact_count': len(basic_contacts)
@@ -2012,11 +2015,13 @@ def run_advanced_tier_enhanced(job_title, company, location, user_email=None):
         for contact in advanced_contacts:
             writer.writerow(contact)
         
+        csv_content = csv_file.getvalue()
+        
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         csv_filename = f"RecruitEdge_Advanced_{timestamp}.csv"
         
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_file.getvalue())
+            f.write(csv_content)
         
         log_api_usage('advanced', user_email, len(advanced_contacts), len(advanced_contacts))
         
@@ -2024,6 +2029,7 @@ def run_advanced_tier_enhanced(job_title, company, location, user_email=None):
         return {
             'contacts': advanced_contacts,
             'csv_file': csv_filename,
+            'csv_content': csv_content,
             'successful_drafts': successful_drafts,
             'tier': 'advanced',
             'contact_count': len(advanced_contacts)
@@ -2092,11 +2098,13 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
         for contact in pro_contacts:
             writer.writerow(contact)
         
+        csv_content = csv_file.getvalue()
+        
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         csv_filename = f"RecruitEdge_Pro_{timestamp}.csv"
         
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_file.getvalue())
+            f.write(csv_content)
         
         log_api_usage('pro', user_email, len(pro_contacts), len(pro_contacts))
         
@@ -2106,6 +2114,7 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
         return {
             'contacts': pro_contacts,
             'csv_file': csv_filename,
+            'csv_content': csv_content,
             'successful_drafts': successful_drafts,
             'resume_info': resume_info,
             'tier': 'pro',
@@ -2209,6 +2218,10 @@ def basic_run():
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
         
+        want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
+        if want_json:
+            return jsonify(result)
+        
         return send_file(result['csv_file'], as_attachment=True)
         
     except Exception as e:
@@ -2252,6 +2265,10 @@ def advanced_run():
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
+        
+        want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
+        if want_json:
+            return jsonify(result)
             
         return send_file(result['csv_file'], as_attachment=True)
         
@@ -2318,6 +2335,10 @@ def pro_run():
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
+        
+        want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
+        if want_json:
+            return jsonify(result)
             
         return send_file(result['csv_file'], as_attachment=True)
         
@@ -2551,6 +2572,81 @@ def delete_contact(contact_id):
         
     except Exception as e:
         print(f"Error deleting contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts/bulk', methods=['POST'])
+def bulk_create_contacts():
+    """Bulk create contacts with deduplication"""
+    try:
+        data = request.get_json() or {}
+        user_id = (data.get('userId') or '').strip()
+        raw_contacts = data.get('contacts') or []
+        
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+
+        contacts_ref = db.collection('users').document(user_id).collection('contacts')
+        created = 0
+        skipped = 0
+        created_contacts = []
+        today = datetime.datetime.now().strftime('%m/%d/%Y')
+
+        for rc in raw_contacts:
+            first_name = (rc.get('FirstName') or rc.get('firstName') or '').strip()
+            last_name = (rc.get('LastName') or rc.get('lastName') or '').strip()
+            email = (rc.get('Email') or rc.get('WorkEmail') or rc.get('PersonalEmail') or rc.get('email') or '').strip()
+            linkedin = (rc.get('LinkedIn') or rc.get('linkedinUrl') or '').strip()
+            company = (rc.get('Company') or rc.get('company') or '').strip()
+            job_title = (rc.get('Title') or rc.get('jobTitle') or '').strip()
+            college = (rc.get('College') or rc.get('college') or '').strip()
+            city = (rc.get('City') or '').strip()
+            state = (rc.get('State') or '').strip()
+            location = (rc.get('location') or ', '.join([v for v in [city, state] if v]) or '').strip()
+
+            is_dup = False
+            if email:
+                dup_q = contacts_ref.where('email', '==', email).limit(1).stream()
+                is_dup = any(True for _ in dup_q)
+            if not is_dup and linkedin:
+                dup_q2 = contacts_ref.where('linkedinUrl', '==', linkedin).limit(1).stream()
+                is_dup = any(True for _ in dup_q2)
+
+            if is_dup:
+                skipped += 1
+                continue
+
+            doc_data = {
+                'firstName': first_name,
+                'lastName': last_name,
+                'linkedinUrl': linkedin,
+                'email': email,
+                'company': company,
+                'jobTitle': job_title,
+                'college': college,
+                'location': location,
+                'firstContactDate': today,
+                'status': 'Not Contacted',
+                'lastContactDate': today,
+                'userId': user_id,
+                'createdAt': today,
+            }
+            doc_ref = contacts_ref.add(doc_data)[1]
+            doc_data['id'] = doc_ref.id
+            created_contacts.append(doc_data)
+            created += 1
+
+        return jsonify({
+            'created': created,
+            'skipped': skipped,
+            'contacts': created_contacts
+        }), 201
+
+    except Exception as e:
+        print(f"Bulk create error: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 # Frontend routes
