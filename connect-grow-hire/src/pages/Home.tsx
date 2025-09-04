@@ -81,6 +81,9 @@ const Home = () => {
   // Search state
   const [isSearching, setIsSearching] = useState(false);
   const [progressValue, setProgressValue] = useState(0);
+  const [lastResults, setLastResults] = useState<any[]>([]);
+  const [lastResultsTier, setLastResultsTier] = useState<'free' | 'starter' | 'pro' | string>('');
+  const hasResults = lastResults.length > 0;
   
   // Mock user data
   const mockUser = {
@@ -159,9 +162,10 @@ const Home = () => {
         endpoint = '/api/pro-run';
       }
 
-      const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+      const response = await fetch(`${BACKEND_URL}${endpoint}?format=json`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: { 'Accept': 'application/json' }
       });
 
       if (!response.ok) {
@@ -169,16 +173,21 @@ const Home = () => {
         throw new Error(errorData.error || 'Search failed');
       }
 
-      // Direct CSV download
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `offerloop-${userTier}-${Date.now()}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const data = await response.json();
+      setLastResults(data.contacts || []);
+      setLastResultsTier(data.tier || userTier);
+
+      if (data.csv_content) {
+        const blob = new Blob([data.csv_content], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `offerloop-${data.tier || userTier}-${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
       
       toast({
         title: "Search Complete!",
@@ -198,6 +207,49 @@ const Home = () => {
     } finally {
       setIsSearching(false);
       setProgressValue(0);
+    }
+  };
+
+  const mapToDirectoryContact = (c: any) => ({
+    firstName: c.FirstName || '',
+    lastName: c.LastName || '',
+    linkedinUrl: c.LinkedIn || '',
+    email: c.Email || c.WorkEmail || c.PersonalEmail || '',
+    company: c.Company || '',
+    jobTitle: c.Title || '',
+    college: c.College || '',
+    location: [c.City, c.State].filter(Boolean).join(', ')
+  });
+
+  const handleSaveToDirectory = async () => {
+    try {
+      if (!hasResults) return;
+      const mapped = lastResults.map(mapToDirectoryContact);
+      const resp = await fetch(`${BACKEND_URL}/api/contacts/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: mockUser.email || 'test@example.com',
+          contacts: mapped
+        })
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json();
+        throw new Error(errData.error || 'Failed to save contacts');
+      }
+      const data = await resp.json();
+      toast({
+        title: "Saved to Contact Directory",
+        description: `Created ${data.created}, skipped ${data.skipped} duplicates.`
+      });
+    } catch (e) {
+      console.error(e);
+      toast({
+        title: "Save Failed",
+        description: e instanceof Error ? e.message : "Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -480,9 +532,20 @@ const Home = () => {
                           {isSearching ? 'Searching...' : `Search ${currentTierConfig.name} Tier (${currentTierConfig.credits} credits)`}
                         </Button>
                         
-                        <div className="text-sm text-gray-400">
-                          <Download className="h-4 w-4 inline mr-2" />
-                          CSV with up to {currentTierConfig.maxContacts} contacts
+                        <div className="flex items-center gap-4">
+                          <div className="text-sm text-gray-400">
+                            <Download className="h-4 w-4 inline mr-2" />
+                            CSV with up to {currentTierConfig.maxContacts} contacts
+                          </div>
+                          <Button
+                            variant="outline"
+                            disabled={!hasResults}
+                            onClick={handleSaveToDirectory}
+                            className="border-blue-500 text-blue-300 hover:bg-blue-500/10"
+                            title={hasResults ? `Save ${lastResults.length} to Contact Directory` : 'Search to enable saving'}
+                          >
+                            Save to Contact Directory
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
