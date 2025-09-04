@@ -5,6 +5,10 @@ import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { isProfileComplete } from '@/utils/onboarding';
+import { EMPTY_PROFILE } from '@/types/profile';
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -16,7 +20,36 @@ const SignIn = () => {
     try {
       setIsSigningIn(true);
       await signIn();
-      navigate("/home");
+
+      const uid = auth.currentUser?.uid;
+      const email = auth.currentUser?.email || '';
+      const name = auth.currentUser?.displayName || '';
+      
+      if (!uid) {
+        navigate("/onboarding/resume-upload");
+        return;
+      }
+
+      const profileRef = doc(db, 'profiles', uid);
+      const profileSnap = await getDoc(profileRef);
+
+      if (!profileSnap.exists()) {
+        const starterProfile = {
+          ...EMPTY_PROFILE,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        await setDoc(profileRef, starterProfile);
+        navigate("/onboarding/resume-upload");
+        return;
+      }
+
+      const profile = profileSnap.data();
+      if (profile.onboardingComplete || isProfileComplete(profile)) {
+        navigate("/home");
+      } else {
+        navigate("/onboarding/resume-upload");
+      }
     } catch (error) {
       console.error('Sign-in failed:', error);
       toast({

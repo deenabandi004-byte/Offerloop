@@ -16,6 +16,23 @@ export interface OnboardingProfile {
 
   avatarDataUrl?: string | null;
   resume?: { name: string; dataUrl: string } | null;
+  
+  onboardingComplete?: boolean;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface UserAuth {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  tier: 'free' | 'starter' | 'pro';
+  credits: number;
+  maxCredits: number;
+  subscriptionId?: string;
+  createdAt: number;
+  lastSignIn: number;
 }
 
 export const EMPTY_PROFILE: OnboardingProfile = {
@@ -32,4 +49,7 @@ export const EMPTY_PROFILE: OnboardingProfile = {
   jobTypes: [],
   avatarDataUrl: null,
   resume: null,
+  onboardingComplete: false,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
 };
