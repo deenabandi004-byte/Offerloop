@@ -1,20 +1,12 @@
 import { OnboardingProfile, EMPTY_PROFILE } from '@/types/profile';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 
 const PROFILE_KEY = 'onboardingProfile';
 
-function getCurrentUserId(): string | null {
-  try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    return user.id || user.sub || null;
-  } catch {
-    return null;
-  }
-}
 
 export async function getProfile(): Promise<OnboardingProfile> {
-  const userId = getCurrentUserId();
+  const userId = auth.currentUser?.uid;
   
   if (!userId) {
     try {
@@ -52,7 +44,7 @@ export async function getProfile(): Promise<OnboardingProfile> {
 }
 
 export async function setProfile(p: OnboardingProfile): Promise<void> {
-  const userId = getCurrentUserId();
+  const userId = auth.currentUser?.uid;
   
   localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
   

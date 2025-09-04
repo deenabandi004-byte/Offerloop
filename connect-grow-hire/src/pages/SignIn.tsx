@@ -15,16 +15,8 @@ const SignIn = () => {
   const handleGoogleSignIn = async () => {
     try {
       setIsSigningIn(true);
-      
-      // BYPASS OAUTH - GO STRAIGHT TO MAIN APP
-      toast({
-        title: "Welcome to Offerloop.ai!",
-        description: "Sign-in bypassed for development",
-      });
-      
-      // Navigate directly to home without authentication
+      await signIn();
       navigate("/home");
-      
     } catch (error) {
       console.error('Sign-in failed:', error);
       toast({

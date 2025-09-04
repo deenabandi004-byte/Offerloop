@@ -1,18 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-// Add Google types
-declare global {
-  interface Window {
-    google?: any;
-  }
-}
+import { auth, googleProvider } from '@/lib/firebase';
+import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut, User as FirebaseUser } from 'firebase/auth';
 
 interface User {
   email: string;
   name: string;
   picture?: string;
-  accessToken: string;
-  // Add tier management fields
+  accessToken?: string;
   tier: 'free' | 'starter' | 'pro';
   credits: number;
   maxCredits: number;
@@ -45,169 +39,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Google OAuth configuration - TEMPORARILY REMOVE GMAIL SCOPE FOR PUBLISHING
-  const GOOGLE_CLIENT_ID = '464822670976-htb19rt0rp079f5h3m0jk86m5ecq4rfi.apps.googleusercontent.com';
-  const SCOPES = 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
-  // const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
-  const REDIRECT_URI = 'http://localhost:8080/auth/callback'; // Try these alternatives if needed:
-  // const REDIRECT_URI = 'http://127.0.0.1:8080/auth/callback';
-  // const REDIRECT_URI = 'http://localhost:3000/auth/callback';
-
   useEffect(() => {
-    // Load Google Identity Services script
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = initializeGoogleAuth;
-    document.head.appendChild(script);
-
-    // Check for existing auth on page load
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        // Ensure tier data exists, add defaults if missing
-        const userWithDefaults: User = {
-          ...parsedUser,
-          tier: parsedUser.tier || 'free',
-          credits: parsedUser.credits ?? 5000,
-          maxCredits: parsedUser.maxCredits ?? 5000,
+    const unsub = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
+      if (fbUser) {
+        const stored = localStorage.getItem('user');
+        const defaults = stored ? JSON.parse(stored) : {};
+        const mapped: User = {
+          email: fbUser.email || '',
+          name: fbUser.displayName || '',
+          picture: fbUser.photoURL || undefined,
+          tier: defaults.tier || 'free',
+          credits: defaults.credits ?? 5000,
+          maxCredits: defaults.maxCredits ?? 5000,
+          subscriptionId: defaults.subscriptionId,
         };
-        setUser(userWithDefaults);
-        // Update localStorage with new format
-        localStorage.setItem('user', JSON.stringify(userWithDefaults));
-      } catch (error) {
-        console.error('Failed to parse saved user data:', error);
+        setUser(mapped);
+        localStorage.setItem('user', JSON.stringify(mapped));
+      } else {
+        setUser(null);
         localStorage.removeItem('user');
       }
-    }
-    setIsLoading(false);
-
-    return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-    };
+      setIsLoading(false);
+    });
+    return () => unsub();
   }, []);
 
-  const initializeGoogleAuth = () => {
-    if (window.google) {
-      console.log('Google Identity Services initialized');
-    }
-  };
-
-  const signIn = async (): Promise<void> => {
+  const signIn = async () => {
     try {
       setIsLoading(true);
-      
-      // Create OAuth URL for popup
-      const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-      authUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
-      authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
-      authUrl.searchParams.set('response_type', 'code');
-      authUrl.searchParams.set('scope', SCOPES);
-      authUrl.searchParams.set('access_type', 'offline');
-      authUrl.searchParams.set('include_granted_scopes', 'true');
-      authUrl.searchParams.set('state', Math.random().toString(36).substring(2, 15));
-
-      // Open popup window
-      const popup = window.open(
-        authUrl.toString(),
-        'google-auth',
-        'width=500,height=600,scrollbars=yes,resizable=yes'
-      );
-
-      if (!popup) {
-        throw new Error('Popup blocked. Please allow popups for this site.');
-      }
-
-      // Listen for popup messages
-      const authPromise = new Promise<string>((resolve, reject) => {
-        const messageListener = (event: MessageEvent) => {
-          if (event.origin !== window.location.origin) return;
-          
-          if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
-            window.removeEventListener('message', messageListener);
-            popup.close();
-            resolve(event.data.code);
-          } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
-            window.removeEventListener('message', messageListener);
-            popup.close();
-            reject(new Error(event.data.error));
-          }
-        };
-
-        window.addEventListener('message', messageListener);
-
-        // Check if popup was closed manually
-        const checkClosed = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(checkClosed);
-            window.removeEventListener('message', messageListener);
-            reject(new Error('Authentication cancelled'));
-          }
-        }, 1000);
-      });
-
-      // Get authorization code from popup
-      const authCode = await authPromise;
-
-      // Exchange code for tokens via your Flask backend
-      const response = await fetch('http://localhost:5001/auth/google/callback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code: authCode }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to authenticate with backend: ${errorText}`);
-      }
-
-      const userData = await response.json();
-      
-      // Check if user has subscription data from backend
-      // For now, we'll use defaults but you can extend this
-      const user: User = {
-        email: userData.email,
-        name: userData.name,
-        picture: userData.picture,
-        accessToken: userData.access_token,
-        // Add tier defaults - these would come from your backend/database
-        tier: userData.tier || 'free',
-        credits: userData.credits ?? 5000,
-        maxCredits: userData.maxCredits ?? 5000,
-        subscriptionId: userData.subscriptionId,
-      };
-
-      setUser(user);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      console.log('Authentication successful:', user.email);
-      
-    } catch (error) {
-      console.error('Authentication failed:', error);
-      throw error;
-    } finally {
+      await signInWithPopup(auth, googleProvider);
+    } catch (e) {
+      console.error('Firebase sign-in failed:', e);
       setIsLoading(false);
+      throw e;
     }
   };
 
-  const signOut = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    console.log('User signed out');
+  const signOut = async () => {
+    try {
+      await firebaseSignOut(auth);
+      console.log('User signed out');
+    } catch (e) {
+      console.error('Sign out error:', e);
+    }
   };
 
   const updateUser = (updates: Partial<User>) => {
-    if (user) {
-      const updatedUser = { ...user, ...updates };
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-    }
+    if (!user) return;
+    const updated = { ...user, ...updates };
+    setUser(updated);
+    localStorage.setItem('user', JSON.stringify(updated));
   };
 
   return (
