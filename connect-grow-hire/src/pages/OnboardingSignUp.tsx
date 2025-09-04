@@ -3,16 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { updateProfile } from "@/hooks/useProfile";
 
 const OnboardingSignUp = () => {
   const navigate = useNavigate();
 
-  const handleGoogleSignUp = () => {
-    localStorage.removeItem('resumeData');
-    // TODO: Implement Google sign-up with Supabase
-    console.log("Google sign-up clicked");
-    // For now, just navigate to home
-    navigate("/home");
+  const handleGoogleSignUp = async () => {
+    try {
+      localStorage.removeItem('resumeData');
+      await updateProfile({ onboardingComplete: true });
+      console.log("Onboarding completed successfully");
+      navigate("/home");
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      navigate("/home");
+    }
   };
 
   const handleGoogleSignUpLink = () => {

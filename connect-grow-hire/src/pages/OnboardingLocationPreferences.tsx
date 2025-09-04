@@ -13,6 +13,7 @@ import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import * as z from "zod";
+import { updateProfile } from "@/hooks/useProfile";
 
 const formSchema = z.object({
   locations: z.array(z.string()).optional(),
@@ -35,13 +36,13 @@ const OnboardingLocationPreferences = () => {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     console.log("Location preferences form submitted:", { 
       ...data, 
       locations: selectedLocations,
       jobTypes: selectedJobTypes 
     });
-    // Navigate to sign-up page
+    await updateProfile({ locations: selectedLocations, jobTypes: selectedJobTypes });
     navigate("/onboarding/signup");
   };
 

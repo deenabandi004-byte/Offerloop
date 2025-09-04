@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import RequireOnboarding from "./components/RequireOnboarding";
 import Index from "./pages/Index";
 import Home from "./pages/Home";
 import SignIn from "./pages/SignIn";
@@ -39,7 +40,7 @@ const App: React.FC = () => {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/home" element={<Home />} />
+              <Route path="/home" element={<RequireOnboarding><Home /></RequireOnboarding>} />
               <Route path="/signin" element={<SignIn />} />
               <Route path="/auth/callback" element={<AuthCallback />} /> {/* Add this route */}
               <Route path="/onboarding/resume-upload" element={<OnboardingResumeUpload />} />
@@ -54,9 +55,9 @@ const App: React.FC = () => {
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/terms-of-service" element={<TermsOfServiceSettings />} />
-              <Route path="/account-settings" element={<AccountSettings />} />
+              <Route path="/account-settings" element={<RequireOnboarding><AccountSettings /></RequireOnboarding>} />
               <Route path="/pricing" element={<Pricing />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard" element={<RequireOnboarding><Dashboard /></RequireOnboarding>} />
               <Route path="/news" element={<News />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
