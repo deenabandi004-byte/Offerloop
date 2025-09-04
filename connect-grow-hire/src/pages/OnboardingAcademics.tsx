@@ -83,10 +83,10 @@ const OnboardingAcademics = () => {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     console.log("Academics form submitted:", data);
     const degree = data.degreeType === 'other' ? (data.customDegree || '') : (data.degreeType || '');
-    updateProfile({
+    await updateProfile({
       graduationMonth: data.graduationMonth || '',
       graduationYear: data.graduationYear || '',
       fieldOfStudy: data.fieldOfStudy || '',

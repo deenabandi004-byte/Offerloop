@@ -667,9 +667,9 @@ const Onboarding = () => {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     console.log("Form submitted:", data);
-    updateProfile({ firstName: data.firstName, lastName: data.lastName, university: data.university });
+    await updateProfile({ firstName: data.firstName, lastName: data.lastName, university: data.university });
     navigate("/onboarding/academics");
   };
 

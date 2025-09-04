@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { getProfile } from "@/hooks/useProfile";
+import { getProfileSync } from "@/hooks/useProfile";
 
 import {
   Sidebar,
@@ -53,7 +53,7 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const { user } = useAuth();
-  const profile = getProfile();
+  const profile = getProfileSync();
   const displayName = user?.name?.trim() || [profile.firstName, profile.lastName].filter(Boolean).join(' ') || '';
   const initial = (displayName || 'U').trim().charAt(0).toUpperCase();
 

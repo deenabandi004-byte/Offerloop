@@ -41,13 +41,13 @@ const OnboardingOpportunityPreferences = () => {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     const finalIndustries = [...selectedIndustries];
     if (customIndustry && selectedIndustries.includes("Other")) {
       finalIndustries[finalIndustries.indexOf("Other")] = customIndustry;
     }
     console.log("Opportunity preferences form submitted:", { ...data, industries: finalIndustries });
-    updateProfile({ industries: finalIndustries, jobRole: data.customJobRole || data.jobRole || '' });
+    await updateProfile({ industries: finalIndustries, jobRole: data.customJobRole || data.jobRole || '' });
     navigate("/onboarding/location-preferences");
   };
 

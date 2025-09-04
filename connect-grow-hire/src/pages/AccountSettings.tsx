@@ -10,20 +10,24 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { getProfile, updateProfile } from "@/hooks/useProfile";
+import { getProfile, updateProfile, getProfileSync, updateProfileSync } from "@/hooks/useProfile";
 import { OnboardingProfile } from "@/types/profile";
 
 export default function AccountSettings() {
   const navigate = useNavigate();
   const { user, updateUser, signOut } = useAuth();
-  const [profile, setProfile] = useState<OnboardingProfile>(getProfile());
+  const [profile, setProfile] = useState<OnboardingProfile>(getProfileSync());
   const [editEmail, setEditEmail] = useState(false);
   const [emailDraft, setEmailDraft] = useState(user?.email || '');
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setProfile(getProfile());
+    const loadProfile = async () => {
+      const profileData = await getProfile();
+      setProfile(profileData);
+    };
+    loadProfile();
   }, []);
 
   const handleSignOut = async () => {
@@ -47,16 +51,16 @@ export default function AccountSettings() {
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const dataUrl = reader.result as string;
-      const updatedProfile = updateProfile({ avatarDataUrl: dataUrl });
+      const updatedProfile = await updateProfile({ avatarDataUrl: dataUrl });
       setProfile(updatedProfile);
     };
     reader.readAsDataURL(file);
   };
 
-  const handleAvatarRemove = () => {
-    const updatedProfile = updateProfile({ avatarDataUrl: null });
+  const handleAvatarRemove = async () => {
+    const updatedProfile = await updateProfile({ avatarDataUrl: null });
     setProfile(updatedProfile);
   };
 
@@ -65,16 +69,16 @@ export default function AccountSettings() {
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const dataUrl = reader.result as string;
-      const updatedProfile = updateProfile({ resume: { name: file.name, dataUrl } });
+      const updatedProfile = await updateProfile({ resume: { name: file.name, dataUrl } });
       setProfile(updatedProfile);
     };
     reader.readAsDataURL(file);
   };
 
-  const updateProfileField = (field: keyof OnboardingProfile, value: any) => {
-    const updatedProfile = updateProfile({ [field]: value });
+  const updateProfileField = async (field: keyof OnboardingProfile, value: any) => {
+    const updatedProfile = await updateProfile({ [field]: value });
     setProfile(updatedProfile);
   };
 
