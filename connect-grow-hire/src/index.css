@@ -129,4 +129,12 @@ All colors MUST be HSL.
   .shadow-soft {
     box-shadow: var(--shadow-soft);
   }
+
+  .typ-hero { @apply font-display font-bold tracking-[-0.03em] text-[64px] leading-[1.1]; }
+  .typ-feature-title { @apply font-display font-semibold tracking-[-0.01em] text-[28px] leading-tight; }
+  .typ-ui { @apply font-sans text-[16px] font-normal leading-[1.5]; }
+  .typ-button { @apply font-sans text-[14px] font-semibold tracking-[0.01em]; }
+  .typ-nav { @apply font-sans text-[14px] font-medium; }
+
+  .btn-primary { @apply bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors; }
 }

@@ -11,7 +11,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-gray-900 text-white font-sans text-[16px] leading-[1.5]">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/90 backdrop-blur-md border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -23,11 +23,11 @@ const Index = () => {
               Offer<span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">loop</span>.ai
             </span>
             <nav className="hidden md:flex items-center gap-6">
-              <a href="#features" className="text-gray-300 hover:text-white transition-colors">Features</a>
-              <a href="#pricing" className="text-gray-300 hover:text-white transition-colors">Pricing</a>
+              <a href="#features" className="typ-nav text-gray-300 hover:text-white transition-colors">Features</a>
+              <a href="#pricing" className="typ-nav text-gray-300 hover:text-white transition-colors">Pricing</a>
               <a 
                 href="#about" 
-                className="text-gray-300 hover:text-white transition-colors"
+                className="typ-nav text-gray-300 hover:text-white transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
                   document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
@@ -40,13 +40,13 @@ const Index = () => {
           <div className="flex items-center gap-6">
             <button 
               onClick={() => navigate("/signin")}
-              className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium transition-colors"
+              className="btn-primary typ-button px-6 py-2 rounded-lg"
             >
               Sign In
             </button>
             <button 
               onClick={() => navigate("/onboarding/resume-upload")}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 px-6 py-2 rounded-lg font-medium transition-colors"
+              className="btn-primary typ-button px-6 py-2 rounded-lg"
             >
               Sign Up
             </button>
@@ -58,11 +58,11 @@ const Index = () => {
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <div className="max-w-4xl mx-auto mb-24">
-            <h1 className="text-6xl lg:text-8xl font-bold tracking-tight mb-12">
+            <h1 className="typ-hero mb-12">
               Offerloop <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Fundamentally</span> changes how you recruit
             </h1>
             
-            <p className="text-xl md:text-2xl text-gray-300 mb-16 leading-relaxed max-w-4xl mx-auto">
+            <p className="typ-ui text-gray-300 mb-16 max-w-4xl mx-auto">
               We take the tedious, repetitive work out of recruiting. Spend less time stuck behind a screen and more time connecting with professionals and living your life.
             </p>
           </div>
@@ -72,8 +72,8 @@ const Index = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <Zap className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-4">Instant Outreach</h3>
-              <p className="text-gray-400 leading-relaxed">
+              <h3 className="typ-feature-title mb-4">Instant Outreach</h3>
+              <p className="typ-ui text-gray-400">
                 Outreach in a single click - curated emails that show up instantly in your email drafts.
               </p>
             </div>
@@ -82,8 +82,8 @@ const Index = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <Calendar className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-4">Personal Mentorship</h3>
-              <p className="text-gray-400 leading-relaxed">
+              <h3 className="typ-feature-title mb-4">Personal Mentorship</h3>
+              <p className="typ-ui text-gray-400">
                 Schedule calls with current analysts and analyst interns to better prepare for recruiting.
               </p>
             </div>
@@ -92,8 +92,8 @@ const Index = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <Users className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-4">Meaningful Connections</h3>
-              <p className="text-gray-400 leading-relaxed">
+              <h3 className="typ-feature-title mb-4">Meaningful Connections</h3>
+              <p className="typ-ui text-gray-400">
                 Maximize your ability to get and prepare for coffee chats.
               </p>
             </div>
@@ -102,8 +102,8 @@ const Index = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <BarChart className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-4">Progress Tracking</h3>
-              <p className="text-gray-400 leading-relaxed">
+              <h3 className="typ-feature-title mb-4">Progress Tracking</h3>
+              <p className="typ-ui text-gray-400">
                 Monitor your recruitment pipeline with detailed analytics and insights to optimize your process.
               </p>
             </div>
@@ -115,18 +115,18 @@ const Index = () => {
       <section className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            <h2 className="typ-feature-title mb-6">
               Smart Filter
             </h2>
-            <p className="text-xl text-gray-300">
+            <p className="typ-ui text-gray-300">
               Access 2 billion+ professionals with intelligent filtering and AI-powered personalizations.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-16 items-center mb-20">
             <div>
-              <h3 className="text-3xl font-bold mb-6 text-blue-400">2 Billion+ Professionals</h3>
-              <p className="text-xl text-gray-300 mb-8">
+              <h3 className="typ-feature-title mb-6 text-blue-400">2 Billion+ Professionals</h3>
+              <p className="typ-ui text-gray-300 mb-8">
                 Access the world's largest database of professional contacts with advanced filtering capabilities to find exactly who you're looking for.
               </p>
               <div className="space-y-4">
@@ -174,8 +174,8 @@ const Index = () => {
               </div>
             </div>
             <div>
-              <h3 className="text-3xl font-bold mb-6 text-purple-400">AI Personalizations</h3>
-              <p className="text-xl text-gray-300 mb-8">
+              <h3 className="typ-feature-title mb-6 text-purple-400">AI Personalizations</h3>
+              <p className="typ-ui text-gray-300 mb-8">
                 Maximize your response rate and recruitment success with hyper personalized emails curated to capture attention.
               </p>
               <div className="space-y-4">
@@ -201,18 +201,18 @@ const Index = () => {
       <section id="features" className="py-20 px-6 bg-gray-800/30">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            <h2 className="typ-feature-title mb-6">
               Why Choose Offerloop.ai?
             </h2>
-            <p className="text-xl text-gray-300">
+            <p className="typ-ui text-gray-300">
               Everything you need to streamline your recruiting process and land the best opportunities — in less time.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-16 items-center mb-20">
             <div>
-              <h3 className="text-3xl font-bold mb-6 text-blue-400">Smart Matching</h3>
-              <p className="text-xl text-gray-300 mb-8">
+              <h3 className="typ-feature-title mb-6 text-blue-400">Smart Matching</h3>
+              <p className="typ-ui text-gray-300 mb-8">
                 Our AI-powered algorithm connects the right talent with the right opportunities based on skills, experience, and culture fit.
               </p>
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
@@ -246,8 +246,8 @@ const Index = () => {
               </div>
             </div>
             <div className="md:order-2">
-              <h3 className="text-3xl font-bold mb-6 text-purple-400">Top-tier Mentorship</h3>
-              <p className="text-xl text-gray-300 mb-8">
+              <h3 className="typ-feature-title mb-6 text-purple-400">Top-tier Mentorship</h3>
+              <p className="typ-ui text-gray-300 mb-8">
                 Get counseling from top talent and professionals across multiple industries to maximize your opportunity at landing your dream job.
               </p>
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
@@ -260,8 +260,8 @@ const Index = () => {
 
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <h3 className="text-3xl font-bold mb-6 text-green-400">Analytics & Insights</h3>
-              <p className="text-xl text-gray-300 mb-8">
+              <h3 className="typ-feature-title mb-6 text-green-400">Analytics & Insights</h3>
+              <p className="typ-ui text-gray-300 mb-8">
                 Track your hiring metrics, measure success rates, and optimize your recruitment process with detailed analytics.
               </p>
               <div className="space-y-4">
@@ -292,10 +292,10 @@ const Index = () => {
       <section id="pricing" className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            <h2 className="typ-feature-title mb-6">
               Choose Your Plan
             </h2>
-            <p className="text-xl text-gray-300">
+            <p className="typ-ui text-gray-300">
               Find the perfect plan to accelerate your career journey
             </p>
           </div>
@@ -303,12 +303,12 @@ const Index = () => {
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Free Trial Plan */}
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
-              <h3 className="text-2xl font-bold mb-2">Free Trial</h3>
+              <h3 className="typ-feature-title mb-2">Free Trial</h3>
               <div className="mb-6">
                 <span className="text-4xl font-bold">$0</span>
                 <span className="text-gray-400">/month</span>
               </div>
-              <p className="text-gray-300 mb-8">Perfect for getting started and exploring our platform</p>
+              <p className="typ-ui text-gray-300 mb-8">Perfect for getting started and exploring our platform</p>
               
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center gap-3">
@@ -331,7 +331,7 @@ const Index = () => {
               
               <button 
                 onClick={() => navigate("/onboarding/resume-upload")}
-                className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-colors"
+                className="btn-primary typ-button w-full py-3 px-6 rounded-xl"
               >
                 Start Free Trial
               </button>
@@ -345,12 +345,12 @@ const Index = () => {
                 </span>
               </div>
               
-              <h3 className="text-2xl font-bold mb-2">Starter</h3>
+              <h3 className="typ-feature-title mb-2">Starter</h3>
               <div className="mb-6">
                 <span className="text-4xl font-bold">$24.99</span>
                 <span className="text-gray-400">/month</span>
               </div>
-              <p className="text-gray-300 mb-8">Ideal for individual recruiters and small teams</p>
+              <p className="typ-ui text-gray-300 mb-8">Ideal for individual recruiters and small teams</p>
               
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center gap-3">
@@ -377,7 +377,7 @@ const Index = () => {
               
               <button 
                 onClick={() => navigate("/onboarding/resume-upload")}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white py-3 px-6 rounded-xl font-semibold transition-all"
+                className="btn-primary typ-button w-full py-3 px-6 rounded-xl"
               >
                 Get Started
               </button>
@@ -385,12 +385,12 @@ const Index = () => {
 
             {/* Pro Plan */}
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
-              <h3 className="text-2xl font-bold mb-2">Pro</h3>
+              <h3 className="typ-feature-title mb-2">Pro</h3>
               <div className="mb-6">
                 <span className="text-4xl font-bold">$39.99</span>
                 <span className="text-gray-400">/month</span>
               </div>
-              <p className="text-gray-300 mb-8">For growing teams and agencies with advanced needs</p>
+              <p className="typ-ui text-gray-300 mb-8">For growing teams and agencies with advanced needs</p>
               
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center gap-3">
@@ -421,7 +421,7 @@ const Index = () => {
               
               <button 
                 onClick={() => navigate("/onboarding/resume-upload")}
-                className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-colors"
+                className="btn-primary typ-button w-full py-3 px-6 rounded-xl"
               >
                 Get Started
               </button>
@@ -434,8 +434,8 @@ const Index = () => {
       <section className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">What Our Users Say</h2>
-            <p className="text-xl text-gray-300">Join thousands of successful recruiters and job seekers</p>
+            <h2 className="typ-feature-title mb-6">What Our Users Say</h2>
+            <p className="typ-ui text-gray-300">Join thousands of successful recruiters and job seekers</p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -445,7 +445,7 @@ const Index = () => {
                   <div key={i} className="w-5 h-5 bg-yellow-400 rounded-full"></div>
                 ))}
               </div>
-              <p className="text-gray-300 mb-6 italic">
+              <p className="typ-ui text-gray-300 mb-6 italic">
                 "Offerloop.ai completely transformed our recruiting process. We're finding better candidates faster than ever before."
               </p>
               <div className="flex items-center gap-3">
@@ -463,7 +463,7 @@ const Index = () => {
                   <div key={i} className="w-5 h-5 bg-yellow-400 rounded-full"></div>
                 ))}
               </div>
-              <p className="text-gray-300 mb-6 italic">
+              <p className="typ-ui text-gray-300 mb-6 italic">
                 "The AI personalizations are incredible. Our response rates have increased by 300% since we started using Offerloop."
               </p>
               <div className="flex items-center gap-3">
@@ -481,7 +481,7 @@ const Index = () => {
                   <div key={i} className="w-5 h-5 bg-yellow-400 rounded-full"></div>
                 ))}
               </div>
-              <p className="text-gray-300 mb-6 italic">
+              <p className="typ-ui text-gray-300 mb-6 italic">
                 "The mentorship program helped me land my dream job. The personalized guidance was invaluable."
               </p>
               <div className="flex items-center gap-3">
@@ -501,13 +501,13 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
           {/* Our Mission */}
           <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-6xl font-bold mb-8">
+            <h2 className="typ-feature-title mb-8">
               About <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Offerloop.ai</span>
             </h2>
             
             <div className="mb-16">
-              <h3 className="text-3xl font-bold mb-8 text-white">Our Mission</h3>
-              <p className="text-xl text-gray-300 leading-relaxed max-w-5xl mx-auto">
+              <h3 className="typ-feature-title mb-8 text-white">Our Mission</h3>
+              <p className="typ-ui text-gray-300 max-w-5xl mx-auto">
                 To give students a competitive edge in recruiting—helping them land the best opportunities while saving time for 
                 what matters most. By combining advanced technology with human insight, we make it easy to cut through the 
                 noise, focus on real connections, and build a career you're excited about.
@@ -521,8 +521,8 @@ const Index = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 mx-auto">
                 <Users className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-4 text-white">High-Impact Connections</h3>
-              <p className="text-gray-300 leading-relaxed">
+              <h3 className="typ-feature-title mb-4 text-white">High-Impact Connections</h3>
+              <p className="typ-ui text-gray-300">
                 We connect you directly with the professionals who matter, so every conversation moves you closer to your goals.
               </p>
             </div>
@@ -531,8 +531,8 @@ const Index = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-6 mx-auto">
                 <Zap className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-4 text-white">Innovation First</h3>
-              <p className="text-gray-300 leading-relaxed">
+              <h3 className="typ-feature-title mb-4 text-white">Innovation First</h3>
+              <p className="typ-ui text-gray-300">
                 We continuously evolve our platform with the latest technology and industry insights.
               </p>
             </div>
@@ -541,8 +541,8 @@ const Index = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mb-6 mx-auto">
                 <Handshake className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-4 text-white">Human Connection</h3>
-              <p className="text-gray-300 leading-relaxed">
+              <h3 className="typ-feature-title mb-4 text-white">Human Connection</h3>
+              <p className="typ-ui text-gray-300">
                 Technology enhances, but human relationships remain at the heart of what we do.
               </p>
             </div>
@@ -550,8 +550,8 @@ const Index = () => {
 
           {/* Our Story */}
           <div className="max-w-5xl mx-auto">
-            <h3 className="text-3xl font-bold mb-8 text-center text-white">Our Story</h3>
-            <div className="space-y-6 text-lg text-gray-300 leading-relaxed">
+            <h3 className="typ-feature-title mb-8 text-center text-white">Our Story</h3>
+            <div className="space-y-6 typ-ui text-gray-300">
               <p>
                 Offerloop.ai started as a simple idea between two college friends who felt the pain of recruiting firsthand. After 
                 watching our classmates spend countless hours on applications—and coming up short ourselves—we realized the 
@@ -573,13 +573,13 @@ const Index = () => {
 
           {/* CTA */}
           <div className="text-center mt-16">
-            <h3 className="text-3xl font-bold mb-6 text-white">Ready to Transform Your Recruiting Journey?</h3>
-            <p className="text-xl text-gray-300 mb-8">
+            <h3 className="typ-feature-title mb-6 text-white">Ready to Transform Your Recruiting Journey?</h3>
+            <p className="typ-ui text-gray-300 mb-8">
               Join thousands of aspiring professionals in discovering their dream opportunities through Offerloop.ai
             </p>
             <button 
               onClick={() => navigate("/onboarding/resume-upload")}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all transform hover:scale-105"
+              className="btn-primary typ-button px-8 py-4 rounded-xl transform hover:scale-105"
             >
               Get Started Today
             </button>
@@ -591,10 +591,10 @@ const Index = () => {
       <section className="py-20 px-6 bg-gray-800/30">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            <h2 className="typ-feature-title mb-6">
               Frequently Asked Questions
             </h2>
-            <p className="text-xl text-gray-300">
+            <p className="typ-ui text-gray-300">
               Have more questions? We're here to help!
             </p>
           </div>
@@ -632,7 +632,7 @@ const Index = () => {
                 </button>
                 {openFaq === index && (
                   <div className="px-6 pb-6">
-                    <p className="text-gray-300 leading-relaxed">{faq.answer}</p>
+                    <p className="typ-ui text-gray-300">{faq.answer}</p>
                   </div>
                 )}
               </div>
@@ -652,7 +652,7 @@ const Index = () => {
                 </span>
               </div>
               
-              <p className="text-gray-400 leading-relaxed mb-8">
+              <p className="typ-ui text-gray-400 mb-8">
                 Fundamentally changing how you recruit by taking the tedious, repetitive work out of the process. 
                 Connect with professionals and build the career you're excited about.
               </p>
@@ -706,7 +706,7 @@ const Index = () => {
           </div>
           
           <div className="border-t border-gray-800 pt-8 text-center">
-            <p className="text-gray-400">
+            <p className="typ-ui text-gray-400">
               © 2024 Offerloop.ai. All rights reserved. Connecting talent with opportunity through intelligent recruiting solutions.
             </p>
           </div>
