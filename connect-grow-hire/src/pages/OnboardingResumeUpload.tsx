@@ -63,9 +63,9 @@ const OnboardingResumeUpload = () => {
       localStorage.setItem('resumeData', JSON.stringify(resumeData));
 
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         const dataUrl = reader.result as string;
-        updateProfile({
+        await updateProfile({
           resume: { name: selectedFile.name, dataUrl }
         });
       };

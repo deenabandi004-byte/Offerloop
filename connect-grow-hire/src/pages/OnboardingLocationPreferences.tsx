@@ -36,13 +36,13 @@ const OnboardingLocationPreferences = () => {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     console.log("Location preferences form submitted:", { 
       ...data, 
       locations: selectedLocations,
       jobTypes: selectedJobTypes 
     });
-    updateProfile({ locations: selectedLocations, jobTypes: selectedJobTypes });
+    await updateProfile({ locations: selectedLocations, jobTypes: selectedJobTypes });
     navigate("/onboarding/signup");
   };
 
