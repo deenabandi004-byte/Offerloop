@@ -36,10 +36,13 @@ const ContactDirectory: React.FC = () => {
     }
   };
 
-  const openLinkedIn = (url: string) => {
-    if (url && url.startsWith('http')) {
-      window.open(url, '_blank');
-    }
+  const normalizeLinkedInUrl = (raw?: string) => {
+    if (!raw) return "";
+    let url = raw.trim();
+    if (url.startsWith("//")) url = "https:" + url;
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    url = url.replace(/^http:\/\//i, "https://");
+    return url;
   };
 
   if (isLoading) {
@@ -102,19 +105,25 @@ const ContactDirectory: React.FC = () => {
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{contact.first_name || contact.FirstName || ''}</td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{contact.last_name || contact.LastName || ''}</td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm">
-                    {(contact.linkedin || contact.LinkedIn) ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openLinkedIn(contact.linkedin || contact.LinkedIn || '')}
-                        className="p-0 h-auto text-blue-600 hover:text-blue-800"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        LinkedIn
-                      </Button>
-                    ) : (
-                      ''
-                    )}
+                    {(() => {
+                      const raw = contact.linkedin || contact.LinkedIn || "";
+                      const href = normalizeLinkedInUrl(raw);
+                      return href ? (
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          className="p-0 h-auto text-blue-600 hover:text-blue-800"
+                        >
+                          <a href={href} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            LinkedIn
+                          </a>
+                        </Button>
+                      ) : (
+                        ""
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{contact.email || contact.Email || ''}</td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{contact.company || contact.Company || ''}</td>
