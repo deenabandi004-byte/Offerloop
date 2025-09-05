@@ -1,10 +1,18 @@
-import { ArrowLeft, CreditCard } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, CreditCard, X, Check, Clock, Users, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Pricing = () => {
   const navigate = useNavigate();
+  const [showProModal, setShowProModal] = useState(false);
 
   const plans = [
     {
@@ -62,9 +70,22 @@ const Pricing = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
           {plans.map((plan) => (
-            <Card key={plan.name} className="relative h-full border-border hover:shadow-lg transition-all">
+            <Card 
+              key={plan.name} 
+              className={`relative h-full border-border hover:shadow-lg transition-all ${
+                plan.name === 'Pro' ? 'cursor-pointer hover:border-primary/50' : ''
+              }`}
+              onClick={plan.name === 'Pro' ? () => setShowProModal(true) : undefined}
+            >
               <CardHeader className="text-center pb-4">
-                <CardTitle className="text-lg font-semibold mb-2">{plan.name}</CardTitle>
+                <CardTitle className="text-lg font-semibold mb-2 flex items-center justify-center gap-2">
+                  {plan.name}
+                  {plan.name === 'Pro' && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                      Click to learn more
+                    </span>
+                  )}
+                </CardTitle>
                 {plan.description && <p className="text-sm text-muted-foreground">{plan.description}</p>}
               </CardHeader>
               <CardContent>
@@ -73,13 +94,196 @@ const Pricing = () => {
                     <li key={i} className="text-sm text-foreground">{b}</li>
                   ))}
                 </ul>
-                <Button className="w-full" onClick={() => navigate(plan.cta.to)}>
+                <Button className="w-full" onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(plan.cta.to);
+                }}>
                   {plan.cta.label}
                 </Button>
               </CardContent>
             </Card>
           ))}
         </div>
+
+        {/* Pro Plan Details Modal */}
+        <Dialog open={showProModal} onOpenChange={setShowProModal}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-center mb-4">
+                How the Pro Plan Works
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-8">
+              {/* Overview */}
+              <div className="text-center">
+                <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">
+                  <Zap className="h-5 w-5" />
+                  <span className="font-semibold">4800 Credits • 56 Contacts • 1200 Minutes Saved</span>
+                </div>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
+                  The Pro plan is designed for serious professionals who want to maximize their networking efficiency 
+                  and build meaningful connections at scale.
+                </p>
+              </div>
+
+              {/* Key Features */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-primary" />
+                    Advanced Features
+                  </h3>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong>Directory Permanently Saves:</strong> All your contacts are stored permanently in your personal directory for future reference
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong>Priority Support:</strong> Get faster response times and dedicated assistance from our support team
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong>Advanced Search Filters:</strong> Access to premium search capabilities and detailed contact information
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-primary" />
+                    Time Efficiency
+                  </h3>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong>20 Minutes Saved Per Contact:</strong> Automated research and contact finding saves you significant time
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong>Bulk Processing:</strong> Handle multiple contacts simultaneously for maximum efficiency
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong>Smart Recommendations:</strong> AI-powered suggestions for the best contacts to reach out to
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* How It Works */}
+              <div className="bg-muted/50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  How the Credit System Works
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
+                      <span className="font-bold text-primary">1</span>
+                    </div>
+                    <p><strong>Search for Contacts</strong><br />Use our advanced search to find relevant professionals</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
+                      <span className="font-bold text-primary">2</span>
+                    </div>
+                    <p><strong>85 Credits Per Contact</strong><br />Each contact found costs 85 credits from your balance</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
+                      <span className="font-bold text-primary">3</span>
+                    </div>
+                    <p><strong>Save & Connect</strong><br />Pro users can permanently save contacts to their directory</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comparison */}
+              <div className="border rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4 text-center">Pro vs Free Comparison</h3>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium mb-3 text-muted-foreground">Free Plan</h4>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        850 credits (~10 contacts)
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        200 minutes saved
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <X className="h-4 w-4 text-red-500" />
+                        Limited features
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <X className="h-4 w-4 text-red-500" />
+                        No permanent directory saves
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="bg-primary/5 rounded-lg p-4">
+                    <h4 className="font-medium mb-3 text-primary">Pro Plan</h4>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        4800 credits (~56 contacts)
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        1200 minutes saved
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        All advanced features
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        Permanent directory saves
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        Priority support
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="text-center pt-4">
+                <Button 
+                  size="lg" 
+                  className="px-8"
+                  onClick={() => {
+                    setShowProModal(false);
+                    navigate("/onboarding/resume-upload");
+                  }}
+                >
+                  Start with Pro Plan
+                </Button>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Get started with the Pro plan and maximize your networking potential
+                </p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
