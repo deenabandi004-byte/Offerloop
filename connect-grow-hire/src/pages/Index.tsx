@@ -292,87 +292,92 @@ const Index = () => {
       <section id="pricing" className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-6">
               Choose Your Plan
             </h2>
-            <p className="text-xl text-gray-300">
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
               85 credits per contact. When you run out of credits, no more contacts.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {/* Free Plan */}
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
-              <h3 className="text-2xl font-bold mb-2">Free</h3>
-              <p className="text-gray-300 mb-8">Try out platform risk free</p>
+            <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl p-8 border border-gray-700/50 hover:border-gray-600 transition-all duration-300 hover:shadow-xl">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">Free</h3>
+                <p className="text-gray-400">Try out platform risk free</p>
+              </div>
               
               <ul className="space-y-4 mb-8">
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>850 credits</span>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-200">850 credits</span>
                 </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Estimated time saved: 200 minutes</span>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-200">Estimated time saved: 200 minutes</span>
                 </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Try out platform risk free</span>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-200">Try out platform risk free</span>
                 </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Limited Features</span>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-200">Limited Features</span>
                 </li>
               </ul>
               
               <button 
                 onClick={() => navigate("/onboarding")}
-                className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-colors"
+                className="w-full bg-gray-700 hover:bg-gray-600 text-white py-4 px-6 rounded-xl font-semibold transition-all duration-300 hover:shadow-lg"
               >
                 Start for free
               </button>
             </div>
 
             {/* Pro Plan */}
-            <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-sm rounded-2xl p-8 border border-blue-500/50 relative">
+            <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-sm rounded-2xl p-8 border border-blue-500/50 relative hover:border-blue-400/60 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10">
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-1 rounded-full text-sm font-medium">
-                  Most popular
+                <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-1 rounded-full text-sm font-medium shadow-lg">
+                  Most Popular
                 </span>
               </div>
               
-              <h3 className="text-2xl font-bold mb-2">Pro</h3>
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">Pro</h3>
+                <p className="text-blue-200">Everything you need to succeed</p>
+              </div>
               
               <ul className="space-y-4 mb-8">
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>4800 credits</span>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-200">4800 credits</span>
                 </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Estimated time saved: 1200 minutes</span>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-200">Estimated time saved: 1200 minutes</span>
                 </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Everything in free plus:</span>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-200 font-medium">Everything in free plus:</span>
                 </li>
-                <li className="flex items-center gap-3 ml-4">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Directory permanently saves</span>
+                <li className="flex items-start gap-3 ml-6">
+                  <Check className="w-4 h-4 text-blue-400 mt-1 flex-shrink-0" />
+                  <span className="text-gray-300">Directory permanently saves</span>
                 </li>
-                <li className="flex items-center gap-3 ml-4">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Priority Support</span>
+                <li className="flex items-start gap-3 ml-6">
+                  <Check className="w-4 h-4 text-blue-400 mt-1 flex-shrink-0" />
+                  <span className="text-gray-300">Priority Support</span>
                 </li>
-                <li className="flex items-center gap-3 ml-4">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Advanced features</span>
+                <li className="flex items-start gap-3 ml-6">
+                  <Check className="w-4 h-4 text-blue-400 mt-1 flex-shrink-0" />
+                  <span className="text-gray-300">Advanced features</span>
                 </li>
               </ul>
               
               <button 
                 onClick={() => navigate("/onboarding/resume-upload")}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white py-3 px-6 rounded-xl font-semibold transition-all"
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white py-4 px-6 rounded-xl font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105"
               >
                 Start now
               </button>
