@@ -225,11 +225,11 @@ const Home = () => {
     try {
       if (!hasResults) return;
       const mapped = lastResults.map(mapToDirectoryContact);
-      const resp = await fetch(`${BACKEND_URL}/api/contacts/bulk`, {
+      const resp = await fetch(`${BACKEND_URL}/api/directory/contacts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: mockUser.email || 'test@example.com',
+          userEmail: mockUser.email || 'test@example.com',
           contacts: mapped
         })
       });
@@ -241,7 +241,7 @@ const Home = () => {
       const data = await resp.json();
       toast({
         title: "Saved to Contact Directory",
-        description: `Created ${data.created}, skipped ${data.skipped} duplicates.`
+        description: `Saved ${data.saved} contacts to directory.`
       });
     } catch (e) {
       console.error(e);
