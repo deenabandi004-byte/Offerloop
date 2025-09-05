@@ -296,48 +296,44 @@ const Index = () => {
               Choose Your Plan
             </h2>
             <p className="text-xl text-gray-300">
-              Find the perfect plan to accelerate your career journey
+              85 credits per contact. When you run out of credits, no more contacts.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Free Trial Plan */}
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* Free Plan */}
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
-              <h3 className="text-2xl font-bold mb-2">Free Trial</h3>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">$0</span>
-                <span className="text-gray-400">/month</span>
-              </div>
-              <p className="text-gray-300 mb-8">Perfect for getting started and exploring our platform</p>
+              <h3 className="text-2xl font-bold mb-2">Free</h3>
+              <p className="text-gray-300 mb-8">Try out platform risk free</p>
               
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span>Up to 10 candidate profiles</span>
+                  <span>850 credits</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span>Basic search filters</span>
+                  <span>Estimated time saved: 200 minutes</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span>Email templates</span>
+                  <span>Try out platform risk free</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span>Basic analytics</span>
+                  <span>Limited Features</span>
                 </li>
               </ul>
               
               <button 
-                onClick={() => navigate("/onboarding/resume-upload")}
+                onClick={() => navigate("/onboarding")}
                 className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-colors"
               >
-                Start Free Trial
+                Start for free
               </button>
             </div>
 
-            {/* Starter Plan */}
+            {/* Pro Plan */}
             <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-sm rounded-2xl p-8 border border-blue-500/50 relative">
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-1 rounded-full text-sm font-medium">
@@ -345,33 +341,32 @@ const Index = () => {
                 </span>
               </div>
               
-              <h3 className="text-2xl font-bold mb-2">Starter</h3>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">$24.99</span>
-                <span className="text-gray-400">/month</span>
-              </div>
-              <p className="text-gray-300 mb-8">Ideal for individual recruiters and small teams</p>
+              <h3 className="text-2xl font-bold mb-2">Pro</h3>
               
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span>Up to 100 candidate profiles</span>
+                  <span>4800 credits</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span>Advanced search & filters</span>
+                  <span>Estimated time saved: 1200 minutes</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span>AI-powered matching</span>
+                  <span>Everything in free plus:</span>
                 </li>
-                <li className="flex items-center gap-3">
+                <li className="flex items-center gap-3 ml-4">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span>Automated outreach</span>
+                  <span>Directory permanently saves</span>
                 </li>
-                <li className="flex items-center gap-3">
+                <li className="flex items-center gap-3 ml-4">
                   <Check className="w-5 h-5 text-green-400" />
-                  <span>Basic mentorship access</span>
+                  <span>Priority Support</span>
+                </li>
+                <li className="flex items-center gap-3 ml-4">
+                  <Check className="w-5 h-5 text-green-400" />
+                  <span>Advanced features</span>
                 </li>
               </ul>
               
@@ -379,51 +374,7 @@ const Index = () => {
                 onClick={() => navigate("/onboarding/resume-upload")}
                 className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white py-3 px-6 rounded-xl font-semibold transition-all"
               >
-                Get Started
-              </button>
-            </div>
-
-            {/* Pro Plan */}
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
-              <h3 className="text-2xl font-bold mb-2">Pro</h3>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">$39.99</span>
-                <span className="text-gray-400">/month</span>
-              </div>
-              <p className="text-gray-300 mb-8">For growing teams and agencies with advanced needs</p>
-              
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Unlimited candidate profiles</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Premium AI personalizations</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Advanced analytics & insights</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Priority mentorship access</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Custom integrations</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Priority support</span>
-                </li>
-              </ul>
-              
-              <button 
-                onClick={() => navigate("/onboarding/resume-upload")}
-                className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-colors"
-              >
-                Get Started
+                Start now
               </button>
             </div>
           </div>

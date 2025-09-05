@@ -116,6 +116,7 @@ export default function AccountSettings() {
               <div>
                 <CardTitle>Credit Usage Jul-Aug 2025</CardTitle>
                 <p className="text-2xl font-bold text-foreground mt-2">12,127 credits</p>
+                <p className="text-sm text-muted-foreground mt-1">85 credits per contact</p>
               </div>
               <div className="flex items-center gap-4">
                 <Button variant="outline" size="sm" className="flex items-center gap-2">
