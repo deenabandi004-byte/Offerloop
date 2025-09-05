@@ -17,28 +17,22 @@ import LockedFeatureOverlay from "@/components/LockedFeatureOverlay";
 
 const BACKEND_URL = 'http://localhost:5001';
 
+const CREDITS_PER_CONTACT = 85;
+
 const TIER_CONFIGS = {
   free: {
-    maxContacts: 4,
+    maxContacts: 10,
     name: 'Free',
-    credits: 500,
-    description: 'Basic search - 4 contacts',
+    credits: 850,
+    description: 'Try out platform risk free',
     coffeeChat: false,
     interviewPrep: false
   },
-  starter: {
-    maxContacts: 6,
-    name: 'Starter',
-    credits: 1000,
-    description: 'Advanced search - 6 contacts + Email drafts',
-    coffeeChat: true,
-    interviewPrep: false
-  },
   pro: {
-    maxContacts: 8,
+    maxContacts: 56,
     name: 'Pro',
-    credits: 2000,
-    description: 'Full search - 8 contacts + Resume matching',
+    credits: 4800,
+    description: 'Everything in Free plus directory saves, priority support, advanced features',
     coffeeChat: true,
     interviewPrep: true
   }
@@ -65,7 +59,7 @@ const Home = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [userTier] = useState<'free' | 'starter' | 'pro'>('free');
+  const [userTier] = useState<'free' | 'pro'>('free');
   
   // Form state
   const [jobTitle, setJobTitle] = useState("");
@@ -156,9 +150,7 @@ const Home = () => {
 
       // Map tier to endpoint
       let endpoint = '/api/basic-run';
-      if (userTier === 'starter') {
-        endpoint = '/api/advanced-run';
-      } else if (userTier === 'pro') {
+      if (userTier === 'pro') {
         endpoint = '/api/pro-run';
       }
 
@@ -195,7 +187,9 @@ const Home = () => {
       });
       
       // Deduct credits (mock)
-      mockUser.credits -= currentTierConfig.credits;
+      const foundCount = (data.contacts || []).length;
+      const cost = foundCount * CREDITS_PER_CONTACT;
+      mockUser.credits = Math.max(0, mockUser.credits - cost);
       
     } catch (error) {
       console.error('Search failed:', error);
@@ -222,6 +216,11 @@ const Home = () => {
   });
 
   const handleSaveToDirectory = async () => {
+    if (userTier !== 'pro') {
+      toast({ title: "Pro feature", description: "Upgrade to Pro to save to directory.", variant: "destructive" });
+      return;
+    }
+
     try {
       if (!hasResults) return;
       const mapped = lastResults.map(mapToDirectoryContact);
@@ -400,9 +399,9 @@ const Home = () => {
                     {userTier === 'pro' && <Crown className="h-5 w-5 text-yellow-400" />}
                     <h2 className="text-2xl font-bold text-white">{currentTierConfig.name}</h2>
                   </div>
-                  <Badge className="bg-gradient-to-r from-pink-500 to-purple-500 text-white border-0">
+                  <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white border-0 px-3 py-1 rounded-full text-sm font-medium">
                     {currentTierConfig.credits} credits
-                  </Badge>
+                  </div>
                 </div>
                 
                 <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
@@ -559,9 +558,9 @@ const Home = () => {
                       <CardTitle className="text-xl text-white flex items-center gap-2">
                         Coffee Chat Prep
                         {currentTierConfig.coffeeChat && (
-                          <Badge variant="outline" className="text-green-400 border-green-400">
+                          <span className="text-green-400 border border-green-400 px-2 py-1 rounded text-xs">
                             Available
-                          </Badge>
+                          </span>
                         )}
                       </CardTitle>
                     </CardHeader>
@@ -625,9 +624,9 @@ const Home = () => {
                       <CardTitle className="text-xl text-white flex items-center gap-2">
                         Interview Prep
                         {currentTierConfig.interviewPrep && (
-                          <Badge variant="outline" className="text-green-400 border-green-400">
+                          <span className="text-green-400 border border-green-400 px-2 py-1 rounded text-xs">
                             Available
-                          </Badge>
+                          </span>
                         )}
                       </CardTitle>
                     </CardHeader>
