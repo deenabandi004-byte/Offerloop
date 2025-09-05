@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutocompleteInput } from "@/components/AutocompleteInput";
 import ScoutChatbot from "@/components/ScoutChatbot";
 import LockedFeatureOverlay from "@/components/LockedFeatureOverlay";
+import { apiService } from '../services/api';
 
 const BACKEND_URL = 'http://localhost:5001';
 
@@ -211,37 +212,35 @@ const Home = () => {
   };
 
   const mapToDirectoryContact = (c: any) => ({
-    firstName: c.FirstName || '',
-    lastName: c.LastName || '',
-    linkedinUrl: c.LinkedIn || '',
-    email: c.Email || c.WorkEmail || c.PersonalEmail || '',
-    company: c.Company || '',
-    jobTitle: c.Title || '',
-    college: c.College || '',
-    location: [c.City, c.State].filter(Boolean).join(', ')
+    FirstName: c.FirstName || '',
+    LastName: c.LastName || '',
+    LinkedIn: c.LinkedIn || '',
+    Email: c.Email || c.WorkEmail || c.PersonalEmail || '',
+    Company: c.Company || '',
+    Title: c.Title || '',
+    College: c.College || '',
+    City: c.City || '',
+    State: c.State || '',
+    Phone: c.Phone || '',
+    PersonalEmail: c.PersonalEmail || '',
+    WorkEmail: c.WorkEmail || '',
+    SocialProfiles: c.SocialProfiles || '',
+    EducationTop: c.EducationTop || '',
+    VolunteerHistory: c.VolunteerHistory || '',
+    WorkSummary: c.WorkSummary || '',
+    Group: c.Group || '',
+    Hometown: c.Hometown || '',
+    Similarity: c.Similarity || ''
   });
 
   const handleSaveToDirectory = async () => {
     try {
       if (!hasResults) return;
       const mapped = lastResults.map(mapToDirectoryContact);
-      const resp = await fetch(`${BACKEND_URL}/api/contacts/bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: mockUser.email || 'test@example.com',
-          contacts: mapped
-        })
-      });
-
-      if (!resp.ok) {
-        const errData = await resp.json();
-        throw new Error(errData.error || 'Failed to save contacts');
-      }
-      const data = await resp.json();
+      const { saved } = await apiService.saveContactsToDirectory(mapped);
       toast({
         title: "Saved to Contact Directory",
-        description: `Created ${data.created}, skipped ${data.skipped} duplicates.`
+        description: `Saved ${saved} contacts to directory.`
       });
     } catch (e) {
       console.error(e);
