@@ -8,7 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import Home from "./pages/Home";
 import SignIn from "./pages/SignIn";
-import AuthCallback from "./pages/AuthCallback"; // Add this import
+import AuthCallback from "./pages/AuthCallback";
 import OnboardingResumeUpload from "./pages/OnboardingResumeUpload";
 import Onboarding from "./pages/Onboarding";
 import OnboardingAcademics from "./pages/OnboardingAcademics";
@@ -26,7 +26,6 @@ import AccountSettings from "./pages/AccountSettings";
 import Pricing from "./pages/Pricing";
 import News from "./pages/News";
 import Dashboard from "./pages/Dashboard";
-import ContactDirectory from "./pages/ContactDirectory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,7 +42,7 @@ const App: React.FC = () => {
               <Route path="/" element={<Index />} />
               <Route path="/home" element={<Home />} />
               <Route path="/signin" element={<SignIn />} />
-              <Route path="/auth/callback" element={<AuthCallback />} /> {/* Add this route */}
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/onboarding/resume-upload" element={<OnboardingResumeUpload />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/onboarding/academics" element={<OnboardingAcademics />} />
@@ -60,7 +59,6 @@ const App: React.FC = () => {
               <Route path="/account-settings" element={<AccountSettings />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/contact-directory" element={<ContactDirectory />} />
               <Route path="/news" element={<News />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

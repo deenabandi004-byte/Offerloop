@@ -2014,25 +2014,19 @@ def handle_pdl_rate_limit():
     time.sleep(5)
 
 def validate_search_inputs(job_title, company, location):
-    """Validate search inputs before making API calls"""
     errors = []
     
     if not job_title or len(job_title.strip()) < 2:
         errors.append("Job title must be at least 2 characters")
     
-    if not company or len(company.strip()) < 2:
+    # Company is optional - only validate if provided
+    if company and len(company.strip()) < 2:
         errors.append("Company name must be at least 2 characters")
     
     if not location or len(location.strip()) < 2:
         errors.append("Location must be at least 2 characters")
     
-    suspicious_patterns = ['test', 'example', 'placeholder', 'xxx']
-    for pattern in suspicious_patterns:
-        if pattern.lower() in job_title.lower() or pattern.lower() in company.lower():
-            errors.append(f"Please provide real search terms (found '{pattern}')")
-    
     return errors
-
 # ========================================
 # ENHANCED TIER FUNCTIONS WITH LOGGING
 # ========================================
@@ -2355,6 +2349,11 @@ def basic_run():
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
         
+        # CHECK FOR JSON FORMAT REQUEST - THIS WAS MISSING
+        want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
+        if want_json:
+            return jsonify(result)
+        
         # Check if we should save to directory
         save_flag = False
         if request.is_json:
@@ -2436,6 +2435,7 @@ def advanced_run():
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
         
+        # CHECK FOR JSON FORMAT REQUEST
         want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
         if want_json:
             return jsonify(result)
@@ -2543,6 +2543,7 @@ def pro_run():
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
         
+        # CHECK FOR JSON FORMAT REQUEST
         want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
         if want_json:
             return jsonify(result)
