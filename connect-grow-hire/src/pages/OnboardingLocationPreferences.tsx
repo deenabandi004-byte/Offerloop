@@ -13,6 +13,7 @@ import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import * as z from "zod";
+import { saveOnboarding } from "@/utils/onboardingStorage";
 
 const formSchema = z.object({
   locations: z.array(z.string()).optional(),
@@ -36,12 +37,10 @@ const OnboardingLocationPreferences = () => {
   });
 
   const onSubmit = (data: FormData) => {
-    console.log("Location preferences form submitted:", { 
-      ...data, 
+    saveOnboarding({
       locations: selectedLocations,
-      jobTypes: selectedJobTypes 
+      jobTypes: selectedJobTypes,
     });
-    // Navigate to sign-up page
     navigate("/onboarding/signup");
   };
 

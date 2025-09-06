@@ -1,4 +1,4 @@
-import { ArrowLeft, Upload, Trash2, LogOut, CreditCard } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, LogOut, CreditCard, Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,9 +6,39 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { loadOnboarding, saveOnboarding } from "@/utils/onboardingStorage";
+import { useState } from "react";
 
 export default function AccountSettings() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [onboarding, setOnboarding] = useState(loadOnboarding());
+
+  const firstName = onboarding?.firstName || "";
+  const lastName = onboarding?.lastName || "";
+  const email = user?.email || "Not signed in";
+  const credits = user?.credits ?? 0;
+  const profileImage = onboarding?.profileImageDataUrl;
+
+  const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        const updated = saveOnboarding({ profileImageDataUrl: reader.result });
+        setOnboarding(updated);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveProfileImage = () => {
+    const updated = saveOnboarding({ profileImageDataUrl: undefined });
+    setOnboarding(updated);
+  };
 
   const handleSignOut = async () => {
     // For now, navigate to landing page - can be enhanced with actual Supabase auth later
@@ -46,99 +76,183 @@ export default function AccountSettings() {
               <CardTitle>Personal Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Profile Picture */}
-              <div className="flex items-center gap-6">
+              <div className="flex items-center space-x-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarFallback className="text-xl font-semibold bg-primary text-primary-foreground">
-                    N
-                  </AvatarFallback>
+                  {profileImage ? (
+                    <img src={profileImage} alt="Profile" className="h-20 w-20 rounded-full object-cover" />
+                  ) : (
+                    <AvatarFallback className="text-xl font-semibold bg-primary text-primary-foreground">
+                      {(firstName?.[0] || "U").toUpperCase()}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-medium text-foreground">Profile Picture</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">PNGs, JPEGs under 10MB</p>
-                  <div className="flex gap-3">
-                    <Button size="sm" className="bg-primary hover:bg-primary/90">
+                <div className="flex flex-col space-y-2">
+                  <div className="flex space-x-2">
+                    <input
+                      id="profile-photo-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleProfileImageUpload}
+                    />
+                    <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => document.getElementById("profile-photo-input")?.click()}>
                       <Upload className="h-4 w-4 mr-2" />
                       Upload Photo
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleRemoveProfileImage}>
                       Remove
                     </Button>
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    JPG, GIF or PNG. 1MB max.
+                  </p>
                 </div>
               </div>
 
-              <Separator />
-
-              {/* Full Name */}
-              <div className="space-y-4">
-                <Label className="text-sm font-medium text-foreground">Full Name</Label>
-                <p className="text-sm text-muted-foreground">Your first and last name, as visible to others.</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <Input 
-                    defaultValue="Nicholas" 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName" className="text-sm font-medium text-foreground">
+                    First Name
+                  </Label>
+                  <Input
+                    id="firstName"
+                    defaultValue={firstName}
                     placeholder="First name"
                     className="bg-background border-input"
                   />
-                  <Input 
-                    defaultValue="Wittig" 
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName" className="text-sm font-medium text-foreground">
+                    Last Name
+                  </Label>
+                  <Input
+                    id="lastName"
+                    defaultValue={lastName}
                     placeholder="Last name"
                     className="bg-background border-input"
                   />
                 </div>
               </div>
 
-              <Separator />
-
-              {/* Email */}
-              <div className="space-y-4">
+              <div className="space-y-2">
                 <Label className="text-sm font-medium text-foreground">Email</Label>
                 <div className="flex items-center justify-between">
-                  <span className="text-foreground">nwittig@usc.edu</span>
-                  <div className="flex gap-3">
+                  <span className="text-foreground">{email}</span>
+                  <div className="flex space-x-2">
                     <Button variant="outline" size="sm">
-                      Change
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
                     </Button>
-                    <Button variant="outline" size="sm">
-                      Reset Password
-                    </Button>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                      Verified
+                    </Badge>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Credit Usage Section */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+        <Card>
+          <CardHeader>
+            <CardTitle>Credit Usage</CardTitle>
+            <p className="text-2xl font-bold text-foreground mt-2">{credits.toLocaleString()} credits</p>
+            <p className="text-sm text-muted-foreground">
+              Billing period: Jan 1 - Jan 31, 2024
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-foreground">Credits used</span>
+                <span className="text-sm font-medium text-foreground">{Math.max(0, (user?.maxCredits ?? 5000) - credits).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-foreground">Credits remaining</span>
+                <span className="text-sm font-medium text-foreground">{credits.toLocaleString()}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-foreground">Total credits</span>
+                <span className="text-sm font-bold text-foreground">{(user?.maxCredits ?? 5000).toLocaleString()}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Academics</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <CardTitle>Credit Usage Jul-Aug 2025</CardTitle>
-                <p className="text-2xl font-bold text-foreground mt-2">12,127 credits</p>
+                <Label className="text-sm font-medium text-foreground">Graduation</Label>
+                <p className="text-sm text-foreground">
+                  {onboarding?.graduationMonth || "--"}/{onboarding?.graduationYear || "----"}
+                </p>
               </div>
-              <div className="flex items-center gap-4">
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
-                  Billing Period
-                </Button>
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
-                  ← Jul-Aug 2025 →
-                </Button>
-                <Button className="bg-primary hover:bg-primary/90" size="sm">
-                  Refresh
-                </Button>
+              <div>
+                <Label className="text-sm font-medium text-foreground">Field of Study</Label>
+                <p className="text-sm text-foreground">{onboarding?.fieldOfStudy || "--"}</p>
               </div>
-            </CardHeader>
-            <CardContent>
-              {/* Simple chart placeholder - you can integrate a real chart library later */}
-              <div className="h-64 bg-muted/30 rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <p className="text-muted-foreground">Credit usage chart</p>
-                  <p className="text-sm text-muted-foreground">Chart visualization would go here</p>
-                </div>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-foreground">Degree</Label>
+              <p className="text-sm text-foreground">{onboarding?.degreeType || onboarding?.customDegree || "--"}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-foreground">University</Label>
+              <p className="text-sm text-foreground">{onboarding?.university || "--"}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Career Interests</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium text-foreground">Industries</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(onboarding?.industries || []).map(ind => (
+                  <span key={ind} className="px-2 py-1 text-xs rounded bg-muted/50 border">{ind}</span>
+                ))}
+                {(!onboarding?.industries || onboarding.industries.length === 0) && <p className="text-sm text-muted-foreground">--</p>}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-foreground">Preferred Role</Label>
+              <p className="text-sm text-foreground">{onboarding?.jobRole || onboarding?.customJobRole || "--"}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Location Preferences</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium text-foreground">Locations</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(onboarding?.locations || []).map(loc => (
+                  <span key={loc} className="px-2 py-1 text-xs rounded bg-muted/50 border">{loc}</span>
+                ))}
+                {(!onboarding?.locations || onboarding.locations.length === 0) && <p className="text-sm text-muted-foreground">--</p>}
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-foreground">Job Types</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(onboarding?.jobTypes || []).map(jt => (
+                  <span key={jt} className="px-2 py-1 text-xs rounded bg-muted/50 border capitalize">{jt.replace("-", " ")}</span>
+                ))}
+                {(!onboarding?.jobTypes || onboarding.jobTypes.length === 0) && <p className="text-sm text-muted-foreground">--</p>}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
           {/* Account Management Section */}
           <Card>
