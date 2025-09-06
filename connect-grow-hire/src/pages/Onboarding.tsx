@@ -12,6 +12,7 @@ import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import * as z from "zod";
+import { saveOnboarding } from "@/utils/onboardingStorage";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -667,8 +668,11 @@ const Onboarding = () => {
   });
 
   const onSubmit = (data: FormData) => {
-    console.log("Form submitted:", data);
-    // Navigate to academics onboarding page
+    saveOnboarding({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      university: data.university || "",
+    });
     navigate("/onboarding/academics");
   };
 
