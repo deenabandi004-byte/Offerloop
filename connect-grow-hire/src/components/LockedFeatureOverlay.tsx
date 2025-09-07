@@ -2,6 +2,7 @@ import React from 'react';
 import { Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { STRIPE_CHECKOUT_URL } from '@/config/billing';
 
 interface LockedFeatureOverlayProps {
   featureName: string;
@@ -31,10 +32,12 @@ const LockedFeatureOverlay: React.FC<LockedFeatureOverlayProps> = ({
             <p className="text-gray-400 text-sm">Available for {requiredTier} membership</p>
           </div>
           <Button
-            onClick={() => navigate('/pricing')}
             className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+            asChild
           >
-            Upgrade Plan
+            <a href={STRIPE_CHECKOUT_URL} target="_blank" rel="noopener noreferrer">
+              Upgrade Plan
+            </a>
           </Button>
         </div>
       </div>
