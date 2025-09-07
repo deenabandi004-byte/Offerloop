@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import React from "react";
 import { Upload, Download, Zap, Crown, ExternalLink, MessageCircle, ChevronRight, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { STRIPE_CHECKOUT_URL } from "@/config/billing";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -339,11 +340,13 @@ const Home = () => {
               
               
               <Button 
-                size="sm" 
-                onClick={() => navigate('/pricing')}
+                size="sm"
                 className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                asChild
               >
-                Upgrade
+                <a href={STRIPE_CHECKOUT_URL} target="_blank" rel="noopener noreferrer">
+                  Upgrade
+                </a>
               </Button>
             </div>
           </header>

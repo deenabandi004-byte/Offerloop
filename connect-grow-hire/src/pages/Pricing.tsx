@@ -198,7 +198,15 @@ const Pricing = () => {
                 <Button 
                   className="w-full mb-6" 
                   variant={plan.buttonVariant}
-                  onClick={() => plan.name === "Enterprise" ? navigate("/contact") : navigate("/onboarding/resume-upload")}
+                  onClick={() => {
+                    if (plan.name === "Enterprise") {
+                      navigate("/contact");
+                    } else if (plan.name === "Free") {
+                      navigate("/onboarding/resume-upload");
+                    } else {
+                      window.open('https://buy.stripe.com/bJe8wP8S2fa79An7ayf7i00', '_blank');
+                    }
+                  }}
                 >
                   {plan.buttonText}
                 </Button>

@@ -16,7 +16,7 @@ export default function AccountSettings() {
   };
 
   const handleManageSubscription = () => {
-    navigate('/pricing');
+    window.open('https://buy.stripe.com/bJe8wP8S2fa79An7ayf7i00', '_blank');
   };
 
   return (

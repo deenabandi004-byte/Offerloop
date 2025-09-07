@@ -13,6 +13,7 @@ import {
   Users
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
+import { STRIPE_CHECKOUT_URL } from "@/config/billing";
 
 import {
   Sidebar,
@@ -166,9 +167,11 @@ export function AppSidebar() {
                     />
                   </div>
                 </div>
-                <Button size="sm" className="w-full">
-                  <Zap className="w-4 h-4 mr-2" />
-                  Upgrade Plan
+                <Button size="sm" className="w-full" asChild>
+                  <a href={STRIPE_CHECKOUT_URL} target="_blank" rel="noopener noreferrer">
+                    <Zap className="w-4 h-4 mr-2" />
+                    Upgrade Plan
+                  </a>
                 </Button>
               </>
             )}
