@@ -84,6 +84,20 @@ const OnboardingAcademics = () => {
 
   const onSubmit = (data: FormData) => {
     console.log("Academics form submitted:", data);
+    
+    try {
+      const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
+      const degreeText = data.customDegree?.trim() ? data.customDegree : (data.degreeType || "");
+      const update = {
+        fieldOfStudy: data.fieldOfStudy || "",
+        currentDegree: degreeText || "",
+        graduationYear: data.graduationYear || ""
+      };
+      localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
+    } catch (error) {
+      console.error('Failed to save professional info:', error);
+    }
+    
     // Navigate to next onboarding step
     navigate("/onboarding/opportunity-preferences");
   };

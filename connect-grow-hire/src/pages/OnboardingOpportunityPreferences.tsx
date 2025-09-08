@@ -46,6 +46,21 @@ const OnboardingOpportunityPreferences = () => {
       finalIndustries[finalIndustries.indexOf("Other")] = customIndustry;
     }
     console.log("Opportunity preferences form submitted:", { ...data, industries: finalIndustries });
+    
+    try {
+      const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
+      const jobRoleText = data.jobRole === 'other' && data.customJobRole?.trim()
+        ? data.customJobRole.trim()
+        : (data.jobRole || "");
+      const update = {
+        industriesOfInterest: finalIndustries,
+        preferredJobRole: jobRoleText
+      };
+      localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
+    } catch (error) {
+      console.error('Failed to save professional info:', error);
+    }
+    
     // Navigate to next onboarding step
     navigate("/onboarding/location-preferences");
   };

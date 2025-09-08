@@ -1,5 +1,6 @@
-import { ArrowLeft, Upload, Trash2, LogOut, CreditCard } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, LogOut, CreditCard, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,34 @@ import { Separator } from "@/components/ui/separator";
 
 export default function AccountSettings() {
   const navigate = useNavigate();
+  
+  const [prof, setProf] = useState({
+    fieldOfStudy: "",
+    currentDegree: "",
+    graduationYear: "",
+    industriesOfInterest: [] as string[],
+    preferredJobRole: "",
+    preferredLocations: [] as string[],
+    jobTypes: [] as string[],
+  });
+
+  useEffect(() => {
+    try {
+      const resume = JSON.parse(localStorage.getItem('resumeData') || '{}');
+      const pi = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
+      setProf({
+        fieldOfStudy: pi.fieldOfStudy || resume.major || "",
+        currentDegree: pi.currentDegree || "",
+        graduationYear: pi.graduationYear || resume.year || "",
+        industriesOfInterest: Array.isArray(pi.industriesOfInterest) ? pi.industriesOfInterest : [],
+        preferredJobRole: pi.preferredJobRole || "",
+        preferredLocations: Array.isArray(pi.preferredLocations) ? pi.preferredLocations : [],
+        jobTypes: Array.isArray(pi.jobTypes) ? pi.jobTypes : [],
+      });
+    } catch (e) {
+      console.error('Failed to load professionalInfo/resumeData', e);
+    }
+  }, []);
 
   const handleSignOut = async () => {
     // For now, navigate to landing page - can be enhanced with actual Supabase auth later
@@ -135,6 +164,85 @@ export default function AccountSettings() {
                 <div className="text-center">
                   <p className="text-muted-foreground">Credit usage chart</p>
                   <p className="text-sm text-muted-foreground">Chart visualization would go here</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Professional Information Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Professional Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Field of Study */}
+              <div className="space-y-4">
+                <Label className="text-sm font-medium text-foreground">Field of Study</Label>
+                <Input 
+                  value={prof.fieldOfStudy || "Finance"} 
+                  readOnly
+                  className="bg-background border-input"
+                />
+              </div>
+
+              <Separator />
+
+              {/* Current Degree */}
+              <div className="space-y-4">
+                <Label className="text-sm font-medium text-foreground">Current Degree</Label>
+                <Input 
+                  value={prof.currentDegree || "BA"} 
+                  readOnly
+                  className="bg-background border-input"
+                />
+              </div>
+
+              <Separator />
+
+              {/* Resume and Career Interests */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Resume Section */}
+                <div className="space-y-4">
+                  <Label className="text-sm font-medium text-foreground">Resume</Label>
+                  <div className="h-48 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/25 flex flex-col items-center justify-center p-6">
+                    <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-sm text-muted-foreground text-center">Click to view full resume</p>
+                  </div>
+                </div>
+
+                {/* Career Interests Section */}
+                <div className="space-y-4">
+                  <Label className="text-sm font-medium text-foreground">Career Interests</Label>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Industries of Interest</Label>
+                      <p className="text-sm text-foreground mt-1">
+                        {prof.industriesOfInterest.length ? prof.industriesOfInterest.join(", ") : "Investment Banking and Management Consulting"}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Preferred Job Roles/Titles</Label>
+                      <p className="text-sm text-foreground mt-1">
+                        {prof.preferredJobRole || "Associate Consulting and Investment Banking Analyst"}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Preferred Locations</Label>
+                      <p className="text-sm text-foreground mt-1">
+                        {prof.preferredLocations.length ? prof.preferredLocations.join(" and ") : "Los Angeles and New York"}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Job Type(s) Interested in</Label>
+                      <p className="text-sm text-foreground mt-1">
+                        {prof.jobTypes.length ? prof.jobTypes.join(", ") : "Full-time"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>

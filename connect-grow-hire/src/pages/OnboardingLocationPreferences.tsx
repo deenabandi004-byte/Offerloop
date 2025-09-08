@@ -41,7 +41,18 @@ const OnboardingLocationPreferences = () => {
       locations: selectedLocations,
       jobTypes: selectedJobTypes 
     });
-    // Navigate to sign-up page
+    
+    try {
+      const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
+      const update = {
+        preferredLocations: selectedLocations,
+        jobTypes: selectedJobTypes
+      };
+      localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
+    } catch (error) {
+      console.error('Failed to save professional info:', error);
+    }
+    
     navigate("/onboarding/signup");
   };
 
