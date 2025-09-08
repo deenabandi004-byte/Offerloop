@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Table,
   TableBody,
@@ -16,6 +17,7 @@ import {
 const Pricing = () => {
   const [isAnnual, setIsAnnual] = useState(false);
   const navigate = useNavigate();
+  const { updateUser } = useAuth();
 
   const plans = [
     {
@@ -27,9 +29,9 @@ const Pricing = () => {
       buttonVariant: "outline" as const,
       popular: false,
       features: {
-        creditsPerMonth: "500",
+        creditsPerMonth: "120",
         batchSize: "4",
-        monthlyReachOuts: "20",
+        monthlyReachOuts: "8",
         seats: "–",
         gmailDrafts: false,
         infoAutoInserted: "Basic fields",
@@ -46,9 +48,9 @@ const Pricing = () => {
       buttonVariant: "default" as const,
       popular: false,
       features: {
-        creditsPerMonth: "11,000",
+        creditsPerMonth: "840",
         batchSize: "6",
-        monthlyReachOuts: "96",
+        monthlyReachOuts: "56",
         seats: "–",
         gmailDrafts: true,
         infoAutoInserted: "All fields",
@@ -65,9 +67,9 @@ const Pricing = () => {
       buttonVariant: "default" as const,
       popular: true,
       features: {
-        creditsPerMonth: "31,000",
+        creditsPerMonth: "840",
         batchSize: "8",
-        monthlyReachOuts: "160",
+        monthlyReachOuts: "56",
         seats: "–",
         gmailDrafts: true,
         infoAutoInserted: "All fields",
@@ -198,7 +200,35 @@ const Pricing = () => {
                 <Button 
                   className="w-full mb-6" 
                   variant={plan.buttonVariant}
-                  onClick={() => plan.name === "Enterprise" ? navigate("/contact") : navigate("/onboarding/resume-upload")}
+                  onClick={() => {
+                    if (plan.name === "Enterprise") {
+                      navigate("/contact");
+                    } else if (plan.name === "Free") {
+                      updateUser({
+                        tier: 'free',
+                        credits: 120,
+                        maxCredits: 120,
+                        emailsUsedThisMonth: 0,
+                        emailsMonthKey: new Date().toISOString().slice(0, 7),
+                      });
+                    } else if (plan.name === "Starter") {
+                      updateUser({
+                        tier: 'starter',
+                        credits: 840,
+                        maxCredits: 840,
+                        emailsUsedThisMonth: 0,
+                        emailsMonthKey: new Date().toISOString().slice(0, 7),
+                      });
+                    } else if (plan.name === "Pro") {
+                      updateUser({
+                        tier: 'pro',
+                        credits: 840,
+                        maxCredits: 840,
+                        emailsUsedThisMonth: 0,
+                        emailsMonthKey: new Date().toISOString().slice(0, 7),
+                      });
+                    }
+                  }}
                 >
                   {plan.buttonText}
                 </Button>

@@ -32,8 +32,11 @@ export const ContactSearchForm = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [saveToDirectory, setSaveToDirectory] = useState(true);
   const { toast } = useToast();
-  const { user, signIn } = useAuth();
+  const { user, signIn, updateUser } = useAuth();
   const isSignedIn = !!user;
+  
+  const CREDITS_PER_CONTACT = 15;
+  const getMonthlyLimit = (tier: 'free' | 'starter' | 'pro') => (tier === 'free' ? 8 : 56);
 
   const form = useForm<SearchFormData>({
     resolver: zodResolver(searchSchema),
@@ -83,6 +86,33 @@ export const ContactSearchForm = () => {
         variant: "destructive",
       });
       return;
+    }
+
+    const contactsCount = tierFeatures[data.tier].contacts;
+    const creditsNeeded = contactsCount * CREDITS_PER_CONTACT;
+
+    if ((user.credits ?? 0) < creditsNeeded) {
+      setError(`Not enough credits. You need ${creditsNeeded} credits for this run.`);
+      toast({ 
+        title: "Insufficient Credits", 
+        description: `You need ${creditsNeeded} credits.`, 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (data.tier !== "basic") {
+      const monthlyLimit = getMonthlyLimit(user.tier);
+      const used = user.emailsUsedThisMonth || 0;
+      if (used + contactsCount > monthlyLimit) {
+        setError(`Monthly email limit reached (${used}/${monthlyLimit}).`);
+        toast({ 
+          title: "Monthly Email Limit", 
+          description: `You have ${monthlyLimit - used} emails left this month.`, 
+          variant: "destructive" 
+        });
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -139,6 +169,18 @@ export const ContactSearchForm = () => {
       toast({
         title: "Search Complete!",
         description: successMessage,
+      });
+
+      const emailsToCount = data.tier === "basic" ? 0 : tierFeatures[data.tier].contacts;
+      const monthKey = new Date().toISOString().slice(0, 7);
+
+      const nextCredits = Math.max(0, (user.credits ?? 0) - creditsNeeded);
+      const nextUsed = (user.emailsMonthKey === monthKey ? (user.emailsUsedThisMonth || 0) : 0) + emailsToCount;
+
+      updateUser({
+        credits: nextCredits,
+        emailsUsedThisMonth: nextUsed,
+        emailsMonthKey: monthKey,
       });
 
       // Reset form

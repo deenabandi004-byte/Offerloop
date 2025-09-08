@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutocompleteInput } from "@/components/AutocompleteInput";
 import ScoutChatbot from "@/components/ScoutChatbot";
 import LockedFeatureOverlay from "@/components/LockedFeatureOverlay";
+import { useAuth } from "@/contexts/AuthContext";
 
 const BACKEND_URL = 'http://localhost:5001';
 
@@ -64,8 +65,9 @@ const Home = () => {
   }, [waveKeyframes]);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
-  const [userTier] = useState<'free' | 'starter' | 'pro'>('free');
+  const [userTier] = useState<'free' | 'starter' | 'pro'>(user?.tier || 'free');
   
   // Form state
   const [jobTitle, setJobTitle] = useState("");
@@ -85,12 +87,11 @@ const Home = () => {
   const [lastResultsTier, setLastResultsTier] = useState<'free' | 'starter' | 'pro' | string>('');
   const hasResults = lastResults.length > 0;
   
-  // Mock user data
-  const mockUser = {
-    credits: 8450,
-    maxCredits: 10000,
-    name: 'Sarah Chen',
-    email: 'sarah@example.com',
+  const currentUser = user || {
+    credits: 0,
+    maxCredits: 0,
+    name: 'User',
+    email: 'user@example.com',
     tier: userTier
   };
 
@@ -124,10 +125,10 @@ const Home = () => {
     }
 
     // Check credits
-    if (mockUser.credits < currentTierConfig.credits) {
+    if (currentUser.credits < currentTierConfig.credits) {
       toast({
         title: "Insufficient Credits",
-        description: `You need ${currentTierConfig.credits} credits for ${currentTierConfig.name} search. You have ${mockUser.credits}.`,
+        description: `You need ${currentTierConfig.credits} credits for ${currentTierConfig.name} search. You have ${currentUser.credits}.`,
         variant: "destructive"
       });
       return;
@@ -148,7 +149,7 @@ const Home = () => {
       formData.append('company', company.trim() || '');
       formData.append('location', location.trim());
       formData.append('tier', userTier);
-      formData.append('userEmail', mockUser.email);
+      formData.append('userEmail', currentUser.email);
       
       if (uploadedFile && userTier === 'pro') {
         formData.append('resume', uploadedFile);
@@ -195,7 +196,7 @@ const Home = () => {
       });
       
       // Deduct credits (mock)
-      mockUser.credits -= currentTierConfig.credits;
+      currentUser.credits -= currentTierConfig.credits;
       
     } catch (error) {
       console.error('Search failed:', error);
@@ -229,7 +230,7 @@ const Home = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: mockUser.email || 'test@example.com',
+          userId: currentUser.email || 'test@example.com',
           contacts: mapped
         })
       });
@@ -334,7 +335,7 @@ const Home = () => {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm">
                 <Zap className="h-4 w-4 text-blue-400" />
-                <span className="text-gray-300">{mockUser.credits.toLocaleString()} credits</span>
+                <span className="text-gray-300">{currentUser.credits.toLocaleString()} credits</span>
               </div>
               
               
