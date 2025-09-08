@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AccountSettings() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const [prof, setProf] = useState({
     fieldOfStudy: "",
@@ -143,8 +145,15 @@ export default function AccountSettings() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Credit Usage Jul-Aug 2025</CardTitle>
-                <p className="text-2xl font-bold text-foreground mt-2">12,127 credits</p>
+                <CardTitle>Credit Usage</CardTitle>
+                <p className="text-2xl font-bold text-foreground mt-2">
+                  {user ? `${user.credits ?? 0} / ${user.maxCredits ?? 0} credits left` : "—"}
+                </p>
+                {user && (
+                  <p className="text-sm text-muted-foreground">
+                    Emails this month: {(user.emailsUsedThisMonth || 0)} / {user.tier === 'free' ? 8 : 56}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-4">
                 <Button variant="outline" size="sm" className="flex items-center gap-2">

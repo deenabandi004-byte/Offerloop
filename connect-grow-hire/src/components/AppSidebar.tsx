@@ -13,6 +13,7 @@ import {
   Users
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 import {
   Sidebar,
@@ -52,6 +53,7 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const { user } = useAuth();
 
   const isActive = (path: string) => currentPath === path;
   const isSettingsActive = settingsItems.some(item => isActive(item.url));
@@ -157,12 +159,18 @@ export function AppSidebar() {
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium">Credits</p>
-                    <p className="text-xs text-muted-foreground">63.8k / 75.0k</p>
+                    <p className="text-xs text-muted-foreground">
+                      {user ? `${user.credits ?? 0} / ${user.maxCredits ?? 0}` : "— / —"}
+                    </p>
                   </div>
                   <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/30">
                     <div 
                       className="h-full bg-blue-500 transition-all rounded-full" 
-                      style={{ width: '85.1%' }}
+                      style={{ 
+                        width: user && user.maxCredits ? 
+                          `${Math.max(0, Math.min(100, ((user.credits ?? 0) / user.maxCredits) * 100))}%` : 
+                          '0%' 
+                      }}
                     />
                   </div>
                 </div>
@@ -177,11 +185,15 @@ export function AppSidebar() {
           {/* User Profile */}
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
-              <AvatarFallback>N</AvatarFallback>
+              {user?.picture ? (
+                <img src={user.picture} alt={user.name} className="w-full h-full object-cover rounded-full" />
+              ) : (
+                <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+              )}
             </Avatar>
             {state !== "collapsed" && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Nicholas</p>
+                <p className="text-sm font-medium truncate">{user?.name || "User"}</p>
               </div>
             )}
           </div>

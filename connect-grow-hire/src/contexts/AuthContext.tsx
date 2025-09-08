@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+const getMonthKey = () => new Date().toISOString().slice(0, 7);
+
+const initialCreditsByTier = (tier: 'free' | 'starter' | 'pro') =>
+  tier === 'free' ? 120 : 840;
+
+const monthlyEmailLimitByTier = (tier: 'free' | 'starter' | 'pro') =>
+  tier === 'free' ? 8 : 56;
+
 // Add Google types
 declare global {
   interface Window {
@@ -17,6 +25,8 @@ interface User {
   credits: number;
   maxCredits: number;
   subscriptionId?: string;
+  emailsUsedThisMonth?: number;
+  emailsMonthKey?: string;
 }
 
 interface AuthContextType {
@@ -68,11 +78,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const parsedUser = JSON.parse(savedUser);
         // Ensure tier data exists, add defaults if missing
+        const nowKey = getMonthKey();
+        const tier = parsedUser.tier || 'free';
+        const defaultCredits = initialCreditsByTier(tier);
+        
         const userWithDefaults: User = {
           ...parsedUser,
-          tier: parsedUser.tier || 'free',
-          credits: parsedUser.credits ?? 5000,
-          maxCredits: parsedUser.maxCredits ?? 5000,
+          tier,
+          credits: parsedUser.credits ?? defaultCredits,
+          maxCredits: parsedUser.maxCredits ?? defaultCredits,
+          emailsMonthKey: parsedUser.emailsMonthKey || nowKey,
+          emailsUsedThisMonth: (parsedUser.emailsMonthKey === nowKey)
+            ? (parsedUser.emailsUsedThisMonth ?? 0)
+            : 0,
         };
         setUser(userWithDefaults);
         // Update localStorage with new format
@@ -171,16 +189,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Check if user has subscription data from backend
       // For now, we'll use defaults but you can extend this
+      const tier: 'free' | 'starter' | 'pro' = userData.tier || 'free';
+      const defaultCredits = initialCreditsByTier(tier);
+      const nowKey = getMonthKey();
+
       const user: User = {
         email: userData.email,
         name: userData.name,
         picture: userData.picture,
         accessToken: userData.access_token,
         // Add tier defaults - these would come from your backend/database
-        tier: userData.tier || 'free',
-        credits: userData.credits ?? 5000,
-        maxCredits: userData.maxCredits ?? 5000,
+        tier,
+        credits: userData.credits ?? defaultCredits,
+        maxCredits: userData.maxCredits ?? defaultCredits,
         subscriptionId: userData.subscriptionId,
+        emailsMonthKey: nowKey,
+        emailsUsedThisMonth: 0,
       };
 
       setUser(user);
