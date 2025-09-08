@@ -968,7 +968,7 @@ def search_contacts_with_pdl_optimized(job_title, company, location, max_contact
 # EMAIL GENERATION (Free & Pro Tiers)
 # ========================================
 
-def generate_email_from_templates(resume_text: str, contact_info: dict, templates: list, temperature: float = 0.7) -> str:
+def generate_email_from_templates(resume_text: str, contact_info: dict, templates: list, user_name: str = "", temperature: float = 0.7) -> str:
     """
     Uses the user's unified prompt to select one best template and return a final polished email body.
     Returns the email body only (no subject).
@@ -995,9 +995,11 @@ You are an expert career networking assistant trained to generate professional, 
 - Do not simply merge the resume with the contact's profile — instead, use only the most relevant overlaps to establish credibility and authenticity.
 - Never overstuff the email with too much detail. Limit to 1–2 personalizing sentences.
 - Always sign off with the user's name and contact info.
+- Replace [Your Name]/[Your Full Name] with: {user_name or "[Your Name]"}
 - resume_text = {json.dumps(resume_text, ensure_ascii=False)}
 - contact_info = {json.dumps(contact_info, ensure_ascii=False)}
 - templates = {json.dumps(templates, ensure_ascii=False)}
+- user_name = {json.dumps(user_name, ensure_ascii=False)}
 Return a final polished cold outreach email that:
 1. Uses the single best-fitting template.
 2. Seamlessly incorporates personal similarities between the user and contact.
@@ -1016,24 +1018,24 @@ Do not return multiple templates or drafts. Only return the final single email.
     )
     return response.choices[0].message.content.strip()
 
-def generate_email_for_tier(contact, tier='free', resume_info=None, similarity=None, hometown=None):
+def generate_email_for_tier(contact, tier='free', resume_info=None, similarity=None, hometown=None, user_name=""):
     """Generate email based on tier - Free or Pro"""
     try:
         print(f"Generating {tier} email for {contact.get('FirstName', 'Unknown')}")
         
         if tier == 'free':
-            return generate_free_email(contact)
+            return generate_free_email(contact, user_name)
         elif tier == 'pro':
-            return generate_pro_email(contact, resume_info, similarity, hometown)
+            return generate_pro_email(contact, resume_info, similarity, hometown, user_name=user_name)
         else:
             # Fallback to free email
-            return generate_free_email(contact)
+            return generate_free_email(contact, user_name)
             
     except Exception as e:
         print(f"{tier.capitalize()} email generation failed: {e}")
         return f"Quick Chat about Your Work at {contact.get('Company', 'Your Company')}?", f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at {contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
 
-def generate_free_email(contact):
+def generate_free_email(contact, user_name=""):
     """Generate Free tier email using template-selection prompt (no resume)."""
     try:
         contact_info = {
@@ -1055,8 +1057,12 @@ def generate_free_email(contact):
             resume_text=resume_text,
             contact_info=contact_info,
             templates=TEMPLATES_15,
+            user_name=user_name,
             temperature=0.7,
         )
+        
+        if user_name:
+            email_body = email_body.replace("[Your Name]", user_name).replace("[Your Full Name]", user_name)
 
         email_subject = f"Coffee chat re: {contact.get('Title', 'your work')} @ {contact.get('Company', 'your company')}?"
 
@@ -1069,11 +1075,13 @@ def generate_free_email(contact):
             f"{contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
         )
 
-def generate_pro_email(contact, resume_info, similarity, hometown):
+def generate_pro_email(contact, resume_info, similarity, hometown, user_name=""):
     """Generate Pro tier email (uses structured profile summary derived from resume)."""
     try:
+        resume_name = (resume_info or {}).get("name") or user_name or ""
+        
         resume_summary = {
-            "name": resume_info.get("name", ""),
+            "name": resume_name,
             "year": resume_info.get("year", ""),
             "major": resume_info.get("major", ""),
             "university": resume_info.get("university", ""),
@@ -1099,8 +1107,12 @@ def generate_pro_email(contact, resume_info, similarity, hometown):
             resume_text=resume_text,
             contact_info=contact_info,
             templates=TEMPLATES_15,
+            user_name=resume_name,
             temperature=0.7,
         )
+        
+        if resume_name:
+            email_body = email_body.replace("[Your Name]", resume_name).replace("[Your Full Name]", resume_name)
 
         subject_prompt = f"""
 Create a concise, compelling subject for a coffee chat outreach email.
@@ -1676,7 +1688,7 @@ def apply_recruitedge_label(gmail_service, message_id, tier):
 # TIER ENDPOINT IMPLEMENTATIONS - SIMPLIFIED TO TWO TIERS
 # ========================================
 
-def run_free_tier(job_title, company, location, user_email=None):
+def run_free_tier(job_title, company, location, user_email=None, user_name=""):
     """FREE TIER: 8 contacts max with PDL search + email drafting"""
     print(f"Running FREE tier workflow for {user_email}")
     
@@ -1690,7 +1702,7 @@ def run_free_tier(job_title, company, location, user_email=None):
         # Step 2: Generate Free emails for each contact
         successful_drafts = 0
         for contact in contacts:
-            email_subject, email_body = generate_email_for_tier(contact, tier='free')
+            email_subject, email_body = generate_email_for_tier(contact, tier='free', user_name=user_name)
             contact['email_subject'] = email_subject
             contact['email_body'] = email_body
             
@@ -1731,7 +1743,7 @@ def run_free_tier(job_title, company, location, user_email=None):
         print(f"Free tier failed for {user_email}: {e}")
         return {'error': str(e), 'contacts': []}
 
-def run_pro_tier(job_title, company, location, resume_file, user_email=None):
+def run_pro_tier(job_title, company, location, resume_file, user_email=None, user_name=""):
     """PRO TIER: 56 contacts max with PDL + resume analysis + similarity engine + smart emails"""
     print(f"Running PRO tier workflow for {user_email}")
     
@@ -1768,7 +1780,8 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
                 tier='pro',
                 resume_info=resume_info,
                 similarity=contact['Similarity'],
-                hometown=contact['Hometown']
+                hometown=contact['Hometown'],
+                user_name=user_name
             )
             contact['email_subject'] = email_subject
             contact['email_body'] = email_body
@@ -1817,7 +1830,7 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
 # ENHANCED TIER FUNCTIONS WITH LOGGING - TWO TIERS ONLY
 # ========================================
 
-def run_free_tier_enhanced(job_title, company, location, user_email=None):
+def run_free_tier_enhanced(job_title, company, location, user_email=None, user_name=""):
     """Enhanced Free tier with validation and logging"""
     print(f"Running FREE tier workflow for {user_email}")
     
@@ -1835,7 +1848,7 @@ def run_free_tier_enhanced(job_title, company, location, user_email=None):
         
         successful_drafts = 0
         for contact in contacts:
-            email_subject, email_body = generate_email_for_tier(contact, tier='free')
+            email_subject, email_body = generate_email_for_tier(contact, tier='free', user_name=user_name)
             contact['email_subject'] = email_subject
             contact['email_body'] = email_body
             
@@ -1885,7 +1898,7 @@ def run_free_tier_enhanced(job_title, company, location, user_email=None):
         log_api_usage('free', user_email, 0, 0)
         return {'error': str(e), 'contacts': []}
 
-def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=None):
+def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=None, user_name=""):
     """Enhanced Pro tier with validation and logging"""
     print(f"Running PRO tier workflow for {user_email}")
     
@@ -1922,7 +1935,8 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
                 tier='pro',
                 resume_info=resume_info,
                 similarity=contact['Similarity'],
-                hometown=contact['Hometown']
+                hometown=contact['Hometown'],
+                user_name=user_name
             )
             contact['email_subject'] = email_subject
             contact['email_body'] = email_body
@@ -2202,11 +2216,13 @@ def free_run():
             company = data.get('company', '').strip() if data.get('company') else ''
             location = data.get('location', '').strip() if data.get('location') else ''
             user_email = data.get('userEmail', '').strip() if data.get('userEmail') else None
+            user_name = data.get('userName', '').strip() if data.get('userName') else ''
         else:
             job_title = (request.form.get('jobTitle') or '').strip()
             company = (request.form.get('company') or '').strip()
             location = (request.form.get('location') or '').strip()
             user_email = (request.form.get('userEmail') or '').strip() or None
+            user_name = (request.form.get('userName') or '').strip()
         
         print(f"DEBUG - Free endpoint received:")
         print(f"  job_title: '{job_title}' (len: {len(job_title)})")
@@ -2224,7 +2240,7 @@ def free_run():
         
         print(f"Free search for {user_email}: {job_title} at {company} in {location}")
         
-        result = run_free_tier_enhanced(job_title, company, location, user_email)
+        result = run_free_tier_enhanced(job_title, company, location, user_email, user_name=user_name)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
@@ -2294,6 +2310,7 @@ def pro_run():
         company = request.form.get('company')
         location = request.form.get('location')
         user_email = request.form.get('userEmail')
+        user_name = request.form.get('userName')
         
         print(f"Raw form values:")
         print(f"  jobTitle: '{job_title}' (type: {type(job_title)})")
@@ -2305,6 +2322,7 @@ def pro_run():
         company = (company or '').strip()
         location = (location or '').strip()
         user_email = (user_email or '').strip() if user_email else None
+        user_name = (user_name or '').strip()
         
         print(f"Cleaned values:")
         print(f"  job_title: '{job_title}' (len: {len(job_title)})")
@@ -2332,7 +2350,7 @@ def pro_run():
         print(f"All validations passed!")
         print(f"Pro search for {user_email}: {job_title} at {company} in {location}")
         
-        result = run_pro_tier_enhanced(job_title, company, location, resume_file, user_email)
+        result = run_pro_tier_enhanced(job_title, company, location, resume_file, user_email, user_name=user_name)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500

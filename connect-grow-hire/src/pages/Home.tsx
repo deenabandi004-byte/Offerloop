@@ -164,6 +164,7 @@ const Home = () => {
         formData.append('company', searchRequest.company);
         formData.append('location', searchRequest.location);
         formData.append('userEmail', currentUser.email);
+        formData.append('userName', currentUser.name || '');
         formData.append('saveToDirectory', 'false');
 
         response = await fetch(`${BACKEND_URL}/api/free-run?format=json`, {
@@ -179,6 +180,7 @@ const Home = () => {
         formData.append('location', location.trim());
         formData.append('resume', uploadedFile!);
         formData.append('userEmail', currentUser.email);
+        formData.append('userName', currentUser.name || '');
         formData.append('saveToDirectory', 'false');
 
         response = await fetch(`${BACKEND_URL}/api/pro-run?format=json`, {
@@ -744,41 +746,51 @@ const Home = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-6 space-y-6">
-                    {lastResults.map((c, idx) => (
-                      <div key={idx} className="p-4 rounded-lg bg-gray-900/40 border border-gray-700">
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <div className="font-semibold text-white">
-                              {c.FirstName} {c.LastName} {c.Title ? `— ${c.Title}` : ""} {c.Company ? `@ ${c.Company}` : ""}
+                    {lastResults.map((c, idx) => {
+                      const toEmail = c.Email || c.WorkEmail || c.PersonalEmail || '';
+                      const subject = c.email_subject || '';
+                      const body = c.email_body || '';
+                      
+                      return (
+                        <div key={idx} className="p-4 rounded-lg bg-gray-900/40 border border-gray-700">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <div className="font-semibold text-white">
+                                {c.FirstName} {c.LastName} {c.Title ? `— ${c.Title}` : ""} {c.Company ? `@ ${c.Company}` : ""}
+                              </div>
+                              {toEmail && (
+                                <div className="text-sm text-emerald-300 mt-1">To: {toEmail}</div>
+                              )}
+                              {subject && (
+                                <div className="text-sm text-blue-300 mt-1">Subject: {subject}</div>
+                              )}
                             </div>
-                            {c.email_subject && (
-                              <div className="text-sm text-blue-300 mt-1">Subject: {c.email_subject}</div>
-                            )}
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-blue-500 text-blue-300 hover:bg-blue-500/10"
+                              onClick={() => {
+                                const header = toEmail ? `To: ${toEmail}\n` : '';
+                                const text = `${header}Subject: ${subject}\n\n${body}`;
+                                navigator.clipboard.writeText(text);
+                              }}
+                              title="Copy email to clipboard"
+                            >
+                              Copy
+                            </Button>
                           </div>
 
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-blue-500 text-blue-300 hover:bg-blue-500/10"
-                            onClick={() => {
-                              const text = `Subject: ${c.email_subject || ""}\n\n${c.email_body || ""}`;
-                              navigator.clipboard.writeText(text);
-                            }}
-                            title="Copy email to clipboard"
-                          >
-                            Copy
-                          </Button>
+                          <pre className="whitespace-pre-wrap text-gray-200 text-sm mt-3">
+                            {body || "No email generated"}
+                          </pre>
+
+                          {c.draft_id && !String(c.draft_id).startsWith("mock_") && (
+                            <div className="text-xs text-green-400 mt-2">Gmail draft created ✓</div>
+                          )}
                         </div>
-
-                        <pre className="whitespace-pre-wrap text-gray-200 text-sm mt-3">
-                          {c.email_body || "No email generated"}
-                        </pre>
-
-                        {c.draft_id && !String(c.draft_id).startsWith("mock_") && (
-                          <div className="text-xs text-green-400 mt-2">Gmail draft created ✓</div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </CardContent>
                 </Card>
               )}

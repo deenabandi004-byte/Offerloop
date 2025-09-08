@@ -124,11 +124,15 @@ class ApiService {
       }
     }
 
+    const userData = user ? JSON.parse(user) : null;
+    const userName = userData?.name || '';
+    
     const backendRequest = {
       jobTitle: request.jobTitle,
       company: request.company,
       location: request.location,
       userEmail: userEmail,
+      userName: userName,
       saveToDirectory: request.saveToDirectory ?? false,
     };
 
@@ -156,12 +160,16 @@ class ApiService {
       }
     }
 
+    const userData = user ? JSON.parse(user) : null;
+    const userName = userData?.name || '';
+    
     const formData = new FormData();
     formData.append('jobTitle', request.jobTitle);
     formData.append('company', request.company);
     formData.append('location', request.location);
     formData.append('resume', request.resume);
     formData.append('userEmail', userEmail);
+    formData.append('userName', userName);
     formData.append('saveToDirectory', String(!!request.saveToDirectory));
 
     console.log(`🟣 Pro Search Request - FormData contents:`);
