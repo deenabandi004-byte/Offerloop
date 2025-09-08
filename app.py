@@ -183,23 +183,14 @@ PDL_BASE_URL = 'https://api.peopledatalabs.com/v5'
 # TIER CONFIGURATIONS (from your specs)
 TIER_CONFIGS = {
     'basic': {
-        'max_contacts': 6,
+        'max_contacts': 8,
         'fields': ['FirstName', 'LastName', 'LinkedIn', 'Email', 'Title', 'Company', 'City', 'State', 'College'],
         'uses_pdl': True,
         'uses_email_drafting': False,
         'uses_resume': False
     },
-    'advanced': {
-        'max_contacts': 8,
-        'fields': ['FirstName', 'LastName', 'LinkedIn', 'Email', 'Title', 'Company', 'City', 'State', 'College',
-                  'Phone', 'PersonalEmail', 'WorkEmail', 'SocialProfiles', 'EducationTop', 'VolunteerHistory',
-                  'WorkSummary', 'Group'],
-        'uses_pdl': True,
-        'uses_email_drafting': True,
-        'uses_resume': False
-    },
     'pro': {
-        'max_contacts': 12,
+        'max_contacts': 56,
         'fields': ['FirstName', 'LastName', 'LinkedIn', 'Email', 'Title', 'Company', 'City', 'State', 'College',
                   'Phone', 'PersonalEmail', 'WorkEmail', 'SocialProfiles', 'EducationTop', 'VolunteerHistory',
                   'WorkSummary', 'Group', 'Hometown', 'Similarity'],
@@ -967,64 +958,9 @@ def search_contacts_with_pdl_optimized(job_title, company, location, max_contact
     return search_contacts_with_smart_location_strategy(job_title, company, location, max_contacts)
 
 # ========================================
-# EMAIL GENERATION (Advanced & Pro Tiers)
+# EMAIL GENERATION (Pro Tier)
 # ========================================
 
-def generate_advanced_email(contact):
-    """Generate Advanced tier email using your exact template"""
-    try:
-        print(f"Generating Advanced email for {contact.get('FirstName', 'Unknown')}")
-        
-        # Your exact Advanced email template
-        prompt = f"""
-Given the information provided which includes name, job title, city, state, work experiences, education, undergrad, write an email following this exact template that's tailored for them but still leave all the [Your Name], [Your year/major], and [Your University] placeholders empty so the sender can fill those in:
-
-Hi {contact.get('FirstName', '[First Name]')},
-
-I hope you're doing well! My name is [Your Name], and I'm currently a [Your year/major] at [Your University]. I came across your profile while researching {contact.get('Company', '[Company Name]')}/{contact.get('Title', 'your field').lower()} and was really inspired by your work in {contact.get('Title', '[specific role, team, project, or recent accomplishment]')}.
-
-I'm very interested in {contact.get('Title', '[role/team/industry]').lower()} and would really appreciate the chance to learn more about your journey and any advice you may have. If you're open to it, would you be available for a quick 15-20 minute chat sometime this or next week?
-
-Thanks so much in advance - I'd love to hear your perspective!
-
-Warmly, [Your Full Name]
-
-Contact Information:
-- Name: {contact.get('FirstName')} {contact.get('LastName')}
-- Company: {contact.get('Company')}
-- Title: {contact.get('Title')}
-- Work Summary: {contact.get('WorkSummary', '')}
-- Education: {contact.get('EducationTop', '')}
-- Volunteer History: {contact.get('VolunteerHistory', '')}
-
-Customize the email by:
-- Filling in their actual first name, company name, and industry
-- Referencing their specific role, team, or a recent accomplishment from their work experience
-- Making the industry/role interest sound genuine and specific to their background
-- Keep [Your Name], [Your year/major], [Your University], and [Your Full Name] as placeholders for the sender to fill in
-"""
-        
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an expert at writing personalized networking emails for Advanced tier. Keep emails warm, professional, and follow the template exactly."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=400,
-            temperature=0.7
-        )
-        
-        email_body = response.choices[0].message.content.strip()
-        
-        # Generate subject using your template
-        email_subject = f"Quick Chat to Learn about Your Work at {contact.get('Company', 'Your Company')}?"
-        
-        print(f"Generated Advanced email for {contact.get('FirstName', 'Unknown')}")
-        return email_subject, email_body
-        
-    except Exception as e:
-        print(f"Advanced email generation failed: {e}")
-        return f"Quick Chat about Your Work at {contact.get('Company', 'Your Company')}?", f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at {contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
 
 def generate_pro_email(contact, resume_info, similarity, hometown):
     """Generate Pro tier email using your exact template with resume integration"""
@@ -1089,6 +1025,7 @@ Customize the email by:
 - For relating judge which ones will make the outreach more personable and for interests make it specific where possible and show genuine interest
 """
         
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -1114,7 +1051,8 @@ Similarity: {similarity}
 Just give the subject line no citations, reasoning or explanations.
 """
         
-        subject_response = openai.ChatCompletion.create(
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        subject_response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert at writing compelling email subject lines that get responses. Be concise and personal."},
@@ -1214,6 +1152,7 @@ Resume text:
 {clean_text}
 """
         
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -1384,6 +1323,7 @@ Contact Background:
 Generate ONE sentence highlighting the most relevant similarity:
 """
         
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -1481,7 +1421,7 @@ def get_gmail_service_for_user(user_email):
         print(f"Gmail service failed for {user_email}: {e}")
         return None
 
-def create_gmail_draft_for_user(contact, email_subject, email_body, tier='advanced', user_email=None):
+def create_gmail_draft_for_user(contact, email_subject, email_body, tier='pro', user_email=None):
     """Create Gmail draft in the user's account"""
     try:
         gmail_service = get_gmail_service_for_user(user_email)
@@ -1540,9 +1480,7 @@ def create_gmail_draft_for_user(contact, email_subject, email_body, tier='advanc
 def apply_recruitedge_label_for_user(gmail_service, message_id, tier, user_email):
     """Apply appropriate RecruitEdge label for specific user"""
     try:
-        if tier == 'advanced':
-            label_name = f"RecruitEdge Advanced - {user_email.split('@')[0]}"
-        elif tier == 'pro':
+        if tier == 'pro':
             label_name = f"RecruitEdge Pro - {user_email.split('@')[0]}"
         else:
             label_name = f"RecruitEdge {tier.capitalize()} - {user_email.split('@')[0]}"
@@ -1577,7 +1515,7 @@ def apply_recruitedge_label_for_user(gmail_service, message_id, tier, user_email
     except Exception as e:
         print(f"Label application failed for {user_email}: {e}")
 
-def create_gmail_draft(contact, email_subject, email_body, tier='advanced'):
+def create_gmail_draft(contact, email_subject, email_body, tier='pro'):
     """Create Gmail draft with appropriate RecruitEdge label as per your specs"""
     try:
         gmail_service = get_gmail_service()
@@ -1640,12 +1578,8 @@ def apply_recruitedge_label(gmail_service, message_id, tier):
     """Apply appropriate RecruitEdge label as per your specs"""
     try:
         # Your exact label naming convention
-        if tier == 'advanced':
-            label_name = "RecruitEdge Advanced"
-        elif tier == 'pro':
+        if tier == 'pro':
             label_name = "RecruitEdge Pro"
-        elif tier == 'advanced_trial':
-            label_name = "RecruitEdge Advanced Trial"
         elif tier == 'pro_trial':
             label_name = "RecruitEdge Pro Trial"
         else:
@@ -1690,7 +1624,7 @@ def run_basic_tier(job_title, company, location, user_email=None):
     print(f"Running BASIC tier workflow for {user_email}")
     
     try:
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=6)
+        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=8)
         
         if not contacts:
             print("No contacts found for Basic tier")
@@ -1726,60 +1660,6 @@ def run_basic_tier(job_title, company, location, user_email=None):
         print(f"Basic tier failed for {user_email}: {e}")
         return {'error': str(e), 'contacts': []}
 
-def run_advanced_tier(job_title, company, location, user_email=None):
-    """ADVANCED TIER: 8 contacts max with PDL + email drafting"""
-    print("Running ADVANCED tier workflow")
-    
-    try:
-        # Step 1: PDL Search for 8 contacts (includes Basic + enrichment)
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=8)
-        
-        if not contacts:
-            print("No contacts found for Advanced tier")
-            return {'error': 'No contacts found', 'contacts': []}
-        
-        # Step 2: Generate Advanced emails for each contact
-        successful_drafts = 0
-        for contact in contacts:
-            email_subject, email_body = generate_advanced_email(contact)
-            contact['email_subject'] = email_subject
-            contact['email_body'] = email_body
-            
-            # Create Gmail draft
-            draft_id = create_gmail_draft_for_user(contact, email_subject, email_body, tier='advanced', user_email=user_email)
-            contact['draft_id'] = draft_id
-            if not draft_id.startswith('mock_'):
-                successful_drafts += 1
-        
-        # Step 3: Filter to Advanced fields
-        advanced_contacts = []
-        for contact in contacts:
-            advanced_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['advanced']['fields']}
-            advanced_contacts.append(advanced_contact)
-        
-        # Step 4: Generate CSV
-        csv_file = StringIO()
-        fieldnames = TIER_CONFIGS['advanced']['fields']
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writeheader()
-        for contact in advanced_contacts:
-            writer.writerow(contact)
-        
-        csv_filename = f"RecruitEdge_Advanced_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_file.getvalue())
-        
-        print(f"Advanced tier completed: {len(advanced_contacts)} contacts, {successful_drafts} Gmail drafts")
-        return {
-            'contacts': advanced_contacts,
-            'csv_file': csv_filename,
-            'successful_drafts': successful_drafts,
-            'tier': 'advanced'
-        }
-        
-    except Exception as e:
-        print(f"Advanced tier failed: {e}")
-        return {'error': str(e), 'contacts': []}
 
 def run_pro_tier(job_title, company, location, resume_file, user_email=None):
     """PRO TIER: 12 contacts max with PDL + resume analysis + similarity engine + smart emails"""
@@ -1793,8 +1673,8 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
         
         resume_info = parse_resume_info(resume_text)
         
-        # Step 2: PDL Search for 12 contacts (includes all enrichment)
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=12)
+        # Step 2: PDL Search for 56 contacts (includes all enrichment)
+        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=56)
         
         if not contacts:
             print("No contacts found for Pro tier")
@@ -1862,24 +1742,9 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
         return {'error': str(e), 'contacts': []}
 
 # ========================================
-# TRIAL IMPLEMENTATIONS (Advanced & Pro)
+# TRIAL IMPLEMENTATIONS (Pro)
 # ========================================
 
-def run_advanced_trial(linkedin_url):
-    """ADVANCED TRIAL: 1 contact from LinkedIn URL"""
-    print("Running ADVANCED TRIAL workflow")
-    
-    try:
-        print(f"Advanced trial LinkedIn extraction not yet implemented for: {linkedin_url}")
-        
-        return {
-            'error': 'Advanced trial LinkedIn extraction coming soon',
-            'contacts': []
-        }
-        
-    except Exception as e:
-        print(f"Advanced trial failed: {e}")
-        return {'error': str(e), 'contacts': []}
 
 def run_pro_trial(linkedin_url, resume_file):
     """PRO TRIAL: 1 contact from LinkedIn URL + resume analysis"""
@@ -1918,10 +1783,9 @@ def test_pdl_implementation():
     basic_result = run_basic_tier("Software Engineer", "Google", "San Francisco, CA")
     print(f"Basic result: {len(basic_result.get('contacts', []))} contacts")
     
-    # Test Advanced tier
-    print("\nTesting Advanced Tier")
-    advanced_result = run_advanced_tier("Software Engineer", "Google", "San Francisco, CA")
-    print(f"Advanced result: {len(advanced_result.get('contacts', []))} contacts")
+    print("\nTesting Pro Tier")
+    pro_result = run_pro_tier("Software Engineer", "Google", "San Francisco, CA", resume_file=None)
+    print(f"Pro result: {len(pro_result.get('contacts', []))} contacts")
     
     print("\nTesting complete")
 
@@ -2040,7 +1904,7 @@ def run_basic_tier_enhanced(job_title, company, location, user_email=None):
         if errors:
             return {'error': f"Validation failed: {'; '.join(errors)}", 'contacts': []}
         
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=6)
+        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=8)
         
         if not contacts:
             print("No contacts found for Basic tier")
@@ -2085,69 +1949,6 @@ def run_basic_tier_enhanced(job_title, company, location, user_email=None):
         log_api_usage('basic', user_email, 0)
         return {'error': str(e), 'contacts': []}
 
-def run_advanced_tier_enhanced(job_title, company, location, user_email=None):
-    """Enhanced Advanced tier with validation and logging"""
-    print("Running ADVANCED tier workflow")
-    
-    try:
-        errors = validate_search_inputs(job_title, company, location)
-        if errors:
-            return {'error': f"Validation failed: {'; '.join(errors)}", 'contacts': []}
-        
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=8)
-        
-        if not contacts:
-            print("No contacts found for Advanced tier")
-            log_api_usage('advanced', user_email, 0, 0)
-            return {'error': 'No contacts found', 'contacts': []}
-        
-        successful_drafts = 0
-        for contact in contacts:
-            email_subject, email_body = generate_advanced_email(contact)
-            contact['email_subject'] = email_subject
-            contact['email_body'] = email_body
-            
-            draft_id = create_gmail_draft_for_user(contact, email_subject, email_body, tier='advanced', user_email=user_email)
-            contact['draft_id'] = draft_id
-            if not draft_id.startswith('mock_'):
-                successful_drafts += 1
-        
-        advanced_contacts = []
-        for contact in contacts:
-            advanced_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['advanced']['fields']}
-            advanced_contacts.append(advanced_contact)
-        
-        csv_file = StringIO()
-        fieldnames = TIER_CONFIGS['advanced']['fields']
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writeheader()
-        for contact in advanced_contacts:
-            writer.writerow(contact)
-        
-        csv_content = csv_file.getvalue()
-        
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        csv_filename = f"RecruitEdge_Advanced_{timestamp}.csv"
-        
-        with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_content)
-        
-        log_api_usage('advanced', user_email, len(advanced_contacts), len(advanced_contacts))
-        
-        print(f"Advanced tier completed: {len(advanced_contacts)} contacts, {successful_drafts} Gmail drafts")
-        return {
-            'contacts': advanced_contacts,
-            'csv_file': csv_filename,
-            'csv_content': csv_content,
-            'successful_drafts': successful_drafts,
-            'tier': 'advanced',
-            'contact_count': len(advanced_contacts)
-        }
-        
-    except Exception as e:
-        print(f"Advanced tier failed: {e}")
-        log_api_usage('advanced', user_email, 0, 0)
-        return {'error': str(e), 'contacts': []}
 
 def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=None):
     """Enhanced Pro tier with validation and logging"""
@@ -2165,7 +1966,7 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
         
         resume_info = parse_resume_info(resume_text)
         
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=12)
+        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=56)
         
         if not contacts:
             print("No contacts found for Pro tier")
@@ -2354,43 +2155,6 @@ def basic_run():
         if want_json:
             return jsonify(result)
         
-        # Check if we should save to directory
-        save_flag = False
-        if request.is_json:
-            data = request.json or {}
-            save_flag = bool(data.get('saveToDirectory'))
-        else:
-            save_flag = (request.form.get('saveToDirectory') == 'true')
-
-        if save_flag and user_email:
-            contacts = result.get('contacts', [])
-            if not contacts:
-                # Fallback: parse from CSV if result doesn't include contacts
-                try:
-                    parsed = []
-                    with open(result['csv_file'], newline='', encoding='utf-8') as f:
-                        reader = csv.DictReader(f)
-                        for row in reader:
-                            parsed.append({
-                                'FirstName': row.get('FirstName') or row.get('First Name',''),
-                                'LastName': row.get('LastName') or row.get('Last Name',''),
-                                'LinkedIn': row.get('LinkedIn') or row.get('LinkedIn URL',''),
-                                'Email': row.get('Email') or row.get('Email Address',''),
-                                'Title': row.get('Title') or row.get('Job Title',''),
-                                'Company': row.get('Company',''),
-                                'City': row.get('City',''),
-                                'State': row.get('State',''),
-                                'College': row.get('College',''),
-                            })
-                    contacts = parsed
-                except Exception as e:
-                    print(f"Warning: failed to parse contacts from CSV for save: {e}")
-            try:
-                saved = save_contacts_sqlite(user_email, contacts)
-                print(f"Saved {saved} contacts to directory for {user_email}")
-            except Exception as e:
-                print(f"Warning: failed to save directory contacts: {e}")
-
         return send_file(result['csv_file'], as_attachment=True)
         
     except Exception as e:
@@ -2398,91 +2162,6 @@ def basic_run():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/advanced-run', methods=['POST'])
-def advanced_run():
-    """Enhanced Advanced endpoint with validation and logging - FIXED to handle form data"""
-    try:
-        if request.is_json:
-            data = request.json or {}
-            job_title = data.get('jobTitle', '').strip() if data.get('jobTitle') else ''
-            company = data.get('company', '').strip() if data.get('company') else ''
-            location = data.get('location', '').strip() if data.get('location') else ''
-            user_email = data.get('userEmail', '').strip() if data.get('userEmail') else None
-        else:
-            job_title = (request.form.get('jobTitle') or '').strip()
-            company = (request.form.get('company') or '').strip()
-            location = (request.form.get('location') or '').strip()
-            user_email = (request.form.get('userEmail') or '').strip() or None
-        
-        print(f"DEBUG - Advanced endpoint received:")
-        print(f"  job_title: '{job_title}' (len: {len(job_title)})")
-        print(f"  company: '{company}' (len: {len(company)})")
-        print(f"  location: '{location}' (len: {len(location)})")
-        print(f"  user_email: '{user_email}'")
-        
-        if not job_title or not location:
-            missing = []
-            if not job_title: missing.append('Job Title')
-            if not location: missing.append('Location')
-            error_msg = f"Missing required fields: {', '.join(missing)}"
-            print(f"ERROR: {error_msg}")
-            return jsonify({'error': error_msg}), 400
-        
-        print(f"Advanced search for {user_email}: {job_title} at {company} in {location}")
-        
-        result = run_advanced_tier_enhanced(job_title, company, location, user_email)
-        
-        if result.get('error'):
-            return jsonify({'error': result['error']}), 500
-        
-        # CHECK FOR JSON FORMAT REQUEST
-        want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
-        if want_json:
-            return jsonify(result)
-            
-        # Check if we should save to directory
-        save_flag = False
-        if request.is_json:
-            data = request.json or {}
-            save_flag = bool(data.get('saveToDirectory'))
-        else:
-            save_flag = (request.form.get('saveToDirectory') == 'true')
-
-        if save_flag and user_email:
-            contacts = result.get('contacts', [])
-            if not contacts:
-                # Fallback: parse from CSV if result doesn't include contacts
-                try:
-                    parsed = []
-                    with open(result['csv_file'], newline='', encoding='utf-8') as f:
-                        reader = csv.DictReader(f)
-                        for row in reader:
-                            parsed.append({
-                                'FirstName': row.get('FirstName') or row.get('First Name',''),
-                                'LastName': row.get('LastName') or row.get('Last Name',''),
-                                'LinkedIn': row.get('LinkedIn') or row.get('LinkedIn URL',''),
-                                'Email': row.get('Email') or row.get('Email Address',''),
-                                'Title': row.get('Title') or row.get('Job Title',''),
-                                'Company': row.get('Company',''),
-                                'City': row.get('City',''),
-                                'State': row.get('State',''),
-                                'College': row.get('College',''),
-                            })
-                    contacts = parsed
-                except Exception as e:
-                    print(f"Warning: failed to parse contacts from CSV for save: {e}")
-            try:
-                saved = save_contacts_sqlite(user_email, contacts)
-                print(f"Saved {saved} contacts to directory for {user_email}")
-            except Exception as e:
-                print(f"Warning: failed to save directory contacts: {e}")
-
-        return send_file(result['csv_file'], as_attachment=True)
-        
-    except Exception as e:
-        print(f"Advanced endpoint error: {e}")
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/pro-run', methods=['POST'])
 def pro_run():
