@@ -197,7 +197,8 @@ export default function AccountSettings() {
                     This will permanently delete your account and all your data. This action cannot be undone.
                   </p>
                 </div>
-                <Button variant="destructive" size="sm">
+                <Button variant="destructive" size="sm" className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
                   Delete account
                 </Button>
               </div>
