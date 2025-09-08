@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Home, 
   BarChart3, 
@@ -52,6 +52,17 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [creditsRemaining, setCreditsRemaining] = useState<number>(0);
+  const [maxCredits, setMaxCredits] = useState<number>(0);
+
+  useEffect(() => {
+    import('@/services/api').then(({ apiService }) => {
+      apiService.getCredits().then(c => {
+        setCreditsRemaining(c.creditsRemaining);
+        setMaxCredits(c.maxCredits);
+      }).catch(() => {});
+    });
+  }, []);
 
   const isActive = (path: string) => currentPath === path;
   const isSettingsActive = settingsItems.some(item => isActive(item.url));
@@ -157,12 +168,14 @@ export function AppSidebar() {
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium">Credits</p>
-                    <p className="text-xs text-muted-foreground">63.8k / 75.0k</p>
+                    <p className="text-xs text-muted-foreground">
+                      {creditsRemaining.toLocaleString()} / {maxCredits.toLocaleString()}
+                    </p>
                   </div>
                   <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/30">
                     <div 
                       className="h-full bg-blue-500 transition-all rounded-full" 
-                      style={{ width: '85.1%' }}
+                      style={{ width: `${maxCredits ? Math.min(100, (creditsRemaining / maxCredits) * 100) : 0}%` }}
                     />
                   </div>
                 </div>

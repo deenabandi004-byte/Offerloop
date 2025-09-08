@@ -6,9 +6,23 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { useState, useEffect } from "react";
 
 export default function AccountSettings() {
   const navigate = useNavigate();
+  const [creditsRemaining, setCreditsRemaining] = useState(0);
+  const [maxCredits, setMaxCredits] = useState(0);
+  const [resetsAt, setResetsAt] = useState<string>('');
+
+  useEffect(() => {
+    import('@/services/api').then(({ apiService }) => {
+      apiService.getCredits().then(c => {
+        setCreditsRemaining(c.creditsRemaining);
+        setMaxCredits(c.maxCredits);
+        setResetsAt(new Date(c.resetsAt).toLocaleDateString());
+      }).catch(() => {});
+    });
+  }, []);
 
   const handleSignOut = async () => {
     // For now, navigate to landing page - can be enhanced with actual Supabase auth later
@@ -114,17 +128,14 @@ export default function AccountSettings() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Credit Usage Jul-Aug 2025</CardTitle>
-                <p className="text-2xl font-bold text-foreground mt-2">12,127 credits</p>
+                <CardTitle>Credits</CardTitle>
+                <p className="text-2xl font-bold text-foreground mt-2">
+                  {creditsRemaining.toLocaleString()} / {maxCredits.toLocaleString()}
+                </p>
+                {resetsAt && <p className="text-sm text-muted-foreground">Resets on {resetsAt}</p>}
               </div>
               <div className="flex items-center gap-4">
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
-                  Billing Period
-                </Button>
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
-                  ← Jul-Aug 2025 →
-                </Button>
-                <Button className="bg-primary hover:bg-primary/90" size="sm">
+                <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
                   Refresh
                 </Button>
               </div>
