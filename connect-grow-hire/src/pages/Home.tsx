@@ -734,6 +734,54 @@ const Home = () => {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Generated Emails */}
+              {hasResults && (
+                <Card className="mt-6 bg-gray-800/50 backdrop-blur-sm border-gray-700">
+                  <CardHeader className="border-b border-gray-700">
+                    <CardTitle className="text-xl text-white">
+                      Generated Emails ({lastResults.length}) — {String(lastResultsTier || userTier).toUpperCase()}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-6">
+                    {lastResults.map((c, idx) => (
+                      <div key={idx} className="p-4 rounded-lg bg-gray-900/40 border border-gray-700">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <div className="font-semibold text-white">
+                              {c.FirstName} {c.LastName} {c.Title ? `— ${c.Title}` : ""} {c.Company ? `@ ${c.Company}` : ""}
+                            </div>
+                            {c.email_subject && (
+                              <div className="text-sm text-blue-300 mt-1">Subject: {c.email_subject}</div>
+                            )}
+                          </div>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-blue-500 text-blue-300 hover:bg-blue-500/10"
+                            onClick={() => {
+                              const text = `Subject: ${c.email_subject || ""}\n\n${c.email_body || ""}`;
+                              navigator.clipboard.writeText(text);
+                            }}
+                            title="Copy email to clipboard"
+                          >
+                            Copy
+                          </Button>
+                        </div>
+
+                        <pre className="whitespace-pre-wrap text-gray-200 text-sm mt-3">
+                          {c.email_body || "No email generated"}
+                        </pre>
+
+                        {c.draft_id && !String(c.draft_id).startsWith("mock_") && (
+                          <div className="text-xs text-green-400 mt-2">Gmail draft created ✓</div>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </main>
         </div>
