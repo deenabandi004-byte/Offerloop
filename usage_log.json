@@ -23,3 +23,13 @@
 {"timestamp": "2025-09-04T16:43:23.852963", "tier": "basic", "user_email": "sarah@example.com", "contacts_found": 1, "emails_generated": 0}
 {"timestamp": "2025-09-04T16:43:57.201855", "tier": "basic", "user_email": "sarah@example.com", "contacts_found": 1, "emails_generated": 0}
 {"timestamp": "2025-09-04T16:48:51.960476", "tier": "basic", "user_email": "sarah@example.com", "contacts_found": 1, "emails_generated": 0}
+{"timestamp": "2025-09-08T01:51:38.201020", "tier": "free", "user_email": "user@example.com", "contacts_found": 1, "emails_generated": 1}
+{"timestamp": "2025-09-08T01:58:28.703032", "tier": "free", "user_email": "user@example.com", "contacts_found": 1, "emails_generated": 1}
+{"timestamp": "2025-09-08T02:02:02.620794", "tier": "free", "user_email": "user@example.com", "contacts_found": 1, "emails_generated": 1}
+{"timestamp": "2025-09-08T02:06:34.703796", "tier": "free", "user_email": "user@example.com", "contacts_found": 1, "emails_generated": 1}
+{"timestamp": "2025-09-08T02:07:55.085039", "tier": "free", "user_email": "user@example.com", "contacts_found": 1, "emails_generated": 1}
+{"timestamp": "2025-09-08T02:49:22.113487", "tier": "free", "user_email": "user@example.com", "contacts_found": 1, "emails_generated": 1}
+{"timestamp": "2025-09-08T02:51:42.745607", "tier": "free", "user_email": "user@example.com", "contacts_found": 1, "emails_generated": 1}
+{"timestamp": "2025-09-08T02:54:29.680894", "tier": "free", "user_email": "user@example.com", "contacts_found": 1, "emails_generated": 1}
+{"timestamp": "2025-09-08T03:10:08.124159", "tier": "free", "user_email": "user@example.com", "contacts_found": 1, "emails_generated": 1}
+{"timestamp": "2025-09-08T03:14:30.624190", "tier": "free", "user_email": "user@example.com", "contacts_found": 1, "emails_generated": 1}

@@ -2,10 +2,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const getMonthKey = () => new Date().toISOString().slice(0, 7);
 
-const initialCreditsByTier = (tier: 'free' | 'starter' | 'pro') =>
+const initialCreditsByTier = (tier: 'free' | 'pro') =>
   tier === 'free' ? 120 : 840;
 
-const monthlyEmailLimitByTier = (tier: 'free' | 'starter' | 'pro') =>
+const monthlyEmailLimitByTier = (tier: 'free' | 'pro') =>
   tier === 'free' ? 8 : 56;
 
 // Add Google types
@@ -21,7 +21,7 @@ interface User {
   picture?: string;
   accessToken: string;
   // Add tier management fields
-  tier: 'free' | 'starter' | 'pro';
+  tier: 'free' | 'pro';
   credits: number;
   maxCredits: number;
   subscriptionId?: string;
@@ -189,7 +189,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Check if user has subscription data from backend
       // For now, we'll use defaults but you can extend this
-      const tier: 'free' | 'starter' | 'pro' = userData.tier || 'free';
+      const tier: 'free' | 'pro' = userData.tier || 'free';
       const defaultCredits = initialCreditsByTier(tier);
       const nowKey = getMonthKey();
 

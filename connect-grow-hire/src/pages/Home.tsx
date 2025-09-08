@@ -15,33 +15,31 @@ import { AutocompleteInput } from "@/components/AutocompleteInput";
 import ScoutChatbot from "@/components/ScoutChatbot";
 import LockedFeatureOverlay from "@/components/LockedFeatureOverlay";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiService } from "@/services/api";
 
 const BACKEND_URL = 'http://localhost:5001';
 
+// UPDATED: Two tiers only - Free and Pro
 const TIER_CONFIGS = {
   free: {
-    maxContacts: 4,
+    maxContacts: 8,
     name: 'Free',
-    credits: 60, // 4 contacts × 15 credits per contact
-    description: 'Basic search - 4 contacts',
-    coffeeChat: false,
-    interviewPrep: false
-  },
-  starter: {
-    maxContacts: 6,
-    name: 'Starter',
-    credits: 90, // 6 contacts × 15 credits per contact
-    description: 'Advanced search - 6 contacts + Email drafts',
-    coffeeChat: true,
-    interviewPrep: false
+    credits: 120, // 8 contacts × 15 credits per contact
+    description: 'Try out platform risk free - 8 contacts + Email drafts',
+    coffeeChat: true, // Updated: Free now includes basic email drafting
+    interviewPrep: false,
+    timeSavedMinutes: 200,
+    usesResume: false
   },
   pro: {
-    maxContacts: 8,
+    maxContacts: 56,
     name: 'Pro',
-    credits: 120, // 8 contacts × 15 credits per contact
-    description: 'Full search - 8 contacts + Resume matching',
+    credits: 840, // 56 contacts × 15 credits per contact
+    description: 'Everything in free plus advanced features - 56 contacts + Resume matching',
     coffeeChat: true,
-    interviewPrep: true
+    interviewPrep: true,
+    timeSavedMinutes: 1200,
+    usesResume: true
   }
 };
 
@@ -63,11 +61,13 @@ const Home = () => {
       }
     };
   }, [waveKeyframes]);
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   
-  const [userTier] = useState<'free' | 'starter' | 'pro'>(user?.tier || 'free');
+  // UPDATED: Default to 'free' tier
+  const [userTier] = useState<'free' | 'pro'>(user?.tier || 'free');
   
   // Form state
   const [jobTitle, setJobTitle] = useState("");
@@ -84,7 +84,7 @@ const Home = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [progressValue, setProgressValue] = useState(0);
   const [lastResults, setLastResults] = useState<any[]>([]);
-  const [lastResultsTier, setLastResultsTier] = useState<'free' | 'starter' | 'pro' | string>('');
+  const [lastResultsTier, setLastResultsTier] = useState<'free' | 'pro' | string>('');
   const hasResults = lastResults.length > 0;
   
   const currentUser = user || {
@@ -103,6 +103,10 @@ const Home = () => {
       .then(res => res.json())
       .then(data => {
         console.log('Backend connected:', data);
+        // Check if backend is using 2-tier system
+        if (data.tiers && data.tiers.includes('free') && data.tiers.includes('pro')) {
+          console.log('✅ Backend using Free/Pro tier system');
+        }
       })
       .catch(err => {
         console.error('Backend connection failed:', err);
@@ -124,11 +128,11 @@ const Home = () => {
       return;
     }
 
-    // Check credits
-    if (currentUser.credits < currentTierConfig.credits) {
+    // Validate resume for Pro tier
+    if (userTier === 'pro' && !uploadedFile) {
       toast({
-        title: "Insufficient Credits",
-        description: `You need ${currentTierConfig.credits} credits for ${currentTierConfig.name} search. You have ${currentUser.credits}.`,
+        title: "Resume Required",
+        description: "Pro tier requires a resume upload for similarity matching.",
         variant: "destructive"
       });
       return;
@@ -144,30 +148,46 @@ const Home = () => {
         setTimeout(() => setProgressValue(value), index * 600);
       });
 
-      const formData = new FormData();
-      formData.append('jobTitle', jobTitle.trim());
-      formData.append('company', company.trim() || '');
-      formData.append('location', location.trim());
-      formData.append('tier', userTier);
-      formData.append('userEmail', currentUser.email);
-      
-      if (uploadedFile && userTier === 'pro') {
-        formData.append('resume', uploadedFile);
-      }
+      let response: Response;
 
-      // Map tier to endpoint
-      let endpoint = '/api/basic-run';
-      if (userTier === 'starter') {
-        endpoint = '/api/advanced-run';
+      if (userTier === 'free') {
+        // Use new Free tier API
+        const searchRequest = {
+          jobTitle: jobTitle.trim(),
+          company: company.trim() || '',
+          location: location.trim(),
+          saveToDirectory: false
+        };
+
+        const formData = new FormData();
+        formData.append('jobTitle', searchRequest.jobTitle);
+        formData.append('company', searchRequest.company);
+        formData.append('location', searchRequest.location);
+        formData.append('userEmail', currentUser.email);
+        formData.append('saveToDirectory', 'false');
+
+        response = await fetch(`${BACKEND_URL}/api/free-run?format=json`, {
+          method: 'POST',
+          body: formData,
+        });
+
       } else if (userTier === 'pro') {
-        endpoint = '/api/pro-run';
-      }
+        // Use Pro tier API with resume
+        const formData = new FormData();
+        formData.append('jobTitle', jobTitle.trim());
+        formData.append('company', company.trim() || '');
+        formData.append('location', location.trim());
+        formData.append('resume', uploadedFile!);
+        formData.append('userEmail', currentUser.email);
+        formData.append('saveToDirectory', 'false');
 
-      const response = await fetch(`${BACKEND_URL}${endpoint}?format=json`, {
-        method: 'POST',
-        body: formData,
-        headers: { 'Accept': 'application/json' }
-      });
+        response = await fetch(`${BACKEND_URL}/api/pro-run?format=json`, {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        throw new Error('Invalid tier selected');
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -225,30 +245,42 @@ const Home = () => {
   const handleSaveToDirectory = async () => {
     try {
       if (!hasResults) return;
+      
       const mapped = lastResults.map(mapToDirectoryContact);
-      const resp = await fetch(`${BACKEND_URL}/api/contacts/bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: currentUser.email || 'test@example.com',
-          contacts: mapped
-        })
-      });
-
-      if (!resp.ok) {
-        const errData = await resp.json();
-        throw new Error(errData.error || 'Failed to save contacts');
+      
+      // Use the global function exposed by ContactDirectory
+      if ((window as any).saveContactsToDirectory) {
+        const result = (window as any).saveContactsToDirectory(mapped);
+        
+        toast({
+          title: "Saved to Contact Directory",
+          description: `Created ${result.created}, skipped ${result.skipped} duplicates.`
+        });
+      } else {
+        // Fallback: save directly to localStorage
+        const storageKey = `contacts_${currentUser.email.replace('@', '_').replace('.', '_')}`;
+        const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        const newContacts = mapped.map((contact, index) => ({
+          ...contact,
+          id: `contact_${Date.now()}_${index}`,
+          firstContactDate: new Date().toLocaleDateString(),
+          status: 'Not Contacted',
+          lastContactDate: new Date().toLocaleDateString(),
+        }));
+        
+        localStorage.setItem(storageKey, JSON.stringify([...existing, ...newContacts]));
+        
+        toast({
+          title: "Saved to Contact Directory",
+          description: `Successfully saved ${mapped.length} contacts.`
+        });
       }
-      const data = await resp.json();
-      toast({
-        title: "Saved to Contact Directory",
-        description: `Created ${data.created}, skipped ${data.skipped} duplicates.`
-      });
+      
     } catch (e) {
-      console.error(e);
+      console.error('Save error:', e);
       toast({
-        title: "Save Failed",
-        description: e instanceof Error ? e.message : "Please try again.",
+        title: "Error",
+        description: "Failed to save contacts to directory. Please try again.",
         variant: "destructive"
       });
     }
@@ -338,7 +370,6 @@ const Home = () => {
                 <span className="text-gray-300">{currentUser.credits.toLocaleString()} credits</span>
               </div>
               
-              
               <Button 
                 size="sm" 
                 onClick={() => navigate('/pricing')}
@@ -408,6 +439,9 @@ const Home = () => {
                 
                 <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
                   <p className="text-sm text-gray-400">{currentTierConfig.description}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Estimated time saved: {currentTierConfig.timeSavedMinutes} minutes
+                  </p>
                 </div>
               </div>
 
@@ -500,7 +534,7 @@ const Home = () => {
                       {userTier === 'pro' && (
                         <div className="mb-6">
                           <label className="block text-sm font-medium mb-2 text-white">
-                            Resume (Optional - for AI similarity matching)
+                            Resume <span className="text-red-400">*</span> (Required for Pro tier AI similarity matching)
                           </label>
                           <div className="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center hover:border-purple-400 transition-colors bg-gray-800/30">
                             <input
@@ -514,7 +548,7 @@ const Home = () => {
                             <label htmlFor="resume-upload" className={`cursor-pointer ${isSearching ? 'opacity-50 cursor-not-allowed' : ''}`}>
                               <Upload className="h-6 w-6 mx-auto mb-2 text-gray-400" />
                               <p className="text-sm text-gray-300 mb-1">
-                                {uploadedFile ? uploadedFile.name : 'Upload resume for AI similarity matching'}
+                                {uploadedFile ? uploadedFile.name : 'Upload resume for AI similarity matching (Required for Pro)'}
                               </p>
                               <p className="text-xs text-gray-400">PDF only, max 10MB</p>
                             </label>
@@ -526,7 +560,7 @@ const Home = () => {
                       <div className="flex items-center justify-between">
                         <Button 
                           onClick={handleSearch}
-                          disabled={!jobTitle.trim() || !location.trim() || isSearching}
+                          disabled={!jobTitle.trim() || !location.trim() || isSearching || (userTier === 'pro' && !uploadedFile)}
                           size="lg"
                           className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-medium px-8 transition-all hover:scale-105"
                         >
@@ -593,7 +627,7 @@ const Home = () => {
                           </Button>
                         </div>
                       ) : (
-                        <LockedFeatureOverlay featureName="Coffee Chat Prep" requiredTier="Starter+">
+                        <LockedFeatureOverlay featureName="Coffee Chat Prep" requiredTier="Free+">
                           <div className="space-y-4">
                             <div>
                               <label className="block text-sm font-medium mb-2 text-white">
