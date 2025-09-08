@@ -376,7 +376,7 @@ export const ContactSearchForm = () => {
                   </div>
                   <div className="text-purple-700 text-sm">
                     <div>✓ Resume analysis & similarity matching</div>
-                    <div>✓ Smart personalized emails in: <strong>{user?.email || 'your inbox'}</strong></div>
+                    <div>✓ Smart personalized emails in: <strong>{user?.email || "your inbox"}</strong></div>
                     <div>✓ Advanced contact enrichment</div>
                   </div>
                 </div>
