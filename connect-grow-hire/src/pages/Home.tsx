@@ -21,7 +21,7 @@ const TIER_CONFIGS = {
   free: {
     maxContacts: 4,
     name: 'Free',
-    credits: 500,
+    credits: 120,
     description: 'Basic search - 4 contacts',
     coffeeChat: false,
     interviewPrep: false
@@ -37,7 +37,7 @@ const TIER_CONFIGS = {
   pro: {
     maxContacts: 8,
     name: 'Pro',
-    credits: 2000,
+    credits: 840,
     description: 'Full search - 8 contacts + Resume matching',
     coffeeChat: true,
     interviewPrep: true
@@ -85,14 +85,17 @@ const Home = () => {
   const [lastResultsTier, setLastResultsTier] = useState<'free' | 'starter' | 'pro' | string>('');
   const hasResults = lastResults.length > 0;
   
-  // Mock user data
-  const mockUser = {
-    credits: 8450,
-    maxCredits: 10000,
-    name: 'Sarah Chen',
-    email: 'sarah@example.com',
-    tier: userTier
-  };
+  const [creditsRemaining, setCreditsRemaining] = useState<number>(0);
+  const [maxCredits, setMaxCredits] = useState<number>(0);
+
+  useEffect(() => {
+    import('@/services/api').then(({ apiService }) => {
+      apiService.getCredits().then(c => {
+        setCreditsRemaining(c.creditsRemaining);
+        setMaxCredits(c.maxCredits);
+      }).catch(() => {});
+    });
+  }, []);
 
   const currentTierConfig = TIER_CONFIGS[userTier];
 
@@ -124,10 +127,10 @@ const Home = () => {
     }
 
     // Check credits
-    if (mockUser.credits < currentTierConfig.credits) {
+    if (creditsRemaining < currentTierConfig.credits) {
       toast({
         title: "Insufficient Credits",
-        description: `You need ${currentTierConfig.credits} credits for ${currentTierConfig.name} search. You have ${mockUser.credits}.`,
+        description: `You need ${currentTierConfig.credits} credits for ${currentTierConfig.name} search. You have ${creditsRemaining}.`,
         variant: "destructive"
       });
       return;
@@ -148,7 +151,7 @@ const Home = () => {
       formData.append('company', company.trim() || '');
       formData.append('location', location.trim());
       formData.append('tier', userTier);
-      formData.append('userEmail', mockUser.email);
+      formData.append('userEmail', 'test@example.com');
       
       if (uploadedFile && userTier === 'pro') {
         formData.append('resume', uploadedFile);
@@ -194,8 +197,6 @@ const Home = () => {
         description: `Your ${currentTierConfig.name} tier CSV with up to ${currentTierConfig.maxContacts} contacts has been downloaded.`
       });
       
-      // Deduct credits (mock)
-      mockUser.credits -= currentTierConfig.credits;
       
     } catch (error) {
       console.error('Search failed:', error);
@@ -229,7 +230,7 @@ const Home = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: mockUser.email || 'test@example.com',
+          userId: 'test@example.com',
           contacts: mapped
         })
       });
@@ -334,7 +335,9 @@ const Home = () => {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm">
                 <Zap className="h-4 w-4 text-blue-400" />
-                <span className="text-gray-300">{mockUser.credits.toLocaleString()} credits</span>
+                <span className="text-gray-300">
+                  {creditsRemaining.toLocaleString()} / {maxCredits.toLocaleString()} credits
+                </span>
               </div>
               
               

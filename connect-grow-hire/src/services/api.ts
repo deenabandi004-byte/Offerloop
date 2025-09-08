@@ -128,6 +128,7 @@ class ApiService {
       company: request.company,
       location: request.location,
       userEmail: userEmail,
+      userTier: (JSON.parse(localStorage.getItem('user') || '{}').tier || 'free'),
       saveToDirectory: request.saveToDirectory ?? false,
     };
 
@@ -159,6 +160,7 @@ class ApiService {
       company: request.company,
       location: request.location,
       userEmail: userEmail,
+      userTier: (JSON.parse(localStorage.getItem('user') || '{}').tier || 'free'),
       saveToDirectory: request.saveToDirectory ?? false,
     };
 
@@ -191,6 +193,7 @@ class ApiService {
     formData.append('location', request.location);
     formData.append('resume', request.resume);
     formData.append('userEmail', userEmail);
+    formData.append('userTier', (JSON.parse(localStorage.getItem('user') || '{}').tier || 'pro'));
     formData.append('saveToDirectory', String(!!request.saveToDirectory));
 
     console.log(`🟣 Pro Search Request - FormData contents:`); // ✅ Added: Debug logging
@@ -266,6 +269,14 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ userEmail: email, contacts }),
     });
+  }
+
+  async getCredits(): Promise<{ userEmail: string; tier: string; creditsRemaining: number; maxCredits: number; resetsAt: string }> {
+    const user = localStorage.getItem('user');
+    const email = user ? JSON.parse(user).email : 'anonymous';
+    const tier = user ? JSON.parse(user).tier || 'free' : 'free';
+    const q = `?userEmail=${encodeURIComponent(email)}&userTier=${encodeURIComponent(tier)}`;
+    return this.makeRequest(`/credits${q}`);
   }
 }
 

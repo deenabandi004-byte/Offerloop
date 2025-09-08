@@ -104,8 +104,20 @@ def init_db():
           created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
         """)
+        
+        db.execute("""
+        CREATE TABLE IF NOT EXISTS user_credits (
+          user_email TEXT PRIMARY KEY,
+          tier TEXT NOT NULL,
+          credits_remaining INTEGER NOT NULL,
+          max_credits INTEGER NOT NULL,
+          period_start TEXT NOT NULL
+        );
+        """)
+        
         db.execute("CREATE INDEX IF NOT EXISTS idx_contacts_user_email ON contacts(user_email);")
         db.execute("CREATE INDEX IF NOT EXISTS idx_contacts_linkedin ON contacts(linkedin);")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_user_credits_user_email ON user_credits(user_email);")
         db.commit()
 
 def normalize_contact(c: dict) -> dict:
@@ -208,6 +220,60 @@ TIER_CONFIGS = {
         'uses_resume': True
     }
 }
+
+CREDIT_COST_PER_CONTACT = 15
+PLAN_MAX_CREDITS = {'free': 120, 'pro': 840}
+
+def _month_key(dt=None):
+    if not dt:
+        dt = datetime.datetime.now()
+    return dt.strftime('%Y-%m')
+
+def _normalize_plan(tier: str) -> str:
+    return 'pro' if (tier or '').lower() == 'pro' else 'free'
+
+def _ensure_user_credits(user_email: str, user_tier: str):
+    plan = _normalize_plan(user_tier)
+    max_credits = PLAN_MAX_CREDITS.get(plan, PLAN_MAX_CREDITS['free'])
+    with get_db() as db:
+        cur = db.execute("SELECT user_email, tier, credits_remaining, max_credits, period_start FROM user_credits WHERE user_email = ?", (user_email,))
+        row = cur.fetchone()
+        now_key = _month_key()
+        if not row:
+            db.execute(
+                "INSERT INTO user_credits (user_email, tier, credits_remaining, max_credits, period_start) VALUES (?, ?, ?, ?, ?)",
+                (user_email, plan, max_credits, max_credits, now_key)
+            )
+            db.commit()
+            return {'user_email': user_email, 'tier': plan, 'credits_remaining': max_credits, 'max_credits': max_credits, 'period_start': now_key}
+        
+        data = dict(row)
+        if data['period_start'] != now_key or data['tier'] != plan or data['max_credits'] != max_credits:
+            db.execute(
+                "UPDATE user_credits SET tier = ?, max_credits = ?, credits_remaining = ?, period_start = ? WHERE user_email = ?",
+                (plan, max_credits, max_credits, now_key, user_email)
+            )
+            db.commit()
+            return {'user_email': user_email, 'tier': plan, 'credits_remaining': max_credits, 'max_credits': max_credits, 'period_start': now_key}
+        return data
+
+def get_allowed_contacts(user_email: str, user_tier: str) -> int:
+    data = _ensure_user_credits(user_email, user_tier)
+    return max(0, int(data['credits_remaining']) // CREDIT_COST_PER_CONTACT)
+
+def deduct_credits_for_contacts(user_email: str, user_tier: str, contacts_count: int) -> dict:
+    if contacts_count <= 0:
+        return _ensure_user_credits(user_email, user_tier)
+    needed = contacts_count * CREDIT_COST_PER_CONTACT
+    with get_db() as db:
+        data = _ensure_user_credits(user_email, user_tier)
+        remaining = int(data['credits_remaining'])
+        to_deduct = min(remaining, needed)
+        new_remaining = remaining - to_deduct
+        db.execute("UPDATE user_credits SET credits_remaining = ? WHERE user_email = ?", (new_remaining, user_email))
+        db.commit()
+        data['credits_remaining'] = new_remaining
+        return data
 
 # PDL Major Metro Areas (based on PDL documentation)
 PDL_METRO_AREAS = {
@@ -2031,21 +2097,33 @@ def validate_search_inputs(job_title, company, location):
 # ENHANCED TIER FUNCTIONS WITH LOGGING
 # ========================================
 
-def run_basic_tier_enhanced(job_title, company, location, user_email=None):
+def run_basic_tier_enhanced(job_title, company, location, user_email=None, user_tier='free'):
     """Enhanced Basic tier with validation and logging"""
     print(f"Running BASIC tier workflow for {user_email}")
     
     try:
+        if not user_email:
+            user_email = 'anonymous'
+        
+        allowed_by_credits = get_allowed_contacts(user_email, user_tier)
+        if allowed_by_credits <= 0:
+            return {'error': 'Insufficient credits', 'contacts': [], 'credits': _ensure_user_credits(user_email, user_tier)}
+        
+        effective_max = min(6, allowed_by_credits)
+        
         errors = validate_search_inputs(job_title, company, location)
         if errors:
             return {'error': f"Validation failed: {'; '.join(errors)}", 'contacts': []}
         
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=6)
+        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=effective_max)
+        contacts = contacts[:effective_max]
+        
+        credit_state = deduct_credits_for_contacts(user_email, user_tier, len(contacts))
         
         if not contacts:
             print("No contacts found for Basic tier")
             log_api_usage('basic', user_email, 0)
-            return {'error': 'No contacts found', 'contacts': []}
+            return {'error': 'No contacts found', 'contacts': [], 'credits': credit_state}
         
         basic_contacts = []
         for contact in contacts:
@@ -2077,7 +2155,8 @@ def run_basic_tier_enhanced(job_title, company, location, user_email=None):
             'csv_content': csv_content,
             'tier': 'basic',
             'user_email': user_email,
-            'contact_count': len(basic_contacts)
+            'contact_count': len(basic_contacts),
+            'credits': credit_state
         }
         
     except Exception as e:
@@ -2085,9 +2164,94 @@ def run_basic_tier_enhanced(job_title, company, location, user_email=None):
         log_api_usage('basic', user_email, 0)
         return {'error': str(e), 'contacts': []}
 
-def run_advanced_tier_enhanced(job_title, company, location, user_email=None):
+def run_advanced_tier_enhanced(job_title, company, location, user_email=None, user_tier='free'):
     """Enhanced Advanced tier with validation and logging"""
     print("Running ADVANCED tier workflow")
+    
+    try:
+        if not user_email:
+            user_email = 'anonymous'
+        
+        allowed_by_credits = get_allowed_contacts(user_email, user_tier)
+        if allowed_by_credits <= 0:
+            return {'error': 'Insufficient credits', 'contacts': [], 'credits': _ensure_user_credits(user_email, user_tier)}
+        
+        effective_max = min(8, allowed_by_credits)
+        
+        errors = validate_search_inputs(job_title, company, location)
+        if errors:
+            return {'error': f"Validation failed: {'; '.join(errors)}", 'contacts': []}
+        
+        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=effective_max)
+        contacts = contacts[:effective_max]
+        
+        credit_state = deduct_credits_for_contacts(user_email, user_tier, len(contacts))
+        
+        if not contacts:
+            print("No contacts found for Advanced tier")
+            log_api_usage('advanced', user_email, 0)
+            return {'error': 'No contacts found', 'contacts': [], 'credits': credit_state}
+        
+        for contact in contacts:
+            try:
+                email_content = generate_advanced_email(contact, job_title, company)
+                contact['AI_Email'] = email_content
+            except Exception as e:
+                print(f"Failed to generate email for {contact.get('FirstName', 'Unknown')}: {e}")
+                contact['AI_Email'] = "Email generation failed"
+        
+        advanced_contacts = []
+        for contact in contacts:
+            advanced_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['advanced']['fields'] + ['AI_Email']}
+            advanced_contacts.append(advanced_contact)
+        
+        csv_file = StringIO()
+        fieldnames = TIER_CONFIGS['advanced']['fields'] + ['AI_Email']
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for contact in advanced_contacts:
+            writer.writerow(contact)
+        
+        csv_content = csv_file.getvalue()
+        
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        user_prefix = user_email.split('@')[0] if user_email else 'user'
+        csv_filename = f"RecruitEdge_Advanced_{user_prefix}_{timestamp}.csv"
+        
+        with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
+            f.write(csv_content)
+        
+        if user_email and user_email != 'anonymous':
+            try:
+                for contact in advanced_contacts:
+                    if contact.get('Email'):
+                        create_gmail_draft_for_user(
+                            user_email,
+                            contact['Email'],
+                            f"Opportunity at {company}",
+                            contact.get('AI_Email', 'Hello!')
+                        )
+                print(f"✅ Created Gmail drafts for {len([c for c in advanced_contacts if c.get('Email')])} contacts")
+            except Exception as e:
+                print(f"Gmail draft creation failed: {e}")
+        
+        log_api_usage('advanced', user_email, len(advanced_contacts))
+        
+        print(f"Advanced tier completed for {user_email}: {len(advanced_contacts)} contacts")
+        return {
+            'contacts': advanced_contacts,
+            'csv_file': csv_filename,
+            'csv_content': csv_content,
+            'tier': 'advanced',
+            'user_email': user_email,
+            'contact_count': len(advanced_contacts),
+            'credits': credit_state
+        }
+        
+    except Exception as e:
+        print(f"Advanced tier failed for {user_email}: {e}")
+        log_api_usage('advanced', user_email, 0)
+        return {'error': str(e), 'contacts': []}
     
     try:
         errors = validate_search_inputs(job_title, company, location)
@@ -2149,59 +2313,68 @@ def run_advanced_tier_enhanced(job_title, company, location, user_email=None):
         log_api_usage('advanced', user_email, 0, 0)
         return {'error': str(e), 'contacts': []}
 
-def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=None):
+def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=None, user_tier='pro'):
     """Enhanced Pro tier with validation and logging"""
     print("Running PRO tier workflow")
     
     try:
+        if not user_email:
+            user_email = 'anonymous'
+        
+        allowed_by_credits = get_allowed_contacts(user_email, user_tier)
+        if allowed_by_credits <= 0:
+            return {'error': 'Insufficient credits', 'contacts': [], 'credits': _ensure_user_credits(user_email, user_tier)}
+        
+        effective_max = min(12, allowed_by_credits)
         errors = validate_search_inputs(job_title, company, location)
         if errors:
             return {'error': f"Validation failed: {'; '.join(errors)}", 'contacts': []}
         
-        resume_text = extract_text_from_pdf(resume_file)
-        if not resume_text:
-            log_api_usage('pro', user_email, 0, 0)
-            return {'error': 'Could not extract text from PDF', 'contacts': []}
+        resume_info = {}
+        if resume_file:
+            try:
+                resume_text = extract_text_from_pdf(resume_file)
+                if resume_text:
+                    resume_info = parse_resume_info(resume_text)
+                    print(f"✅ Resume parsed successfully")
+            except Exception as e:
+                print(f"Resume parsing failed: {e}")
+                resume_info = {}
         
-        resume_info = parse_resume_info(resume_text)
+        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=effective_max)
+        contacts = contacts[:effective_max]
         
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=12)
+        credit_state = deduct_credits_for_contacts(user_email, user_tier, len(contacts))
         
         if not contacts:
             print("No contacts found for Pro tier")
-            log_api_usage('pro', user_email, 0, 0)
-            return {'error': 'No contacts found', 'contacts': []}
+            log_api_usage('pro', user_email, 0)
+            return {'error': 'No contacts found', 'contacts': [], 'credits': credit_state}
+        
+        if resume_info:
+            for contact in contacts:
+                try:
+                    similarity = generate_similarity_summary(resume_info, contact)
+                    contact['Similarity'] = similarity
+                except Exception as e:
+                    print(f"Similarity generation failed for {contact.get('FirstName', 'Unknown')}: {e}")
+                    contact['Similarity'] = "N/A"
         
         for contact in contacts:
-            similarity = generate_similarity_summary(resume_text, contact)
-            contact['Similarity'] = similarity
-            
-            hometown = extract_hometown_from_education(contact)
-            contact['Hometown'] = hometown or 'Not available'
-        
-        successful_drafts = 0
-        for contact in contacts:
-            email_subject, email_body = generate_pro_email(
-                contact,
-                resume_info,
-                contact['Similarity'],
-                contact['Hometown']
-            )
-            contact['email_subject'] = email_subject
-            contact['email_body'] = email_body
-            
-            draft_id = create_gmail_draft_for_user(contact, email_subject, email_body, tier='pro', user_email=user_email)
-            contact['draft_id'] = draft_id
-            if not draft_id.startswith('mock_'):
-                successful_drafts += 1
+            try:
+                email_content = generate_pro_email(contact, job_title, company, resume_info)
+                contact['AI_Email'] = email_content
+            except Exception as e:
+                print(f"Failed to generate email for {contact.get('FirstName', 'Unknown')}: {e}")
+                contact['AI_Email'] = "Email generation failed"
         
         pro_contacts = []
         for contact in contacts:
-            pro_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['pro']['fields']}
+            pro_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['pro']['fields'] + ['AI_Email']}
             pro_contacts.append(pro_contact)
         
         csv_file = StringIO()
-        fieldnames = TIER_CONFIGS['pro']['fields']
+        fieldnames = TIER_CONFIGS['pro']['fields'] + ['AI_Email']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
         for contact in pro_contacts:
@@ -2210,29 +2383,43 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
         csv_content = csv_file.getvalue()
         
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        csv_filename = f"RecruitEdge_Pro_{timestamp}.csv"
+        user_prefix = user_email.split('@')[0] if user_email else 'user'
+        csv_filename = f"RecruitEdge_Pro_{user_prefix}_{timestamp}.csv"
         
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
             f.write(csv_content)
         
-        log_api_usage('pro', user_email, len(pro_contacts), len(pro_contacts))
+        if user_email and user_email != 'anonymous':
+            try:
+                for contact in pro_contacts:
+                    if contact.get('Email'):
+                        create_gmail_draft_for_user(
+                            user_email,
+                            contact['Email'],
+                            f"Exciting Opportunity at {company}",
+                            contact.get('AI_Email', 'Hello!')
+                        )
+                print(f"✅ Created Gmail drafts for {len([c for c in pro_contacts if c.get('Email')])} contacts")
+            except Exception as e:
+                print(f"Gmail draft creation failed: {e}")
         
-        print(f"Pro tier completed: {len(pro_contacts)} contacts, {successful_drafts} Gmail drafts")
-        print(f"User: {resume_info.get('name')} - {resume_info.get('year')} {resume_info.get('major')}")
+        log_api_usage('pro', user_email, len(pro_contacts))
         
+        print(f"Pro tier completed for {user_email}: {len(pro_contacts)} contacts")
         return {
             'contacts': pro_contacts,
             'csv_file': csv_filename,
             'csv_content': csv_content,
-            'successful_drafts': successful_drafts,
-            'resume_info': resume_info,
             'tier': 'pro',
-            'contact_count': len(pro_contacts)
+            'user_email': user_email,
+            'contact_count': len(pro_contacts),
+            'resume_info': resume_info,
+            'credits': credit_state
         }
         
     except Exception as e:
-        print(f"Pro tier failed: {e}")
-        log_api_usage('pro', user_email, 0, 0)
+        print(f"Pro tier failed for {user_email}: {e}")
+        log_api_usage('pro', user_email, 0)
         return {'error': str(e), 'contacts': []}
 
 # ========================================
@@ -2322,11 +2509,13 @@ def basic_run():
             company = data.get('company', '').strip() if data.get('company') else ''
             location = data.get('location', '').strip() if data.get('location') else ''
             user_email = data.get('userEmail', '').strip() if data.get('userEmail') else None
+            user_tier = (data.get('userTier') or 'free').strip().lower()
         else:
             job_title = (request.form.get('jobTitle') or '').strip()
             company = (request.form.get('company') or '').strip()
             location = (request.form.get('location') or '').strip()
             user_email = (request.form.get('userEmail') or '').strip() or None
+            user_tier = (request.form.get('userTier') or 'free').strip().lower()
         
         print(f"DEBUG - Basic endpoint received:")
         print(f"  job_title: '{job_title}' (len: {len(job_title)})")
@@ -2344,7 +2533,7 @@ def basic_run():
         
         print(f"Basic search for {user_email}: {job_title} at {company} in {location}")
         
-        result = run_basic_tier_enhanced(job_title, company, location, user_email)
+        result = run_basic_tier_enhanced(job_title, company, location, user_email, user_tier)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
@@ -2408,17 +2597,20 @@ def advanced_run():
             company = data.get('company', '').strip() if data.get('company') else ''
             location = data.get('location', '').strip() if data.get('location') else ''
             user_email = data.get('userEmail', '').strip() if data.get('userEmail') else None
+            user_tier = (data.get('userTier') or 'free').strip().lower()
         else:
             job_title = (request.form.get('jobTitle') or '').strip()
             company = (request.form.get('company') or '').strip()
             location = (request.form.get('location') or '').strip()
             user_email = (request.form.get('userEmail') or '').strip() or None
+            user_tier = (request.form.get('userTier') or 'free').strip().lower()
         
         print(f"DEBUG - Advanced endpoint received:")
         print(f"  job_title: '{job_title}' (len: {len(job_title)})")
         print(f"  company: '{company}' (len: {len(company)})")
         print(f"  location: '{location}' (len: {len(location)})")
         print(f"  user_email: '{user_email}'")
+        print(f"  user_tier: '{user_tier}'")
         
         if not job_title or not location:
             missing = []
@@ -2430,7 +2622,7 @@ def advanced_run():
         
         print(f"Advanced search for {user_email}: {job_title} at {company} in {location}")
         
-        result = run_advanced_tier_enhanced(job_title, company, location, user_email)
+        result = run_advanced_tier_enhanced(job_title, company, location, user_email, user_tier)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
@@ -2500,6 +2692,7 @@ def pro_run():
         company = request.form.get('company')
         location = request.form.get('location')
         user_email = request.form.get('userEmail')
+        user_tier = (request.form.get('userTier') or 'pro').strip().lower()
         
         print(f"Raw form values:")
         print(f"  jobTitle: '{job_title}' (type: {type(job_title)})")
@@ -2538,7 +2731,7 @@ def pro_run():
         print(f"All validations passed!")
         print(f"Pro search for {user_email}: {job_title} at {company} in {location}")
         
-        result = run_pro_tier_enhanced(job_title, company, location, resume_file, user_email)
+        result = run_pro_tier_enhanced(job_title, company, location, resume_file, user_email, user_tier)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
@@ -2641,6 +2834,30 @@ def autocomplete_api(data_type):
             'query': query,
             'data_type': data_type
         }), 500
+
+@app.route('/api/credits', methods=['GET'])
+def get_credits():
+    """Get user credit information"""
+    try:
+        user_email = (request.args.get('userEmail') or '').strip() or 'anonymous'
+        user_tier = (request.args.get('userTier') or 'free').strip().lower()
+        
+        state = _ensure_user_credits(user_email, user_tier)
+        
+        now = datetime.datetime.now()
+        first_next = datetime.datetime(now.year + (1 if now.month == 12 else 0), 1 if now.month == 12 else now.month + 1, 1)
+        
+        return jsonify({
+            'userEmail': user_email,
+            'tier': state['tier'],
+            'creditsRemaining': state['credits_remaining'],
+            'maxCredits': state['max_credits'],
+            'resetsAt': first_next.isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Credits endpoint error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/enrich-job-title', methods=['POST'])
 def enrich_job_title_api():
