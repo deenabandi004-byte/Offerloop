@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Loader2, ExternalLink } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 
 interface Contact {
   id: string;
@@ -131,10 +131,12 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
     }
   };
 
-  const openLinkedIn = (url: string) => {
-    if (url && url.startsWith('http')) {
-      window.open(url, '_blank');
-    }
+  const buildMailto = (contact: Contact) => {
+    const to = (contact.email || '').trim();
+    if (!to) return '#';
+    const subject = `Hello ${[contact.firstName, contact.lastName].filter(Boolean).join(' ')}`.trim();
+    const body = `Hi ${contact.firstName || contact.lastName || ''},\n\n`;
+    return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   const clearAllContacts = () => {
@@ -169,8 +171,8 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Contact Directory</h1>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500">User: {userEmail}</span>
-          <span className="text-sm text-gray-500">Storage: localStorage</span>
+          <span className="text-sm text-muted-foreground">User: {userEmail}</span>
+          <span className="text-sm text-muted-foreground">Storage: localStorage</span>
           <Button onClick={loadContacts} variant="outline">
             Refresh
           </Button>
@@ -192,55 +194,77 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
           </p>
         </div>
       ) : (
-        <div className="rounded-md border overflow-x-auto">
+        <div className="rounded-md border border-border overflow-x-auto bg-background/60 backdrop-blur-sm">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">LinkedIn URL</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email Address</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Title</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">College</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Contact Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Contact Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">First Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Last Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Email Link</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Email Address</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Company</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Job Title</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">College</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">First Contact Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Last Contact Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Mail</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-background divide-y divide-border">
               {contacts.map((contact, index) => (
-                <tr key={contact.id || index} className="hover:bg-gray-50">
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{contact.firstName}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{contact.lastName}</td>
+                <tr key={contact.id || index} className="hover:bg-accent/50">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.firstName}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.lastName}</td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm">
-                    {contact.linkedinUrl ? (
+                    {contact.email ? (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => openLinkedIn(contact.linkedinUrl)}
-                        className="p-0 h-auto text-blue-600 hover:text-blue-800"
+                        asChild
+                        className="p-0 h-auto text-primary hover:text-primary/80"
+                        title={`Email ${contact.firstName || contact.lastName || ''}`}
                       >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        LinkedIn
+                        <a href={buildMailto(contact)}>
+                          <Mail className="h-4 w-4 mr-1" />
+                          Email
+                        </a>
                       </Button>
                     ) : (
                       ''
                     )}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{contact.email}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{contact.company}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{contact.jobTitle}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{contact.college}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{contact.location}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{formatDate(contact.firstContactDate)}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.email}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.company}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.jobTitle}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.college}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.location}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{formatDate(contact.firstContactDate)}</td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                    <span className="px-2 py-1 rounded-full text-xs bg-muted text-foreground">
                       {contact.status}
                     </span>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{formatDate(contact.lastContactDate)}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{formatDate(contact.lastContactDate)}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm">
+                    {contact.email ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        asChild
+                        className="text-primary hover:text-primary/80"
+                        aria-label={`Quick email ${contact.firstName || contact.lastName || ''}`}
+                        title={`Email ${contact.firstName || contact.lastName || ''}`}
+                      >
+                        <a href={buildMailto(contact)}>
+                          <Mail className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    ) : (
+                      ''
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
