@@ -159,11 +159,20 @@ const Home = () => {
           saveToDirectory: false
         };
 
+        // Read onboarding resume data from localStorage
+        const rdStr = localStorage.getItem('resumeData');
+        const rd = rdStr ? JSON.parse(rdStr) : null;
+        const derivedName = (rd?.name || currentUser.name || '').trim();
+        const derivedEmail = (currentUser.email || rd?.email || '').trim();
+        const derivedPhone = (rd?.phone || '').trim();
+
         const formData = new FormData();
         formData.append('jobTitle', searchRequest.jobTitle);
         formData.append('company', searchRequest.company);
         formData.append('location', searchRequest.location);
-        formData.append('userEmail', currentUser.email);
+        formData.append('userEmail', derivedEmail);
+        formData.append('userName', derivedName);
+        formData.append('userPhone', derivedPhone);
         formData.append('saveToDirectory', 'false');
 
         response = await fetch(`${BACKEND_URL}/api/free-run?format=json`, {
@@ -173,12 +182,21 @@ const Home = () => {
 
       } else if (userTier === 'pro') {
         // Use Pro tier API with resume
+        // Read onboarding resume data from localStorage
+        const rdStr = localStorage.getItem('resumeData');
+        const rd = rdStr ? JSON.parse(rdStr) : null;
+        const derivedName = (rd?.name || currentUser.name || '').trim();
+        const derivedEmail = (currentUser.email || rd?.email || '').trim();
+        const derivedPhone = (rd?.phone || '').trim();
+
         const formData = new FormData();
         formData.append('jobTitle', jobTitle.trim());
         formData.append('company', company.trim() || '');
         formData.append('location', location.trim());
         formData.append('resume', uploadedFile!);
-        formData.append('userEmail', currentUser.email);
+        formData.append('userEmail', derivedEmail);
+        formData.append('userName', derivedName);
+        formData.append('userPhone', derivedPhone);
         formData.append('saveToDirectory', 'false');
 
         response = await fetch(`${BACKEND_URL}/api/pro-run?format=json`, {
@@ -730,6 +748,112 @@ const Home = () => {
                         <span className="text-blue-400">{progressValue}%</span>
                       </div>
                       <Progress value={progressValue} className="h-2" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Generated Emails */}
+              {hasResults && (
+                <Card className="mt-6 bg-gray-800/50 backdrop-blur-sm border-gray-700">
+                  <CardHeader className="border-b border-gray-700">
+                    <CardTitle className="text-xl text-white flex items-center gap-2">
+                      <span className="text-blue-400">✉</span>
+                      Generated Emails ({lastResults.length}) — {String(lastResultsTier || userTier).toUpperCase()}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="grid gap-6">
+                      {lastResults.map((c, idx) => {
+                        const toEmail = c.Email || c.WorkEmail || c.PersonalEmail || '';
+                        const subject = c.email_subject || '';
+                        const body = c.email_body || '';
+                        
+                        return (
+                          <div key={idx} className="relative group">
+                            {/* Email Card */}
+                            <div className="p-5 rounded-xl bg-gradient-to-br from-gray-900/60 to-gray-800/40 border border-gray-600/50 hover:border-blue-500/30 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/10">
+                              {/* Header with Contact Info */}
+                              <div className="flex items-start justify-between gap-4 mb-4">
+                                <div className="flex-1">
+                                  <div className="font-semibold text-white text-lg mb-2">
+                                    {c.FirstName} {c.LastName}
+                                    {c.Title && <span className="text-gray-300 font-normal"> — {c.Title}</span>}
+                                    {c.Company && <span className="text-blue-300 font-normal"> @ {c.Company}</span>}
+                                  </div>
+                                  
+                                  {/* Email Headers */}
+                                  <div className="space-y-1">
+                                    {toEmail && (
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-gray-400 font-medium">To:</span>
+                                        <span className="text-emerald-300 font-mono">{toEmail}</span>
+                                      </div>
+                                    )}
+                                    {subject && (
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-gray-400 font-medium">Subject:</span>
+                                        <span className="text-blue-300">{subject}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Copy Button */}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-blue-500/50 text-blue-300 hover:bg-blue-500/20 hover:border-blue-400 transition-all duration-200 px-4 py-2 font-medium"
+                                  onClick={() => {
+                                    const header = toEmail ? `To: ${toEmail}\n` : '';
+                                    const text = `${header}Subject: ${subject}\n\n${body}`;
+                                    navigator.clipboard.writeText(text);
+                                  }}
+                                  title="Copy complete email to clipboard"
+                                >
+                                  📋 Copy Email
+                                </Button>
+                              </div>
+
+                              {/* Email Body */}
+                              <div className="relative">
+                                <div className="bg-gray-900/60 rounded-lg p-4 border border-gray-700/50">
+                                  <pre className="whitespace-pre-wrap text-gray-200 text-sm leading-relaxed font-sans">
+                                    {body || "No email generated"}
+                                  </pre>
+                                </div>
+                              </div>
+
+                              {/* Status Indicators */}
+                              <div className="flex items-center justify-between mt-3">
+                                <div className="flex items-center gap-3">
+                                  {c.draft_id && !String(c.draft_id).startsWith("mock_") && (
+                                    <div className="flex items-center gap-1 text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded-full">
+                                      <span>✓</span>
+                                      <span>Gmail draft created</span>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <div className="text-xs text-gray-500">
+                                  Email #{idx + 1}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Separator line between emails (except last) */}
+                            {idx < lastResults.length - 1 && (
+                              <div className="flex items-center justify-center my-6">
+                                <div className="h-px bg-gradient-to-r from-transparent via-gray-600/50 to-transparent w-full"></div>
+                                <div className="px-3 text-xs text-gray-500 bg-gray-800/50 rounded-full border border-gray-700/50">
+                                  ···
+                                </div>
+                                <div className="h-px bg-gradient-to-r from-transparent via-gray-600/50 to-transparent w-full"></div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>

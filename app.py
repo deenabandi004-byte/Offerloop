@@ -28,6 +28,7 @@ from dotenv import load_dotenv
 from openai import OpenAI   # new SDK import
 import sqlite3
 from contextlib import contextmanager
+from email_templates import TEMPLATES_15
 
 # Load environment variables from .env
 load_dotenv()
@@ -184,7 +185,7 @@ PDL_BASE_URL = 'https://api.peopledatalabs.com/v5'
 TIER_CONFIGS = {
     'free': {
         'max_contacts': 8,  # 8 emails = 120 credits (15 credits per email)
-        'fields': ['FirstName', 'LastName', 'LinkedIn', 'Email', 'Title', 'Company', 'City', 'State', 'College'],
+        'fields': ['FirstName', 'LastName', 'LinkedIn', 'Email', 'Title', 'Company', 'City', 'State', 'College', 'email_subject', 'email_body', 'draft_id'],
         'uses_pdl': True,
         'uses_email_drafting': True,
         'uses_resume': False,
@@ -196,7 +197,7 @@ TIER_CONFIGS = {
         'max_contacts': 56,  # 56 emails = 840 credits (15 credits per email)
         'fields': ['FirstName', 'LastName', 'LinkedIn', 'Email', 'Title', 'Company', 'City', 'State', 'College',
                   'Phone', 'PersonalEmail', 'WorkEmail', 'SocialProfiles', 'EducationTop', 'VolunteerHistory',
-                  'WorkSummary', 'Group', 'Hometown', 'Similarity'],
+                  'WorkSummary', 'Group', 'Hometown', 'Similarity', 'email_subject', 'email_body', 'draft_id'],
         'uses_pdl': True,
         'uses_email_drafting': True,
         'uses_resume': True,
@@ -967,182 +968,193 @@ def search_contacts_with_pdl_optimized(job_title, company, location, max_contact
 # EMAIL GENERATION (Free & Pro Tiers)
 # ========================================
 
-def generate_email_for_tier(contact, tier='free', resume_info=None, similarity=None, hometown=None):
+def generate_email_from_templates(resume_text: str, contact_info: dict, templates: list, user_name: str = "", user_email: str = "", user_phone: str = "", temperature: float = 0.7) -> str:
+    """
+    Uses the user's unified prompt to select one best template and return a final polished email body.
+    Returns the email body only (no subject).
+    """
+    system_prompt = (
+        "You are an expert career networking assistant trained to generate professional, "
+        "personalized cold outreach emails for coffee chats and networking."
+    )
+
+    user_prompt = f"""
+You are an expert career networking assistant trained to generate professional, personalized cold outreach emails for coffee chats and networking.
+1. From a library of 15 pre-written outreach templates, select the single most appropriate template given:
+   - The user's resume (background, education, experiences, goals).
+   - The contact's profile (from People Data Labs: role, company, school, skills, industry, location).
+   - The nature of their commonalities (e.g., same school, same club, same hometown, shared interests, career transitions, or company admiration).
+2. Reconcile and merge the most relevant overlapping details between the user's resume and the contact's information to personalize the chosen template. This includes:
+   - Education overlaps (same school/degree/club/activities).
+   - Career overlaps (similar industries, roles, or transitions).
+   - Geographic overlaps (same city, hometown, office).
+   - Aspirational overlaps (the user's career goals aligning with the contact's path).
+3. Fill in the personalization slots in the chosen template. Do this subtly and naturally, without overloading the email with excessive detail. Mention one or two very specific similarities or points of admiration that connect the user to the contact.
+- Always keep the tone professional, respectful, and concise.
+- Emphasize gratitude and the ask for a 15–20 minute call or coffee chat.
+- Do not simply merge the resume with the contact's profile — instead, use only the most relevant overlaps to establish credibility and authenticity.
+- Never overstuff the email with too much detail. Limit to 1–2 personalizing sentences.
+- Always sign off with the user's name and contact info.
+- Replace [Your Name]/[Your Full Name] with: {user_name or "[Your Name]"}
+- Replace [Your Email] with: {user_email or "[Your Email]"}
+- Replace [Your Phone Number] with: {user_phone or "[Your Phone Number]"}
+- resume_text = {json.dumps(resume_text, ensure_ascii=False)}
+- contact_info = {json.dumps(contact_info, ensure_ascii=False)}
+- templates = {json.dumps(templates, ensure_ascii=False)}
+- user = {{"name": {json.dumps(user_name)}, "email": {json.dumps(user_email)}, "phone": {json.dumps(user_phone)}}}
+Return a final polished cold outreach email that:
+1. Uses the single best-fitting template.
+2. Seamlessly incorporates personal similarities between the user and contact.
+3. Reads as if the user wrote it specifically for this contact.
+Do not return multiple templates or drafts. Only return the final single email.
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        max_tokens=700,
+        temperature=temperature,
+    )
+    return response.choices[0].message.content.strip()
+
+def generate_email_for_tier(contact, tier='free', resume_info=None, similarity=None, hometown=None, user_name="", user_email="", user_phone=""):
     """Generate email based on tier - Free or Pro"""
     try:
         print(f"Generating {tier} email for {contact.get('FirstName', 'Unknown')}")
         
         if tier == 'free':
-            return generate_free_email(contact)
+            return generate_free_email(contact, user_name, user_email, user_phone)
         elif tier == 'pro':
-            return generate_pro_email(contact, resume_info, similarity, hometown)
+            return generate_pro_email(contact, resume_info, similarity, hometown, user_name=user_name, user_email=user_email, user_phone=user_phone)
         else:
             # Fallback to free email
-            return generate_free_email(contact)
+            return generate_free_email(contact, user_name, user_email, user_phone)
             
     except Exception as e:
         print(f"{tier.capitalize()} email generation failed: {e}")
         return f"Quick Chat about Your Work at {contact.get('Company', 'Your Company')}?", f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at {contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
 
-def generate_free_email(contact):
-    """Generate Free tier email using simplified template"""
+def generate_free_email(contact, user_name="", user_email="", user_phone=""):
+    """Generate Free tier email using template-selection prompt (no resume)."""
     try:
-        print(f"Generating Free email for {contact.get('FirstName', 'Unknown')}")
-        
-        # Free tier email template - simpler than advanced
-        prompt = f"""
-Write a professional networking email following this template that's tailored for them but leave [Your Name], [Your year/major], and [Your University] placeholders empty:
+        contact_info = {
+            "first_name": contact.get("FirstName"),
+            "last_name": contact.get("LastName"),
+            "title": contact.get("Title"),
+            "company": contact.get("Company"),
+            "city": contact.get("City"),
+            "state": contact.get("State"),
+            "education": contact.get("EducationTop"),
+            "skills": contact.get("Skills") or [],
+            "industry": contact.get("Industry") or contact.get("PDLIndustry"),
+            "location": ", ".join([p for p in [contact.get("City"), contact.get("State")] if p]),
+        }
 
-Hi {contact.get('FirstName', '[First Name]')},
+        resume_text = ""
 
-I hope you're doing well! My name is [Your Name], and I'm currently a [Your year/major] at [Your University]. I came across your profile while researching {contact.get('Company', '[Company Name]')}/{contact.get('Title', 'your field').lower()} and was really inspired by your work in {contact.get('Title', '[specific role, team, project, or recent accomplishment]')}.
-
-I'm very interested in {contact.get('Title', '[role/team/industry]').lower()} and would really appreciate the chance to learn more about your journey and any advice you may have. If you're open to it, would you be available for a quick 15-20 minute chat sometime this or next week?
-
-Thanks so much in advance - I'd love to hear your perspective!
-
-Warmly, [Your Full Name]
-
-Contact Information:
-- Name: {contact.get('FirstName')} {contact.get('LastName')}
-- Company: {contact.get('Company')}
-- Title: {contact.get('Title')}
-- Education: {contact.get('EducationTop', '')}
-
-Customize the email by:
-- Filling in their actual first name, company name, and industry
-- Referencing their specific role or company
-- Keep [Your Name], [Your year/major], [Your University], and [Your Full Name] as placeholders
-"""
-        
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an expert at writing personalized networking emails for Free tier. Keep emails warm, professional, and follow the template exactly."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=400,
-            temperature=0.7
+        email_body = generate_email_from_templates(
+            resume_text=resume_text,
+            contact_info=contact_info,
+            templates=TEMPLATES_15,
+            user_name=user_name,
+            user_email=user_email,
+            user_phone=user_phone,
+            temperature=0.7,
         )
         
-        email_body = response.choices[0].message.content.strip()
-        
-        # Generate subject using simple template
-        email_subject = f"Quick Chat to Learn about Your Work at {contact.get('Company', 'Your Company')}?"
-        
-        print(f"Generated Free email for {contact.get('FirstName', 'Unknown')}")
+        if user_name:
+            email_body = email_body.replace("[Your Name]", user_name).replace("[Your Full Name]", user_name)
+        if user_email:
+            email_body = email_body.replace("[Your Email]", user_email)
+        if user_phone:
+            email_body = email_body.replace("[Your Phone Number]", user_phone)
+
+        email_subject = f"Coffee chat re: {contact.get('Title', 'your work')} @ {contact.get('Company', 'your company')}?"
+
         return email_subject, email_body
-        
+
     except Exception as e:
         print(f"Free email generation failed: {e}")
-        return f"Quick Chat about Your Work at {contact.get('Company', 'Your Company')}?", f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at {contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
+        return f"Coffee chat about your work at {contact.get('Company', 'your company')}?", (
+            f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at "
+            f"{contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
+        )
 
-def generate_pro_email(contact, resume_info, similarity, hometown):
-    """Generate Pro tier email using enhanced template with resume integration"""
+def generate_pro_email(contact, resume_info, similarity, hometown, user_name="", user_email="", user_phone=""):
+    """Generate Pro tier email (uses structured profile summary derived from resume)."""
     try:
-        print(f"Generating Pro email for {contact.get('FirstName', 'Unknown')}")
+        resume_name = (resume_info or {}).get("name") or user_name or ""
+        resume_email = (resume_info or {}).get("email") or user_email or ""
+        resume_phone = (resume_info or {}).get("phone") or user_phone or ""
         
-        # Extract values safely to avoid f-string issues
-        user_name = resume_info.get('name', '[User Name]')
-        user_year = resume_info.get('year', '[User Year in school]')
-        user_major = resume_info.get('major', '[User Major/field of study]')
-        user_university = resume_info.get('university', '[User University]')
-        contact_first = contact.get('FirstName', '[First Name]')
-        contact_company = contact.get('Company', '[Company Name]')
-        contact_title = contact.get('Title', '[Industry]')
-        
-        # Pro tier email template with enhanced personalization
-        prompt = f"""
-Given the information provided which includes first name, last name, job title, city, state, work experiences, education, undergrad, hometown, group, summary of the person you're reaching out to and summary of your similarities.
+        resume_summary = {
+            "name": resume_name,
+            "year": resume_info.get("year", ""),
+            "major": resume_info.get("major", ""),
+            "university": resume_info.get("university", ""),
+            "hometown": hometown or "",
+            "similarity_summary": similarity or "",
+        }
+        resume_text = json.dumps(resume_summary, ensure_ascii=False)
 
-It also includes the extracted text from the user's resume. Which from there extract the necessary information which is: User's Name, their year in school and major.
+        contact_info = {
+            "first_name": contact.get("FirstName"),
+            "last_name": contact.get("LastName"),
+            "title": contact.get("Title"),
+            "company": contact.get("Company"),
+            "city": contact.get("City"),
+            "state": contact.get("State"),
+            "education": contact.get("EducationTop"),
+            "skills": contact.get("Skills") or [],
+            "industry": contact.get("Industry") or contact.get("PDLIndustry"),
+            "location": ", ".join([p for p in [contact.get("City"), contact.get("State")] if p]),
+        }
 
-Write an email following this exact template but when possible integrate in a concise way the similarities you have with the person.
-
-Contact Information:
-- Name: {contact.get('FirstName')} {contact.get('LastName')}
-- Company: {contact.get('Company')}
-- Title: {contact.get('Title')}
-- City: {contact.get('City')}
-- State: {contact.get('State')}
-- Work Summary: {contact.get('WorkSummary', '')}
-- Education: {contact.get('EducationTop', '')}
-- Volunteer History: {contact.get('VolunteerHistory', '')}
-- Group: {contact.get('Group', '')}
-- Hometown: {hometown or 'Not available'}
-
-User Information:
-- Name: {user_name}
-- Year in School: {user_year}
-- Major: {user_major}
-- University: {user_university}
-
-Similarity Summary: {similarity}
-
-Template:
-Hi {contact_first},
-
-I hope you're doing well! My name is {user_name}, and I'm currently a {user_year} studying {user_major} at {user_university}. I came across your profile while researching {contact_company}/{contact_title.lower()} and was really inspired by your work in {contact_title}.
-
-I'm very interested in {contact_title.lower()} and would really appreciate the chance to learn more about your journey and any advice you may have. If you're open to it, would you be available for a quick 15-20 minute chat sometime this or next week?
-
-Thanks so much in advance - I'd love to hear your perspective!
-
-Warmly, {user_name}
-
-Customize the email by:
-- Filling in their actual first name, company name, and industry
-- Referencing their specific role, team, or a recent accomplishment from their work experience
-- Making the industry/role interest sound genuine and specific to their background
-- Integrate similarities naturally and concisely
-- Make it the best possible with the information provided
-- Limit it to at most 3 concise paragraphs
-- For relating judge which ones will make the outreach more personable and for interests make it specific where possible and show genuine interest
-"""
-        
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an expert at writing personalized networking emails for Pro tier. Keep emails concise, warm, and professional with natural similarity integration."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=600,
-            temperature=0.7
+        email_body = generate_email_from_templates(
+            resume_text=resume_text,
+            contact_info=contact_info,
+            templates=TEMPLATES_15,
+            user_name=resume_name,
+            user_email=resume_email,
+            user_phone=resume_phone,
+            temperature=0.7,
         )
         
-        email_body = response.choices[0].message.content.strip()
-        
-        # Generate subject line using enhanced prompt
+        if resume_name:
+            email_body = email_body.replace("[Your Name]", resume_name).replace("[Your Full Name]", resume_name)
+        if resume_email:
+            email_body = email_body.replace("[Your Email]", resume_email)
+        if resume_phone:
+            email_body = email_body.replace("[Your Phone Number]", resume_phone)
+
         subject_prompt = f"""
-Given the email body, develop an appropriate subject for the email. It's very short but it captures what the email is asking for which is a coffee chat and then also any personal connection but again it's an email subject so for example if they're a USC alumni and you're a USC student in the subject mention that. Or if you're from the same hometown. Maybe not even hometown but judge what's appropriate and generate good subject lines that are more likely to lead to responses.
-
-Email body: {email_body[:300]}...
-Contact: {contact_first} at {contact_company}
-User: {user_name} - {user_year} at {user_university}
-Hometown connection: {hometown or 'None'}
-Similarity: {similarity}
-
-Just give the subject line no citations, reasoning or explanations.
+Create a concise, compelling subject for a coffee chat outreach email.
+Consider: {contact.get('FirstName','')} at {contact.get('Company','')}, role {contact.get('Title','')},
+and any alumni/location fit if obvious. Output only the subject line.
+Email body (first 300 chars): {email_body[:300]}...
 """
-        
         subject_response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert at writing compelling email subject lines that get responses. Be concise and personal."},
-                {"role": "user", "content": subject_prompt}
+                {"role": "system", "content": "You write concise, effective email subject lines with subtle personalization."},
+                {"role": "user", "content": subject_prompt},
             ],
-            max_tokens=50,
-            temperature=0.7
+            max_tokens=40,
+            temperature=0.7,
         )
-        
         email_subject = subject_response.choices[0].message.content.strip().strip('"').strip("'")
-        
-        print(f"Generated Pro email for {contact.get('FirstName', 'Unknown')}")
+
         return email_subject, email_body
-        
+
     except Exception as e:
         print(f"Pro email generation failed: {e}")
-        return f"Coffee chat about your work at {contact.get('Company', 'your company')}?", f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at {contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
+        return f"Coffee chat about your work at {contact.get('Company', 'your company')}?", (
+            f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at "
+            f"{contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
+        )
 
 # ========================================
 # PRO TIER - RESUME PROCESSING
@@ -1207,6 +1219,8 @@ def parse_resume_info(resume_text):
         prompt = f"""
 Extract the following information from this resume text:
 - Full Name
+- Email Address (personal or professional email)
+- Phone Number (format as provided, e.g., "(555) 123-4567" or "555-123-4567")
 - Graduation Year (extract the 4-digit year from graduation date, e.g., "2022", "2023", "2024")
 - Major/Field of Study
 - University/School name
@@ -1214,12 +1228,14 @@ Extract the following information from this resume text:
 Return as JSON format:
 {{
     "name": "Full Name",
+    "email": "email@example.com",
+    "phone": "(555) 123-4567",
     "year": "2022",
     "major": "Major/Field",
     "university": "University Name"
 }}
 
-If graduation year is not found, use "Unknown" for the year field.
+If any field is not found, use an empty string "" for that field.
 
 Resume text:
 {clean_text}
@@ -1248,10 +1264,12 @@ Resume text:
             result = json.loads(response_text)
             
             # Validate the result has required fields
-            required_fields = ['name', 'year', 'major', 'university']
+            required_fields = ['name', 'email', 'phone', 'year', 'major', 'university']
             for field in required_fields:
-                if field not in result or not result[field]:
-                    result[field] = f"[Your {field.capitalize()}]"
+                if field not in result:
+                    result[field] = ""
+                elif not result[field] or result[field] in ['Unknown', 'N/A', 'n/a']:
+                    result[field] = ""
             
             if result['year'] and result['year'] != "[Your Year]":
                 year_match = re.search(r'\b(19|20)\d{2}\b', result['year'])
@@ -1260,7 +1278,7 @@ Resume text:
                 elif result['year'].lower() in ['graduated', 'unknown', 'n/a']:
                     result['year'] = ""
             
-            print(f"Parsed resume info: {result['name']} - {result['year']} {result['major']} at {result['university']}")
+            print(f"Parsed resume info: {result['name']} ({result['email']}, {result['phone']}) - {result['year']} {result['major']} at {result['university']}")
             return result
             
         except json.JSONDecodeError as je:
@@ -1273,10 +1291,12 @@ Resume text:
     except Exception as e:
         print(f"Resume parsing failed: {e}")
         return {
-            "name": "[Your Name]",
-            "year": "[Your Year]",
-            "major": "[Your Major]",
-            "university": "[Your University]"
+            "name": "",
+            "email": "",
+            "phone": "",
+            "year": "",
+            "major": "",
+            "university": ""
         }
 
 def extract_resume_info_fallback(text):
@@ -1287,10 +1307,12 @@ def extract_resume_info_fallback(text):
         import re
         
         result = {
-            "name": "[Your Name]",
-            "year": "[Your Year]",
-            "major": "[Your Major]",
-            "university": "[Your University]"
+            "name": "",
+            "email": "",
+            "phone": "",
+            "year": "",
+            "major": "",
+            "university": ""
         }
         
         # Try to find name (usually at the beginning)
@@ -1348,16 +1370,36 @@ def extract_resume_info_fallback(text):
                 result['major'] = match.group(1).strip()
                 break
         
+        # Try to find email
+        email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', text)
+        if email_match:
+            result['email'] = email_match.group().strip()
+        
+        # Try to find phone
+        phone_match = re.search(r'(\+?\d[\d\-\s\(\)]{7,}\d)', text)
+        if phone_match:
+            result['phone'] = phone_match.group().strip()
+        
+        # Validate required fields and set defaults
+        required_fields = ['name', 'email', 'phone', 'year', 'major', 'university']
+        for field in required_fields:
+            if field not in result:
+                result[field] = ""
+            elif not result[field] or result[field] in ['Unknown', 'N/A', 'n/a']:
+                result[field] = ""
+        
         print(f"Fallback extraction: {result}")
         return result
         
     except Exception as e:
         print(f"Fallback extraction failed: {e}")
         return {
-            "name": "[Your Name]",
-            "year": "[Your Year]",
-            "major": "[Your Major]",
-            "university": "[Your University]"
+            "name": "",
+            "email": "",
+            "phone": "",
+            "year": "",
+            "major": "",
+            "university": ""
         }
 
 def generate_similarity_summary(resume_text, contact):
@@ -1692,7 +1734,7 @@ def apply_recruitedge_label(gmail_service, message_id, tier):
 # TIER ENDPOINT IMPLEMENTATIONS - SIMPLIFIED TO TWO TIERS
 # ========================================
 
-def run_free_tier(job_title, company, location, user_email=None):
+def run_free_tier(job_title, company, location, user_email=None, user_name="", user_phone=""):
     """FREE TIER: 8 contacts max with PDL search + email drafting"""
     print(f"Running FREE tier workflow for {user_email}")
     
@@ -1706,7 +1748,7 @@ def run_free_tier(job_title, company, location, user_email=None):
         # Step 2: Generate Free emails for each contact
         successful_drafts = 0
         for contact in contacts:
-            email_subject, email_body = generate_email_for_tier(contact, tier='free')
+            email_subject, email_body = generate_email_for_tier(contact, tier='free', user_name=user_name, user_email=user_email, user_phone=user_phone)
             contact['email_subject'] = email_subject
             contact['email_body'] = email_body
             
@@ -1747,7 +1789,7 @@ def run_free_tier(job_title, company, location, user_email=None):
         print(f"Free tier failed for {user_email}: {e}")
         return {'error': str(e), 'contacts': []}
 
-def run_pro_tier(job_title, company, location, resume_file, user_email=None):
+def run_pro_tier(job_title, company, location, resume_file, user_email=None, user_name="", user_phone=""):
     """PRO TIER: 56 contacts max with PDL + resume analysis + similarity engine + smart emails"""
     print(f"Running PRO tier workflow for {user_email}")
     
@@ -1784,7 +1826,10 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
                 tier='pro',
                 resume_info=resume_info,
                 similarity=contact['Similarity'],
-                hometown=contact['Hometown']
+                hometown=contact['Hometown'],
+                user_name=user_name,
+                user_email=user_email,
+                user_phone=user_phone
             )
             contact['email_subject'] = email_subject
             contact['email_body'] = email_body
@@ -1833,7 +1878,7 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
 # ENHANCED TIER FUNCTIONS WITH LOGGING - TWO TIERS ONLY
 # ========================================
 
-def run_free_tier_enhanced(job_title, company, location, user_email=None):
+def run_free_tier_enhanced(job_title, company, location, user_email=None, user_name="", user_phone=""):
     """Enhanced Free tier with validation and logging"""
     print(f"Running FREE tier workflow for {user_email}")
     
@@ -1851,7 +1896,7 @@ def run_free_tier_enhanced(job_title, company, location, user_email=None):
         
         successful_drafts = 0
         for contact in contacts:
-            email_subject, email_body = generate_email_for_tier(contact, tier='free')
+            email_subject, email_body = generate_email_for_tier(contact, tier='free', user_name=user_name, user_email=user_email, user_phone=user_phone)
             contact['email_subject'] = email_subject
             contact['email_body'] = email_body
             
@@ -1901,7 +1946,7 @@ def run_free_tier_enhanced(job_title, company, location, user_email=None):
         log_api_usage('free', user_email, 0, 0)
         return {'error': str(e), 'contacts': []}
 
-def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=None):
+def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=None, user_name="", user_phone=""):
     """Enhanced Pro tier with validation and logging"""
     print(f"Running PRO tier workflow for {user_email}")
     
@@ -1938,7 +1983,10 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
                 tier='pro',
                 resume_info=resume_info,
                 similarity=contact['Similarity'],
-                hometown=contact['Hometown']
+                hometown=contact['Hometown'],
+                user_name=user_name,
+                user_email=user_email,
+                user_phone=user_phone
             )
             contact['email_subject'] = email_subject
             contact['email_body'] = email_body
@@ -2218,11 +2266,15 @@ def free_run():
             company = data.get('company', '').strip() if data.get('company') else ''
             location = data.get('location', '').strip() if data.get('location') else ''
             user_email = data.get('userEmail', '').strip() if data.get('userEmail') else None
+            user_name = data.get('userName', '').strip() if data.get('userName') else ''
+            user_phone = data.get('userPhone', '').strip() if data.get('userPhone') else ''
         else:
             job_title = (request.form.get('jobTitle') or '').strip()
             company = (request.form.get('company') or '').strip()
             location = (request.form.get('location') or '').strip()
             user_email = (request.form.get('userEmail') or '').strip() or None
+            user_name = (request.form.get('userName') or '').strip()
+            user_phone = (request.form.get('userPhone') or '').strip()
         
         print(f"DEBUG - Free endpoint received:")
         print(f"  job_title: '{job_title}' (len: {len(job_title)})")
@@ -2240,7 +2292,7 @@ def free_run():
         
         print(f"Free search for {user_email}: {job_title} at {company} in {location}")
         
-        result = run_free_tier_enhanced(job_title, company, location, user_email)
+        result = run_free_tier_enhanced(job_title, company, location, user_email, user_name=user_name, user_phone=user_phone)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
@@ -2310,6 +2362,8 @@ def pro_run():
         company = request.form.get('company')
         location = request.form.get('location')
         user_email = request.form.get('userEmail')
+        user_name = request.form.get('userName')
+        user_phone = request.form.get('userPhone')
         
         print(f"Raw form values:")
         print(f"  jobTitle: '{job_title}' (type: {type(job_title)})")
@@ -2321,6 +2375,7 @@ def pro_run():
         company = (company or '').strip()
         location = (location or '').strip()
         user_email = (user_email or '').strip() if user_email else None
+        user_name = (user_name or '').strip()
         
         print(f"Cleaned values:")
         print(f"  job_title: '{job_title}' (len: {len(job_title)})")
@@ -2348,7 +2403,7 @@ def pro_run():
         print(f"All validations passed!")
         print(f"Pro search for {user_email}: {job_title} at {company} in {location}")
         
-        result = run_pro_tier_enhanced(job_title, company, location, resume_file, user_email)
+        result = run_pro_tier_enhanced(job_title, company, location, resume_file, user_email, user_name=user_name, user_phone=user_phone)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500

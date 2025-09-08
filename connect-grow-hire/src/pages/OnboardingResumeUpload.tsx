@@ -54,6 +54,8 @@ const OnboardingResumeUpload = () => {
       // Store the parsed data in localStorage with the correct structure
       const resumeData = {
         name: result.data.name || '',
+        email: result.data.email || '',
+        phone: result.data.phone || '',
         year: result.data.year || '',
         major: result.data.major || '',
         university: result.data.university || ''
