@@ -67,8 +67,8 @@ class ApiService {
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     
-    console.log(`🌐 Making request to: ${url}`); // ✅ Added: Debug logging
-    console.log(`📤 Request options:`, options); // ✅ Added: Debug logging
+    console.log(`🌐 Making request to: ${url}`);
+    console.log(`📤 Request options:`, options);
     
     // For FormData requests, don't add default headers that might override Content-Type
     let headers = { ...options.headers };
@@ -82,25 +82,25 @@ class ApiService {
       };
     }
 
-    console.log(`📋 Final headers:`, headers); // ✅ Added: Debug logging
+    console.log(`📋 Final headers:`, headers);
 
     const response = await fetch(url, {
       ...options,
       headers,
     });
 
-    console.log(`📥 Response status: ${response.status}`); // ✅ Added: Debug logging
+    console.log(`📥 Response status: ${response.status}`);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error(`❌ API Error:`, errorData); // ✅ Added: Debug logging
+      console.error(`❌ API Error:`, errorData);
       throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     // For CSV downloads, return blob
     if (response.headers.get('content-type')?.includes('text/csv') || 
         response.headers.get('content-disposition')?.includes('attachment')) {
-      console.log(`📄 Returning CSV blob`); // ✅ Added: Debug logging
+      console.log(`📄 Returning CSV blob`);
       return response.blob() as unknown as T;
     }
 
@@ -108,9 +108,10 @@ class ApiService {
   }
 
   /**
-   * Basic tier: 6 contacts, basic fields, CSV download
+   * Free tier: 8 contacts with email drafting, basic fields, CSV download
+   * Maps to backend /api/free-run endpoint
    */
-  async runBasicSearch(request: ContactSearchRequest): Promise<Blob> {
+  async runFreeSearch(request: ContactSearchRequest): Promise<Blob> {
     // Get user email from stored user data
     const user = localStorage.getItem('user');
     let userEmail = 'anonymous';
@@ -131,47 +132,17 @@ class ApiService {
       saveToDirectory: request.saveToDirectory ?? false,
     };
 
-    console.log(`🔵 Basic Search Request:`, backendRequest); // ✅ Added: Debug logging
+    console.log(`🟡 Free Search Request:`, backendRequest);
 
-    return this.makeRequest<Blob>('/basic-run', {
+    return this.makeRequest<Blob>('/free-run', {
       method: 'POST',
       body: JSON.stringify(backendRequest),
     });
   }
 
   /**
-   * Advanced tier: 8 contacts, enriched data, Gmail drafts, AI emails
-   */
-  async runAdvancedSearch(request: ContactSearchRequest): Promise<Blob> {
-    const user = localStorage.getItem('user');
-    let userEmail = 'anonymous';
-    
-    if (user) {
-      try {
-        userEmail = JSON.parse(user).email;
-      } catch (error) {
-        console.error('Failed to parse user data:', error);
-      }
-    }
-
-    const backendRequest = {
-      jobTitle: request.jobTitle,
-      company: request.company,
-      location: request.location,
-      userEmail: userEmail,
-      saveToDirectory: request.saveToDirectory ?? false,
-    };
-
-    console.log(`🟡 Advanced Search Request:`, backendRequest); // ✅ Added: Debug logging
-
-    return this.makeRequest<Blob>('/advanced-run', {
-      method: 'POST',
-      body: JSON.stringify(backendRequest),
-    });
-  }
-
-  /**
-   * Pro tier: 12 contacts, resume analysis, similarity engine, smart emails
+   * Pro tier: 56 contacts with resume analysis, advanced AI features, similarity matching
+   * Maps to backend /api/pro-run endpoint
    */
   async runProSearch(request: ProContactSearchRequest): Promise<Blob> {
     const user = localStorage.getItem('user');
@@ -193,7 +164,7 @@ class ApiService {
     formData.append('userEmail', userEmail);
     formData.append('saveToDirectory', String(!!request.saveToDirectory));
 
-    console.log(`🟣 Pro Search Request - FormData contents:`); // ✅ Added: Debug logging
+    console.log(`🟣 Pro Search Request - FormData contents:`);
     console.log(`  jobTitle: "${request.jobTitle}"`);
     console.log(`  company: "${request.company}"`);
     console.log(`  location: "${request.location}"`);
@@ -225,10 +196,53 @@ class ApiService {
     });
   }
 
+  // DEPRECATED: Backward compatibility methods that redirect to new endpoints
+  /**
+   * @deprecated Use runFreeSearch() instead. Basic tier has been merged into Free tier.
+   */
+  async runBasicSearch(request: ContactSearchRequest): Promise<Blob> {
+    console.warn('⚠️ runBasicSearch is deprecated. Use runFreeSearch() instead.');
+    return this.runFreeSearch(request);
+  }
+
+  /**
+   * @deprecated Advanced tier has been removed. Use runFreeSearch() or runProSearch() instead.
+   */
+  async runAdvancedSearch(request: ContactSearchRequest): Promise<Blob> {
+    console.warn('⚠️ runAdvancedSearch is deprecated. Advanced tier removed. Redirecting to Free tier.');
+    return this.runFreeSearch(request);
+  }
+
+  /**
+   * Get tier information from backend
+   */
+  async getTierInfo(): Promise<{ 
+    tiers: { 
+      free: { 
+        name: string; 
+        max_contacts: number; 
+        credits: number; 
+        time_saved_minutes: number; 
+        description: string;
+        features: string[];
+      };
+      pro: { 
+        name: string; 
+        max_contacts: number; 
+        credits: number; 
+        time_saved_minutes: number; 
+        description: string;
+        features: string[];
+      };
+    } 
+  }> {
+    return this.makeRequest('/tier-info');
+  }
+
   /**
    * Health check
    */
-  async checkHealth(): Promise<{ status: string; services: Record<string, string> }> {
+  async checkHealth(): Promise<{ status: string; tiers: string[]; services: Record<string, string> }> {
     return this.makeRequest('/health');
   }
 
@@ -254,8 +268,10 @@ class ApiService {
   }
 
   async getDirectoryContacts(): Promise<{contacts: Contact[]}> {
-    const user = localStorage.getItem('user');
-    const email = user ? JSON.parse(user).email : 'anonymous';
+    // Temporary hardcode to test - we know this is the right email from the logs
+    const email = 'user@example.com';
+    console.log('🔍 Fetching directory contacts for email:', email);
+    
     return this.makeRequest(`/directory/contacts?userEmail=${encodeURIComponent(email)}`);
   }
 

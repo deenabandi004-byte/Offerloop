@@ -668,6 +668,21 @@ const Onboarding = () => {
 
   const onSubmit = (data: FormData) => {
     console.log("Form submitted:", data);
+    
+    // Save the basic profile data to localStorage
+    try {
+      const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
+      const update = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        university: data.university || "",
+      };
+      localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
+      console.log("Saved profile data:", { ...existing, ...update });
+    } catch (error) {
+      console.error('Failed to save profile info:', error);
+    }
+    
     // Navigate to academics onboarding page
     navigate("/onboarding/academics");
   };
