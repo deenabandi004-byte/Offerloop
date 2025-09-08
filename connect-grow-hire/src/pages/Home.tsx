@@ -22,7 +22,7 @@ const TIER_CONFIGS = {
   free: {
     maxContacts: 4,
     name: 'Free',
-    credits: 500,
+    credits: 60, // 4 contacts × 15 credits per contact
     description: 'Basic search - 4 contacts',
     coffeeChat: false,
     interviewPrep: false
@@ -30,7 +30,7 @@ const TIER_CONFIGS = {
   starter: {
     maxContacts: 6,
     name: 'Starter',
-    credits: 1000,
+    credits: 90, // 6 contacts × 15 credits per contact
     description: 'Advanced search - 6 contacts + Email drafts',
     coffeeChat: true,
     interviewPrep: false
@@ -38,7 +38,7 @@ const TIER_CONFIGS = {
   pro: {
     maxContacts: 8,
     name: 'Pro',
-    credits: 2000,
+    credits: 120, // 8 contacts × 15 credits per contact
     description: 'Full search - 8 contacts + Resume matching',
     coffeeChat: true,
     interviewPrep: true
