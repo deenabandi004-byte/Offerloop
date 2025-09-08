@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Loader2, Mail } from "lucide-react";
+import { Loader2, Mail, ExternalLink } from "lucide-react";
 
 interface Contact {
   id: string;
@@ -139,6 +139,12 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
     return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
+  const openLinkedIn = (url: string) => {
+    if (url && url.startsWith('http')) {
+      window.open(url, '_blank');
+    }
+  };
+
   const clearAllContacts = () => {
     if (confirm('Are you sure you want to clear all contacts? This cannot be undone.')) {
       const storageKey = getStorageKey();
@@ -198,26 +204,43 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">First Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Last Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Email Link</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Email Address</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Company</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Job Title</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">College</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">First Contact Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Last Contact Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Mail</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">First Name</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Last Name</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">LinkedIn</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Email Link</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Email Address</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Company</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Job Title</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">College</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">First Contact Date</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Last Contact Date</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Mail</th>
               </tr>
             </thead>
             <tbody className="bg-background divide-y divide-border">
               {contacts.map((contact, index) => (
                 <tr key={contact.id || index} className="hover:bg-accent/50">
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.firstName}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.lastName}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm">
+                  <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">{contact.firstName}</td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">{contact.lastName}</td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm">
+                    {contact.linkedinUrl ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openLinkedIn(contact.linkedinUrl)}
+                        className="p-0 h-auto text-primary hover:text-primary/80"
+                        title={`View ${contact.firstName || contact.lastName || ''}'s LinkedIn`}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        LinkedIn
+                      </Button>
+                    ) : (
+                      ''
+                    )}
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm">
                     {contact.email ? (
                       <Button
                         variant="ghost"
@@ -235,19 +258,19 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
                       ''
                     )}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.email}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.company}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.jobTitle}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.college}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{contact.location}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{formatDate(contact.firstContactDate)}</td>
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">{contact.email}</td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">{contact.company}</td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">{contact.jobTitle}</td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">{contact.college}</td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">{contact.location}</td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">{formatDate(contact.firstContactDate)}</td>
+                  <td className="px-3 py-4 whitespace-nowrap">
                     <span className="px-2 py-1 rounded-full text-xs bg-muted text-foreground">
                       {contact.status}
                     </span>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{formatDate(contact.lastContactDate)}</td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm">
+                  <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">{formatDate(contact.lastContactDate)}</td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm">
                     {contact.email ? (
                       <Button
                         variant="ghost"
