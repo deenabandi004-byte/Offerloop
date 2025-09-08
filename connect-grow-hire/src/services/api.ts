@@ -126,6 +126,9 @@ class ApiService {
 
     const userData = user ? JSON.parse(user) : null;
     const userName = userData?.name || '';
+    const storedResume = localStorage.getItem('resumeData');
+    const rd = storedResume ? JSON.parse(storedResume) : null;
+    const userPhone = rd?.phone || '';
     
     const backendRequest = {
       jobTitle: request.jobTitle,
@@ -133,6 +136,7 @@ class ApiService {
       location: request.location,
       userEmail: userEmail,
       userName: userName,
+      userPhone: userPhone,
       saveToDirectory: request.saveToDirectory ?? false,
     };
 
@@ -162,6 +166,9 @@ class ApiService {
 
     const userData = user ? JSON.parse(user) : null;
     const userName = userData?.name || '';
+    const storedResume = localStorage.getItem('resumeData');
+    const rd = storedResume ? JSON.parse(storedResume) : null;
+    const userPhone = rd?.phone || '';
     
     const formData = new FormData();
     formData.append('jobTitle', request.jobTitle);
@@ -170,6 +177,7 @@ class ApiService {
     formData.append('resume', request.resume);
     formData.append('userEmail', userEmail);
     formData.append('userName', userName);
+    formData.append('userPhone', userPhone);
     formData.append('saveToDirectory', String(!!request.saveToDirectory));
 
     console.log(`🟣 Pro Search Request - FormData contents:`);
