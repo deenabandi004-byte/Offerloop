@@ -136,24 +136,34 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
   const buildMailto = (contact: Contact) => {
     const to = (contact.email || '').trim();
     if (!to) return '#';
-    
-    const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(' ');
-    const firstName = contact.firstName || contact.lastName || 'there';
-    
+
+    let profInfo: any = {};
+    let resumeData: any = {};
+    try { profInfo = JSON.parse(localStorage.getItem('professionalInfo') || '{}'); } catch {}
+    try { resumeData = JSON.parse(localStorage.getItem('resumeData') || '{}'); } catch {}
+    const userName = (profInfo.firstName && profInfo.lastName) ? `${profInfo.firstName} ${profInfo.lastName}` : (resumeData.name || '');
+    const userMajor = profInfo.fieldOfStudy || resumeData.major || '';
+    const userUniversity = profInfo.university || resumeData.university || '';
+    const userYear = profInfo.graduationYear || resumeData.year || '';
+
     const subject = `Quick chat about your work at ${contact.company || 'your company'}`;
-    
+
+    const firstName = contact.firstName || contact.lastName || 'there';
+    const intro = userName
+      ? `I'm ${userName}${userMajor ? `, studying ${userMajor}` : ''}${userUniversity ? ` at ${userUniversity}` : ''}.`
+      : `I came across your profile and was impressed by your work.`;
+    const roleLine = (contact.jobTitle || contact.company)
+      ? ` I noticed your work as ${contact.jobTitle || 'a professional'} at ${contact.company || 'your company'} and would love to learn more.`
+      : '';
+
     const body = `Hi ${firstName},
 
-I hope this email finds you well! I came across your profile and was really impressed by your work as a ${contact.jobTitle || 'professional'} at ${contact.company || 'your company'}.
+${intro}${roleLine}
 
-I'm currently exploring opportunities in ${contact.jobTitle || 'this field'} and would love to learn more about your experience and any insights you might be willing to share.
-
-Would you be open to a brief 15-20 minute coffee chat or phone call sometime this week or next? I'd really appreciate hearing about your journey and any advice you might have.
-
-Thank you so much for your time, and I look forward to hearing from you!
+Would you be open to a brief 15–20 minute chat sometime this or next week?
 
 Best regards,
-[Your Name]`;
+${userName || ''}`;
 
     return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
@@ -237,7 +247,7 @@ Best regards,
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Contact Directory</h1>
+        <h1 className="text-3xl font-bold">Contact Library</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">User: {userEmail}</span>
           <span className="text-sm text-muted-foreground">Storage: localStorage</span>
@@ -255,10 +265,10 @@ Best regards,
       {contacts.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground text-lg">
-            No contacts in your directory yet.
+            No contacts in your library yet.
           </p>
           <p className="text-muted-foreground mt-2">
-            Use the search functionality with "Save to Directory" enabled to add contacts.
+            Use the search functionality with "Save to Library" enabled to add contacts.
           </p>
         </div>
       ) : (

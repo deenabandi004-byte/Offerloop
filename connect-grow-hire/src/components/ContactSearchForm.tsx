@@ -468,7 +468,7 @@ export const ContactSearchForm = () => {
                   className="rounded border-gray-300"
                 />
                 <label htmlFor="save-dir" className="text-sm text-muted-foreground">
-                  Save results to your Contact Directory
+                  Save results to your Contact Library
                 </label>
               </div>
 

@@ -148,6 +148,18 @@ const Home = () => {
         setTimeout(() => setProgressValue(value), index * 600);
       });
 
+      // Build userProfile from localStorage
+      const profInfo = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
+      const resumeData = JSON.parse(localStorage.getItem('resumeData') || '{}');
+      const userProfile = {
+        name: (profInfo.firstName && profInfo.lastName) ? `${profInfo.firstName} ${profInfo.lastName}` : (resumeData.name || ''),
+        firstName: profInfo.firstName || '',
+        lastName: profInfo.lastName || '',
+        university: profInfo.university || resumeData.university || '',
+        year: profInfo.graduationYear || resumeData.year || '',
+        major: profInfo.fieldOfStudy || resumeData.major || '',
+      };
+
       let response: Response;
 
       if (userTier === 'free') {
@@ -165,6 +177,7 @@ const Home = () => {
         formData.append('location', searchRequest.location);
         formData.append('userEmail', currentUser.email);
         formData.append('saveToDirectory', 'false');
+        formData.append('userProfile', JSON.stringify(userProfile));
 
         response = await fetch(`${BACKEND_URL}/api/free-run?format=json`, {
           method: 'POST',
@@ -180,6 +193,7 @@ const Home = () => {
         formData.append('resume', uploadedFile!);
         formData.append('userEmail', currentUser.email);
         formData.append('saveToDirectory', 'false');
+        formData.append('userProfile', JSON.stringify(userProfile));
 
         response = await fetch(`${BACKEND_URL}/api/pro-run?format=json`, {
           method: 'POST',
@@ -274,7 +288,7 @@ const Home = () => {
         localStorage.setItem(storageKey, JSON.stringify([...existing, ...newContacts]));
         
         toast({
-          title: "Saved to Contact Directory",
+          title: "Saved to Contact Library",
           description: `Successfully saved ${mapped.length} contacts.`
         });
       }
@@ -580,12 +594,52 @@ const Home = () => {
                             disabled={!hasResults}
                             onClick={handleSaveToDirectory}
                             className="border-blue-500 text-blue-300 hover:bg-blue-500/10"
-                            title={hasResults ? `Save ${lastResults.length} to Contact Directory` : 'Search to enable saving'}
+                            title={hasResults ? `Save ${lastResults.length} to Contact Library` : 'Search to enable saving'}
                           >
-                            Save to Contact Directory
+                            Save to Contact Library
                           </Button>
                         </div>
                       </div>
+
+                      {/* Email Preview - show after results exist */}
+                      {userTier === 'free' && (lastResults?.length || 0) > 0 && (() => {
+                        const profInfo = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
+                        const resumeData = JSON.parse(localStorage.getItem('resumeData') || '{}');
+                        const userProfile = {
+                          name: (profInfo.firstName && profInfo.lastName) ? `${profInfo.firstName} ${profInfo.lastName}` : (resumeData.name || ''),
+                          firstName: profInfo.firstName || '',
+                          lastName: profInfo.lastName || '',
+                          university: profInfo.university || resumeData.university || '',
+                          year: profInfo.graduationYear || resumeData.year || '',
+                          major: profInfo.fieldOfStudy || resumeData.major || '',
+                        };
+
+                        return (
+                          <div className="mt-4 p-4 border border-gray-700 rounded bg-gray-800/40 text-white">
+                            <div className="text-sm text-gray-300 mb-2">Email Preview (first contact)</div>
+                            {(() => {
+                              const c = lastResults[0];
+                              const firstName = c.FirstName || c.firstName || 'there';
+                              const subject = `Quick chat about your work at ${c.Company || 'your company'}`;
+                              const body = `Hi ${firstName},
+
+I'm ${userProfile.name || 'a student'}${userProfile.major ? `, studying ${userProfile.major}` : ''}${userProfile.university ? ` at ${userProfile.university}` : ''}.${c.Title || c.Company ? ` I came across your work as ${c.Title || 'a professional'} at ${c.Company || 'your company'} and would love to learn more.` : ''}
+
+Would you be open to a brief 15–20 minute chat this or next week?
+
+Best regards,
+${userProfile.name || ''}`;
+
+                              return (
+                                <div>
+                                  <div className="text-sm font-semibold mb-1">Subject: {subject}</div>
+                                  <pre className="whitespace-pre-wrap text-sm bg-gray-900/50 p-3 rounded border border-gray-700">{body}</pre>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 </TabsContent>

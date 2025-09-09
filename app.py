@@ -967,75 +967,95 @@ def search_contacts_with_pdl_optimized(job_title, company, location, max_contact
 # EMAIL GENERATION (Free & Pro Tiers)
 # ========================================
 
-def generate_email_for_tier(contact, tier='free', resume_info=None, similarity=None, hometown=None):
+def sanitize_placeholders(text: str, user_name: str = "", user_year: str = "", user_major: str = "", user_university: str = "") -> str:
+    replacements = {
+        "[Your Name]": user_name,
+        "[Your Full Name]": user_name,
+        "[Your Year]": user_year or "",
+        "[Your year/major]": f"{user_year} {user_major}".strip(),
+        "[Your Major]": user_major or "",
+        "[Your University]": user_university or "",
+    }
+    for k, v in replacements.items():
+        text = text.replace(k, v)
+    # Remove any remaining bracketed placeholders conservatively
+    return text
+
+def generate_email_for_tier(contact, tier='free', resume_info=None, user_profile=None, similarity=None, hometown=None):
     """Generate email based on tier - Free or Pro"""
     try:
         print(f"Generating {tier} email for {contact.get('FirstName', 'Unknown')}")
-        
         if tier == 'free':
-            return generate_free_email(contact)
+            return generate_free_email(contact, user_profile=user_profile)
         elif tier == 'pro':
             return generate_pro_email(contact, resume_info, similarity, hometown)
         else:
-            # Fallback to free email
-            return generate_free_email(contact)
-            
+            return generate_free_email(contact, user_profile=user_profile)
     except Exception as e:
         print(f"{tier.capitalize()} email generation failed: {e}")
-        return f"Quick Chat about Your Work at {contact.get('Company', 'Your Company')}?", f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at {contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
+        return (
+            f"Quick Chat about Your Work at {contact.get('Company', 'Your Company')}?",
+            f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at {contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
+        )
 
-def generate_free_email(contact):
-    """Generate Free tier email using simplified template"""
+def generate_free_email(contact, user_profile=None):
+    """Generate Free tier email using simplified template with onboarding personalization"""
     try:
         print(f"Generating Free email for {contact.get('FirstName', 'Unknown')}")
         
-        # Free tier email template - simpler than advanced
+        # Pull user info from user_profile if available
+        user_name = (user_profile or {}).get('name') or (
+            ((user_profile or {}).get('firstName', '') + ' ' + (user_profile or {}).get('lastName', '')).strip()
+        )
+        user_year = (user_profile or {}).get('year') or (user_profile or {}).get('graduationYear') or ""
+        user_major = (user_profile or {}).get('major') or (user_profile or {}).get('fieldOfStudy') or ""
+        user_university = (user_profile or {}).get('university') or ""
+
         prompt = f"""
-Write a professional networking email following this template that's tailored for them but leave [Your Name], [Your year/major], and [Your University] placeholders empty:
+Write a warm, concise networking email tailored to the recipient below.
+Use the sender's actual details (no placeholders) and reference their role/company.
 
-Hi {contact.get('FirstName', '[First Name]')},
+Recipient:
+- FirstName: {contact.get('FirstName', '')}
+- Title: {contact.get('Title', '')}
+- Company: {contact.get('Company', '')}
 
-I hope you're doing well! My name is [Your Name], and I'm currently a [Your year/major] at [Your University]. I came across your profile while researching {contact.get('Company', '[Company Name]')}/{contact.get('Title', 'your field').lower()} and was really inspired by your work in {contact.get('Title', '[specific role, team, project, or recent accomplishment]')}.
+Sender:
+- Name: {user_name}
+- Year: {user_year}
+- Major: {user_major}
+- University: {user_university}
 
-I'm very interested in {contact.get('Title', '[role/team/industry]').lower()} and would really appreciate the chance to learn more about your journey and any advice you may have. If you're open to it, would you be available for a quick 15-20 minute chat sometime this or next week?
-
-Thanks so much in advance - I'd love to hear your perspective!
-
-Warmly, [Your Full Name]
-
-Contact Information:
-- Name: {contact.get('FirstName')} {contact.get('LastName')}
-- Company: {contact.get('Company')}
-- Title: {contact.get('Title')}
-- Education: {contact.get('EducationTop', '')}
-
-Customize the email by:
-- Filling in their actual first name, company name, and industry
-- Referencing their specific role or company
-- Keep [Your Name], [Your year/major], [Your University], and [Your Full Name] as placeholders
+Constraints:
+- Start with "Hi {{Recipient FirstName}},".
+- Mention the recipient's role and company.
+- Briefly introduce the sender (year/major/university when available).
+- Ask for a brief 15–20 minute chat.
+- End with sender's actual full name (no brackets).
 """
         
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert at writing personalized networking emails for Free tier. Keep emails warm, professional, and follow the template exactly."},
+                {"role": "system", "content": "You write personalized outreach emails with no placeholders."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=400,
-            temperature=0.7
+            temperature=0.7,
         )
-        
+
         email_body = response.choices[0].message.content.strip()
-        
-        # Generate subject using simple template
-        email_subject = f"Quick Chat to Learn about Your Work at {contact.get('Company', 'Your Company')}?"
-        
-        print(f"Generated Free email for {contact.get('FirstName', 'Unknown')}")
-        return email_subject, email_body
+        subject = f"Quick chat about your work at {contact.get('Company', 'your company')}?"
+
+        email_body = sanitize_placeholders(email_body, user_name, user_year, user_major, user_university)
+
+        return subject, email_body
         
     except Exception as e:
         print(f"Free email generation failed: {e}")
-        return f"Quick Chat about Your Work at {contact.get('Company', 'Your Company')}?", f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at {contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
+        subject = f"Quick Chat about Your Work at {contact.get('Company', 'Your Company')}?"
+        body = f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at {contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards,\n{(user_profile or {}).get('name','')}"
+        return subject, body
 
 def generate_pro_email(contact, resume_info, similarity, hometown):
     """Generate Pro tier email using enhanced template with resume integration"""
@@ -1521,7 +1541,8 @@ def create_gmail_draft_for_user(contact, email_subject, email_body, tier='free',
         message = MIMEText(email_body)
         message['to'] = recipient_email
         message['subject'] = email_subject
-        message['from'] = user_email  # Set the user's email as sender
+        safe_from = user_email or os.getenv("DEFAULT_FROM_EMAIL", "noreply@offerloop.ai")
+        message['from'] = safe_from
         
         raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
         
@@ -1833,7 +1854,7 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
 # ENHANCED TIER FUNCTIONS WITH LOGGING - TWO TIERS ONLY
 # ========================================
 
-def run_free_tier_enhanced(job_title, company, location, user_email=None):
+def run_free_tier_enhanced(job_title, company, location, user_email=None, user_profile=None):
     """Enhanced Free tier with validation and logging"""
     print(f"Running FREE tier workflow for {user_email}")
     
@@ -1851,7 +1872,7 @@ def run_free_tier_enhanced(job_title, company, location, user_email=None):
         
         successful_drafts = 0
         for contact in contacts:
-            email_subject, email_body = generate_email_for_tier(contact, tier='free')
+            email_subject, email_body = generate_email_for_tier(contact, tier='free', user_profile=user_profile)
             contact['email_subject'] = email_subject
             contact['email_body'] = email_body
             
@@ -1969,6 +1990,17 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
             f.write(csv_content)
         
+        # After assembling subject/body from model, sanitize any placeholders
+        for contact in pro_contacts:
+            if 'email_body' in contact:
+                contact['email_body'] = sanitize_placeholders(
+                    contact['email_body'],
+                    user_name=resume_info.get('name', ''),
+                    user_year=resume_info.get('year', ''),
+                    user_major=resume_info.get('major', ''),
+                    user_university=resume_info.get('university', '')
+                )
+
         log_api_usage('pro', user_email, len(pro_contacts), len(pro_contacts))
         
         print(f"Pro tier completed for {user_email}: {len(pro_contacts)} contacts, {successful_drafts} Gmail drafts")
@@ -2229,11 +2261,17 @@ def free_run():
             company = data.get('company', '').strip() if data.get('company') else ''
             location = data.get('location', '').strip() if data.get('location') else ''
             user_email = data.get('userEmail', '').strip() if data.get('userEmail') else None
+            user_profile = data.get('userProfile') or None
         else:
             job_title = (request.form.get('jobTitle') or '').strip()
             company = (request.form.get('company') or '').strip()
             location = (request.form.get('location') or '').strip()
             user_email = (request.form.get('userEmail') or '').strip() or None
+            user_profile_raw = request.form.get('userProfile')
+            try:
+                user_profile = json.loads(user_profile_raw) if user_profile_raw else None
+            except Exception:
+                user_profile = None
         
         print(f"DEBUG - Free endpoint received:")
         print(f"  job_title: '{job_title}' (len: {len(job_title)})")
@@ -2251,7 +2289,7 @@ def free_run():
         
         print(f"Free search for {user_email}: {job_title} at {company} in {location}")
         
-        result = run_free_tier_enhanced(job_title, company, location, user_email)
+        result = run_free_tier_enhanced(job_title, company, location, user_email, user_profile=user_profile)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
