@@ -234,12 +234,15 @@ const Home = () => {
   const mapToDirectoryContact = (c: any) => ({
     firstName: c.FirstName || '',
     lastName: c.LastName || '',
-    linkedinUrl: c.LinkedIn || '',
+    linkedinUrl: c.LinkedIn || c.linkedinUrl || '',
     email: c.Email || c.WorkEmail || c.PersonalEmail || '',
     company: c.Company || '',
-    jobTitle: c.Title || '',
+    jobTitle: c.Title || c.jobTitle || '',
     college: c.College || '',
-    location: [c.City, c.State].filter(Boolean).join(', ')
+    location: [c.City, c.State].filter(Boolean).join(', '),
+    // ADD THESE LINES:
+    emailSubject: c.email_subject || '',
+    emailBody: c.email_body || ''
   });
 
   const handleSaveToDirectory = async () => {
