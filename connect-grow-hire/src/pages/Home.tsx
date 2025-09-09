@@ -15,6 +15,9 @@ import { AutocompleteInput } from "@/components/AutocompleteInput";
 import ScoutChatbot from "@/components/ScoutChatbot";
 import LockedFeatureOverlay from "@/components/LockedFeatureOverlay";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import { firebaseApi } from '../services/firebaseApi';
+import { useFirebaseMigration } from '../hooks/useFirebaseMigration';
 import { apiService } from "@/services/api";
 
 const BACKEND_URL = 'http://localhost:5001';
@@ -44,6 +47,11 @@ const TIER_CONFIGS = {
 };
 
 const Home = () => {
+  const { user: legacyUser, updateUser } = useAuth();
+  const { user: firebaseUser } = useFirebaseAuth();
+  const { migrationComplete } = useFirebaseMigration();
+  
+  const currentUser = firebaseUser || legacyUser;
   const waveKeyframes = `
     @keyframes wave {
       0%, 100% { transform: rotate(-8deg); }
@@ -64,10 +72,9 @@ const Home = () => {
 
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
   
   // UPDATED: Default to 'free' tier
-  const [userTier] = useState<'free' | 'pro'>(user?.tier || 'free');
+  const [userTier] = useState<'free' | 'pro'>(effectiveUser?.tier || 'free');
   
   // Form state
   const [jobTitle, setJobTitle] = useState("");
@@ -87,7 +94,7 @@ const Home = () => {
   const [lastResultsTier, setLastResultsTier] = useState<'free' | 'pro' | string>('');
   const hasResults = lastResults.length > 0;
   
-  const currentUser = user || {
+  const effectiveUser = currentUser || {
     credits: 0,
     maxCredits: 0,
     name: 'User',
@@ -175,7 +182,7 @@ const Home = () => {
         formData.append('jobTitle', searchRequest.jobTitle);
         formData.append('company', searchRequest.company);
         formData.append('location', searchRequest.location);
-        formData.append('userEmail', currentUser.email);
+        formData.append('userEmail', effectiveUser.email);
         formData.append('saveToDirectory', 'false');
         formData.append('userProfile', JSON.stringify(userProfile));
 
@@ -191,7 +198,7 @@ const Home = () => {
         formData.append('company', company.trim() || '');
         formData.append('location', location.trim());
         formData.append('resume', uploadedFile!);
-        formData.append('userEmail', currentUser.email);
+        formData.append('userEmail', effectiveUser.email);
         formData.append('saveToDirectory', 'false');
         formData.append('userProfile', JSON.stringify(userProfile));
 
@@ -230,7 +237,7 @@ const Home = () => {
       });
       
       // Deduct credits (mock)
-      currentUser.credits -= currentTierConfig.credits;
+      effectiveUser.credits -= currentTierConfig.credits;
       
     } catch (error) {
       console.error('Search failed:', error);
@@ -275,7 +282,7 @@ const Home = () => {
         });
       } else {
         // Fallback: save directly to localStorage
-        const storageKey = `contacts_${currentUser.email.replace('@', '_').replace('.', '_')}`;
+        const storageKey = `contacts_${effectiveUser.email.replace('@', '_').replace('.', '_')}`;
         const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
         const newContacts = mapped.map((contact, index) => ({
           ...contact,
@@ -384,7 +391,7 @@ const Home = () => {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm">
                 <Zap className="h-4 w-4 text-blue-400" />
-                <span className="text-gray-300">{currentUser.credits.toLocaleString()} credits</span>
+                <span className="text-gray-300">{effectiveUser.credits.toLocaleString()} credits</span>
               </div>
               
               <Button 
