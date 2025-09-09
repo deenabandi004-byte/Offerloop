@@ -22,7 +22,7 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import traceback
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, auth as fb_auth
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -50,13 +50,47 @@ if not OPENAI_API_KEY:
 
 # Initialize Firebase
 try:
-    cred = credentials.Certificate('./firebase-creds.json')
-    firebase_admin.initialize_app(cred)
+    if os.getenv('GOOGLE_APPLICATION_CREDENTIALS'):
+        firebase_admin.initialize_app()
+    else:
+        # Try different possible paths for credentials
+        cred_paths = [
+            './firebase-creds.json',
+            '/home/ubuntu/secrets/firebase-creds.json',
+            os.path.expanduser('~/firebase-creds.json')
+        ]
+        cred = None
+        for path in cred_paths:
+            if os.path.exists(path):
+                cred = credentials.Certificate(path)
+                break
+        
+        if cred:
+            firebase_admin.initialize_app(cred)
+        else:
+            print("⚠️ No Firebase credentials found, initializing without credentials")
+            firebase_admin.initialize_app()
+    
     db = firestore.client()
     print("✅ Firebase initialized successfully")
 except Exception as e:
     print(f"❌ Firebase initialization failed: {e}")
     db = None
+
+def require_firebase_auth(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            auth_header = request.headers.get('Authorization', '')
+            if not auth_header.startswith('Bearer '):
+                return jsonify({'error': 'Missing Authorization header'}), 401
+            id_token = auth_header.split(' ', 1)[1].strip()
+            decoded = fb_auth.verify_id_token(id_token)
+            request.firebase_user = decoded
+            return fn(*args, **kwargs)
+        except Exception as e:
+            return jsonify({'error': f'Invalid token: {str(e)}'}), 401
+    return wrapper
 
 # Initialize Flask app
 app = Flask(__name__)

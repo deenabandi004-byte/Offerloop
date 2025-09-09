@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import { firebaseApi } from '../services/firebaseApi';
 import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -23,6 +25,7 @@ type FormData = z.infer<typeof formSchema>;
 
 const OnboardingLocationPreferences = () => {
   const navigate = useNavigate();
+  const { user: firebaseUser } = useFirebaseAuth();
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedJobTypes, setSelectedJobTypes] = useState<string[]>([]);
   const [openLocations, setOpenLocations] = useState(false);
@@ -35,7 +38,7 @@ const OnboardingLocationPreferences = () => {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     console.log("Location preferences form submitted:", { 
       ...data, 
       locations: selectedLocations,
@@ -43,12 +46,20 @@ const OnboardingLocationPreferences = () => {
     });
     
     try {
-      const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
       const update = {
         preferredLocations: selectedLocations,
         jobTypes: selectedJobTypes
       };
-      localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
+
+      if (firebaseUser) {
+        const existing = await firebaseApi.getProfessionalInfo(firebaseUser.uid) || {};
+        await firebaseApi.saveProfessionalInfo(firebaseUser.uid, { ...existing, ...update });
+        console.log("Saved location preferences to Firestore");
+      } else {
+        const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
+        localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
+        console.log("Saved location preferences to localStorage");
+      }
     } catch (error) {
       console.error('Failed to save professional info:', error);
     }

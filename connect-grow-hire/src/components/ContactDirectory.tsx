@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Loader2, Mail, ExternalLink } from "lucide-react";
+import { useAuth } from '@/contexts/AuthContext';
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import { firebaseApi } from '../services/firebaseApi';
+import { useFirebaseMigration } from '../hooks/useFirebaseMigration';
 
 interface Contact {
-  id: string;
+  id?: string;
   firstName: string;
   lastName: string;
   linkedinUrl: string;
@@ -24,38 +28,51 @@ interface ContactDirectoryProps {
 }
 
 const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@example.com' }) => {
+  const { user: legacyUser } = useAuth();
+  const { user: firebaseUser } = useFirebaseAuth();
+  const { migrationComplete } = useFirebaseMigration();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Generate localStorage key for user-specific storage
-  const getStorageKey = () => `contacts_${userEmail.replace('@', '_').replace('.', '_')}`;
+  const user = firebaseUser || legacyUser;
+  const effectiveUserEmail = user?.email || userEmail;
+
+  const getStorageKey = () => `contacts_${effectiveUserEmail.replace('@', '_').replace('.', '_')}`;
 
   useEffect(() => {
-    loadContacts();
-  }, [userEmail]);
+    if (user || userEmail) {
+      loadContacts();
+    }
+  }, [user, userEmail, migrationComplete]);
 
   const loadContacts = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('📂 Loading contacts from localStorage for:', userEmail);
-      
-      const storageKey = getStorageKey();
-      const storedContacts = localStorage.getItem(storageKey);
-      
-      if (storedContacts) {
-        const parsed = JSON.parse(storedContacts);
-        setContacts(Array.isArray(parsed) ? parsed : []);
-        console.log(`✅ Loaded ${parsed.length} contacts from localStorage`);
+      if (firebaseUser) {
+        console.log('📂 Loading contacts from Firestore for:', firebaseUser.uid);
+        const firestoreContacts = await firebaseApi.getContacts(firebaseUser.uid);
+        setContacts(firestoreContacts);
+        console.log(`✅ Loaded ${firestoreContacts.length} contacts from Firestore`);
       } else {
-        setContacts([]);
-        console.log('🔭 No contacts found in localStorage');
+        console.log('📂 Loading contacts from localStorage for:', effectiveUserEmail);
+        const storageKey = getStorageKey();
+        const storedContacts = localStorage.getItem(storageKey);
+        
+        if (storedContacts) {
+          const parsed = JSON.parse(storedContacts);
+          setContacts(Array.isArray(parsed) ? parsed : []);
+          console.log(`✅ Loaded ${parsed.length} contacts from localStorage`);
+        } else {
+          setContacts([]);
+          console.log('🔭 No contacts found in localStorage');
+        }
       }
       
     } catch (err) {
-      console.error('Failed to load contacts from localStorage:', err);
+      console.error('Failed to load contacts:', err);
       setError('Failed to load contacts. Please try again.');
       setContacts([]);
     } finally {
@@ -249,8 +266,8 @@ ${userName || ''}`;
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Contact Library</h1>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">User: {userEmail}</span>
-          <span className="text-sm text-muted-foreground">Storage: localStorage</span>
+          <span className="text-sm text-muted-foreground">User: {effectiveUserEmail}</span>
+          <span className="text-sm text-muted-foreground">Storage: {firebaseUser ? 'Firestore' : 'localStorage'}</span>
           <Button onClick={loadContacts} variant="outline">
             Refresh
           </Button>

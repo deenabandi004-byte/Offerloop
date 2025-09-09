@@ -9,6 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import { firebaseApi } from '../services/firebaseApi';
 import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -26,6 +28,7 @@ type FormData = z.infer<typeof formSchema>;
 
 const OnboardingAcademics = () => {
   const navigate = useNavigate();
+  const { user: firebaseUser } = useFirebaseAuth();
   const [showCustomDegree, setShowCustomDegree] = useState(false);
   const [openFieldOfStudy, setOpenFieldOfStudy] = useState(false);
   
@@ -82,18 +85,26 @@ const OnboardingAcademics = () => {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     console.log("Academics form submitted:", data);
     
     try {
-      const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
       const degreeText = data.customDegree?.trim() ? data.customDegree : (data.degreeType || "");
       const update = {
         fieldOfStudy: data.fieldOfStudy || "",
         currentDegree: degreeText || "",
         graduationYear: data.graduationYear || ""
       };
-      localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
+
+      if (firebaseUser) {
+        const existing = await firebaseApi.getProfessionalInfo(firebaseUser.uid) || {};
+        await firebaseApi.saveProfessionalInfo(firebaseUser.uid, { ...existing, ...update });
+        console.log("Saved academics data to Firestore");
+      } else {
+        const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
+        localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
+        console.log("Saved academics data to localStorage");
+      }
     } catch (error) {
       console.error('Failed to save professional info:', error);
     }
