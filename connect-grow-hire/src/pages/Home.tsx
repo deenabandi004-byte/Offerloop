@@ -73,6 +73,14 @@ const Home = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  const effectiveUser = currentUser || {
+    credits: 0,
+    maxCredits: 0,
+    name: 'User',
+    email: 'user@example.com',
+    tier: 'free'
+  };
+  
   // UPDATED: Default to 'free' tier
   const [userTier] = useState<'free' | 'pro'>(effectiveUser?.tier || 'free');
   
@@ -93,14 +101,6 @@ const Home = () => {
   const [lastResults, setLastResults] = useState<any[]>([]);
   const [lastResultsTier, setLastResultsTier] = useState<'free' | 'pro' | string>('');
   const hasResults = lastResults.length > 0;
-  
-  const effectiveUser = currentUser || {
-    credits: 0,
-    maxCredits: 0,
-    name: 'User',
-    email: 'user@example.com',
-    tier: userTier
-  };
 
   const currentTierConfig = TIER_CONFIGS[userTier];
 
