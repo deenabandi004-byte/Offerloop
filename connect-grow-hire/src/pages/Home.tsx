@@ -601,45 +601,25 @@ const Home = () => {
                         </div>
                       </div>
 
-                      {/* Email Preview - show after results exist */}
-                      {userTier === 'free' && (lastResults?.length || 0) > 0 && (() => {
-                        const profInfo = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
-                        const resumeData = JSON.parse(localStorage.getItem('resumeData') || '{}');
-                        const userProfile = {
-                          name: (profInfo.firstName && profInfo.lastName) ? `${profInfo.firstName} ${profInfo.lastName}` : (resumeData.name || ''),
-                          firstName: profInfo.firstName || '',
-                          lastName: profInfo.lastName || '',
-                          university: profInfo.university || resumeData.university || '',
-                          year: profInfo.graduationYear || resumeData.year || '',
-                          major: profInfo.fieldOfStudy || resumeData.major || '',
-                        };
+                      {/* Email Preview - FIXED to use backend email content */}
+                      {userTier === 'free' && (lastResults?.length || 0) > 0 && (
+                        <div className="mt-4 p-4 border border-gray-700 rounded bg-gray-800/40 text-white">
+                          <div className="text-sm text-gray-300 mb-2">Email Preview (first contact)</div>
+                          {(() => {
+                            const c = lastResults[0];
+                            // ✅ USE THE ACTUAL EMAIL CONTENT FROM BACKEND
+                            const subject = c.email_subject || c.emailSubject || `Question about your work at ${c.Company || 'your company'}`;
+                            const body = c.email_body || c.emailBody || 'Email content not available';
 
-                        return (
-                          <div className="mt-4 p-4 border border-gray-700 rounded bg-gray-800/40 text-white">
-                            <div className="text-sm text-gray-300 mb-2">Email Preview (first contact)</div>
-                            {(() => {
-                              const c = lastResults[0];
-                              const firstName = c.FirstName || c.firstName || 'there';
-                              const subject = `Quick chat about your work at ${c.Company || 'your company'}`;
-                              const body = `Hi ${firstName},
-
-I'm ${userProfile.name || 'a student'}${userProfile.major ? `, studying ${userProfile.major}` : ''}${userProfile.university ? ` at ${userProfile.university}` : ''}.${c.Title || c.Company ? ` I came across your work as ${c.Title || 'a professional'} at ${c.Company || 'your company'} and would love to learn more.` : ''}
-
-Would you be open to a brief 15–20 minute chat this or next week?
-
-Best regards,
-${userProfile.name || ''}`;
-
-                              return (
-                                <div>
-                                  <div className="text-sm font-semibold mb-1">Subject: {subject}</div>
-                                  <pre className="whitespace-pre-wrap text-sm bg-gray-900/50 p-3 rounded border border-gray-700">{body}</pre>
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        );
-                      })()}
+                            return (
+                              <div>
+                                <div className="text-sm font-semibold mb-1">Subject: {subject}</div>
+                                <pre className="whitespace-pre-wrap text-sm bg-gray-900/50 p-3 rounded border border-gray-700">{body}</pre>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
