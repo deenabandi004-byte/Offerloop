@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import { firebaseApi } from '../services/firebaseApi';
 import { ArrowLeft, ArrowRight, Upload, Check, X } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const OnboardingResumeUpload = () => {
   const navigate = useNavigate();
+  const { user: firebaseUser } = useFirebaseAuth();
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -59,7 +62,13 @@ const OnboardingResumeUpload = () => {
         university: result.data.university || ''
       };
       
-      localStorage.setItem('resumeData', JSON.stringify(resumeData));
+      if (firebaseUser) {
+        await firebaseApi.saveResumeData(firebaseUser.uid, resumeData);
+        console.log("Saved resume data to Firestore");
+      } else {
+        localStorage.setItem('resumeData', JSON.stringify(resumeData));
+        console.log("Saved resume data to localStorage");
+      }
 
       toast({
         title: "Resume Uploaded Successfully!",

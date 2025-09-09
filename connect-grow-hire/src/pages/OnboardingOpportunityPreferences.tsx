@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import { firebaseApi } from '../services/firebaseApi';
 import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -25,6 +27,7 @@ type FormData = z.infer<typeof formSchema>;
 
 const OnboardingOpportunityPreferences = () => {
   const navigate = useNavigate();
+  const { user: firebaseUser } = useFirebaseAuth();
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [showCustomJobRole, setShowCustomJobRole] = useState(false);
   const [showCustomIndustry, setShowCustomIndustry] = useState(false);
@@ -40,7 +43,7 @@ const OnboardingOpportunityPreferences = () => {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     const finalIndustries = [...selectedIndustries];
     if (customIndustry && selectedIndustries.includes("Other")) {
       finalIndustries[finalIndustries.indexOf("Other")] = customIndustry;
@@ -48,20 +51,28 @@ const OnboardingOpportunityPreferences = () => {
     console.log("Opportunity preferences form submitted:", { ...data, industries: finalIndustries });
     
     try {
-      const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
       const jobRoleText = data.jobRole === 'other' && data.customJobRole?.trim()
         ? data.customJobRole.trim()
         : (data.jobRole || "");
       const update = {
-        industriesOfInterest: finalIndustries,
-        preferredJobRole: jobRoleText
+        targetJobTitles: [jobRoleText].filter(Boolean),
+        targetCompanies: [],
+        targetIndustries: finalIndustries
       };
-      localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
+
+      if (firebaseUser) {
+        const existing = await firebaseApi.getProfessionalInfo(firebaseUser.uid) || {};
+        await firebaseApi.saveProfessionalInfo(firebaseUser.uid, { ...existing, ...update });
+        console.log("Saved opportunity preferences to Firestore");
+      } else {
+        const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
+        localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
+        console.log("Saved opportunity preferences to localStorage");
+      }
     } catch (error) {
       console.error('Failed to save professional info:', error);
     }
     
-    // Navigate to next onboarding step
     navigate("/onboarding/location-preferences");
   };
 

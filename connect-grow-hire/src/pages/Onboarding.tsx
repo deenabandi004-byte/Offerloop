@@ -12,6 +12,9 @@ import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import * as z from "zod";
+import { useAuth } from '@/contexts/AuthContext';
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import { firebaseApi } from '../services/firebaseApi';
 
 const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -623,6 +626,10 @@ const universities = [
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const { user: legacyUser } = useAuth();
+  const { user: firebaseUser } = useFirebaseAuth();
+  
+  const user = firebaseUser || legacyUser;
   const [open, setOpen] = useState(false);
   
   const getResumeData = () => {
@@ -666,24 +673,29 @@ const Onboarding = () => {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     console.log("Form submitted:", data);
     
-    // Save the basic profile data to localStorage
     try {
-      const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
       const update = {
         firstName: data.firstName,
         lastName: data.lastName,
         university: data.university || "",
       };
-      localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
-      console.log("Saved profile data:", { ...existing, ...update });
+
+      if (firebaseUser) {
+        const existing = await firebaseApi.getProfessionalInfo(firebaseUser.uid) || {};
+        await firebaseApi.saveProfessionalInfo(firebaseUser.uid, { ...existing, ...update });
+        console.log("Saved profile data to Firestore:", { ...existing, ...update });
+      } else {
+        const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
+        localStorage.setItem('professionalInfo', JSON.stringify({ ...existing, ...update }));
+        console.log("Saved profile data to localStorage:", { ...existing, ...update });
+      }
     } catch (error) {
       console.error('Failed to save profile info:', error);
     }
     
-    // Navigate to academics onboarding page
     navigate("/onboarding/academics");
   };
 

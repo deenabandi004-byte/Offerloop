@@ -42,23 +42,35 @@ export interface ApiError {
 }
 
 class ApiService {
-  private getAuthHeaders(): Record<string, string> {
-    const user = localStorage.getItem('user');
-    if (user) {
-      try {
-        const userData = JSON.parse(user);
-        return {
-          'Authorization': `Bearer ${userData.accessToken}`,
-          'Content-Type': 'application/json',
-        };
-      } catch (error) {
-        console.error('Failed to parse user data:', error);
-        localStorage.removeItem('user');
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    
+    try {
+      const { auth } = await import('../lib/firebase');
+      if (auth.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+        headers['X-User-Uid'] = auth.currentUser.uid;
+        headers['X-User-Email'] = auth.currentUser.email || '';
+      }
+    } catch (error) {
+      console.error('Error getting Firebase auth headers:', error);
+      
+      const user = localStorage.getItem('user');
+      if (user) {
+        try {
+          const userData = JSON.parse(user);
+          if (userData.accessToken) {
+            headers['Authorization'] = `Bearer ${userData.accessToken}`;
+          }
+        } catch (parseError) {
+          console.error('Failed to parse user data:', parseError);
+          localStorage.removeItem('user');
+        }
       }
     }
-    return {
-      'Content-Type': 'application/json',
-    };
+    
+    return headers;
   }
 
   private async makeRequest<T>(
@@ -75,7 +87,7 @@ class ApiService {
     
     // Only add auth headers automatically for non-FormData requests
     if (!(options.body instanceof FormData)) {
-      const authHeaders = this.getAuthHeaders();
+      const authHeaders = await this.getAuthHeaders();
       headers = {
         ...authHeaders,
         ...options.headers,
@@ -174,16 +186,25 @@ class ApiService {
     // For FormData, DON'T set Content-Type header - let browser set it automatically
     const headers: Record<string, string> = {};
     
-    // Only add Authorization header if we have it
-    const user_data = localStorage.getItem('user');
-    if (user_data) {
-      try {
-        const userData = JSON.parse(user_data);
-        if (userData.accessToken) {
-          headers['Authorization'] = `Bearer ${userData.accessToken}`;
+    try {
+      const { auth } = await import('../lib/firebase');
+      if (auth.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('Error getting Firebase auth for FormData:', error);
+      
+      const user_data = localStorage.getItem('user');
+      if (user_data) {
+        try {
+          const userData = JSON.parse(user_data);
+          if (userData.accessToken) {
+            headers['Authorization'] = `Bearer ${userData.accessToken}`;
+          }
+        } catch (parseError) {
+          console.error('Failed to parse user data for auth:', parseError);
         }
-      } catch (error) {
-        console.error('Failed to parse user data for auth:', error);
       }
     }
 
@@ -276,12 +297,22 @@ class ApiService {
   }
 
   async saveContactsToDirectory(contacts: Contact[]): Promise<{saved:number}> {
-    const user = localStorage.getItem('user');
-    const email = user ? JSON.parse(user).email : 'anonymous';
-    return this.makeRequest(`/directory/contacts`, {
-      method: 'POST',
-      body: JSON.stringify({ userEmail: email, contacts }),
-    });
+    try {
+      const { auth } = await import('../lib/firebase');
+      const userEmail = auth.currentUser?.email || 'anonymous';
+      return this.makeRequest(`/directory/contacts`, {
+        method: 'POST',
+        body: JSON.stringify({ userEmail, contacts }),
+      });
+    } catch (error) {
+      console.error('Error getting Firebase user for directory save:', error);
+      const user = localStorage.getItem('user');
+      const email = user ? JSON.parse(user).email : 'anonymous';
+      return this.makeRequest(`/directory/contacts`, {
+        method: 'POST',
+        body: JSON.stringify({ userEmail: email, contacts }),
+      });
+    }
   }
 }
 
