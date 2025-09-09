@@ -15,6 +15,8 @@ interface Contact {
   firstContactDate: string;
   status: string;
   lastContactDate: string;
+  emailSubject?: string;
+  emailBody?: string;
 }
 
 interface ContactDirectoryProps {
@@ -49,7 +51,7 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
         console.log(`✅ Loaded ${parsed.length} contacts from localStorage`);
       } else {
         setContacts([]);
-        console.log('📭 No contacts found in localStorage');
+        console.log('🔭 No contacts found in localStorage');
       }
       
     } catch (err) {
@@ -134,14 +136,74 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
   const buildMailto = (contact: Contact) => {
     const to = (contact.email || '').trim();
     if (!to) return '#';
-    const subject = `Hello ${[contact.firstName, contact.lastName].filter(Boolean).join(' ')}`.trim();
-    const body = `Hi ${contact.firstName || contact.lastName || ''},\n\n`;
+    
+    const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(' ');
+    const firstName = contact.firstName || contact.lastName || 'there';
+    
+    const subject = `Quick chat about your work at ${contact.company || 'your company'}`;
+    
+    const body = `Hi ${firstName},
+
+I hope this email finds you well! I came across your profile and was really impressed by your work as a ${contact.jobTitle || 'professional'} at ${contact.company || 'your company'}.
+
+I'm currently exploring opportunities in ${contact.jobTitle || 'this field'} and would love to learn more about your experience and any insights you might be willing to share.
+
+Would you be open to a brief 15-20 minute coffee chat or phone call sometime this week or next? I'd really appreciate hearing about your journey and any advice you might have.
+
+Thank you so much for your time, and I look forward to hearing from you!
+
+Best regards,
+[Your Name]`;
+
     return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
+  // Fixed LinkedIn URL handling
+  const normalizeLinkedInUrl = (url: string) => {
+    if (!url || url.trim() === '') return '';
+    
+    const trimmedUrl = url.trim();
+    
+    // If it already starts with http, return as is
+    if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+      return trimmedUrl;
+    }
+    
+    // If it starts with linkedin.com or www.linkedin.com, add https://
+    if (trimmedUrl.startsWith('linkedin.com') || trimmedUrl.startsWith('www.linkedin.com')) {
+      return `https://${trimmedUrl}`;
+    }
+    
+    // If it's just a path like /in/username, add the full domain
+    if (trimmedUrl.startsWith('/in/')) {
+      return `https://linkedin.com${trimmedUrl}`;
+    }
+    
+    // If it contains linkedin but is malformed, try to fix it
+    if (trimmedUrl.includes('linkedin') && trimmedUrl.includes('/in/')) {
+      // Extract the /in/username part and rebuild
+      const match = trimmedUrl.match(/\/in\/[^\/\s]+/);
+      if (match) {
+        return `https://linkedin.com${match[0]}`;
+      }
+    }
+    
+    // Otherwise, assume it's just a username and add the full path
+    return `https://linkedin.com/in/${trimmedUrl}`;
+  };
+
   const openLinkedIn = (url: string) => {
-    if (url && url.startsWith('http')) {
-      window.open(url, '_blank');
+    if (!url) return;
+    
+    const normalizedUrl = normalizeLinkedInUrl(url);
+    console.log('Opening LinkedIn URL:', normalizedUrl);
+    
+    try {
+      window.open(normalizedUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Failed to open LinkedIn URL:', error);
+      // Fallback: try to navigate directly
+      window.location.href = normalizedUrl;
     }
   };
 
@@ -230,14 +292,15 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
                         variant="ghost"
                         size="sm"
                         onClick={() => openLinkedIn(contact.linkedinUrl)}
-                        className="p-0 h-auto text-primary hover:text-primary/80"
+                        className="p-1 h-auto text-primary hover:text-primary/80 cursor-pointer"
                         title={`View ${contact.firstName || contact.lastName || ''}'s LinkedIn`}
+                        type="button"
                       >
                         <ExternalLink className="h-4 w-4 mr-1" />
                         LinkedIn
                       </Button>
                     ) : (
-                      ''
+                      <span className="text-muted-foreground text-xs">No LinkedIn</span>
                     )}
                   </td>
                   <td className="px-3 py-4 whitespace-nowrap text-sm">
@@ -246,7 +309,7 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
                         variant="ghost"
                         size="sm"
                         asChild
-                        className="p-0 h-auto text-primary hover:text-primary/80"
+                        className="p-1 h-auto text-primary hover:text-primary/80"
                         title={`Email ${contact.firstName || contact.lastName || ''}`}
                       >
                         <a href={buildMailto(contact)}>
@@ -255,7 +318,7 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
                         </a>
                       </Button>
                     ) : (
-                      ''
+                      <span className="text-muted-foreground text-xs">No Email</span>
                     )}
                   </td>
                   <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">{contact.email}</td>
@@ -285,7 +348,7 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
                         </a>
                       </Button>
                     ) : (
-                      ''
+                      <span className="text-muted-foreground text-xs">No Email</span>
                     )}
                   </td>
                 </tr>

@@ -2130,6 +2130,17 @@ def startup_checks():
     except Exception as e:
         print(f"PDL API connection: ERROR ({e})")
     
+    # OpenAI API test - properly indented
+    try:
+        test_response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=5
+        )
+        print("OpenAI API connection: OK")
+    except Exception as e:
+        print(f"OpenAI API connection: ERROR - {e}")
+    
     print("Startup checks completed")
 
 def search_contacts_with_pdl(job_title, company, location, max_contacts=8):
