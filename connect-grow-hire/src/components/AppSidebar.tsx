@@ -35,7 +35,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 const navigationItems = [
   { title: "Home", url: "/home", icon: Home },
   { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
-  { title: "Contact Directory", url: "/contact-directory", icon: Users },
+  { title: "Contact Library", url: "/contact-directory", icon: Users },
   { title: "Loop News", url: "/news", icon: Newspaper },
   { title: "Pricing", url: "/pricing", icon: CreditCard },
 ];
