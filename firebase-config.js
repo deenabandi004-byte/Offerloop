@@ -3,13 +3,12 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCz6qHGyJCQgsL1KRxetkeTWdEWMtNvSf4",
-  authDomain: "offerloop-690d7.firebaseapp.com",
-  projectId: "offerloop-690d7",
-  storageBucket: "offerloop-690d7.firebasestorage.app",
-  messagingSenderId: "397312689444",
-  appId: "1:397312689444:web:f4fc33782daf838555dfb1",
-  measurementId: "G-XZZY32PPL2"
+  apiKey: "AIzaSyCxcZbNwbh09DFw70tBQUSoqBIDaXNwZdE",
+  authDomain: "offerloop-native.firebaseapp.com",
+  projectId: "offerloop-native",
+  storageBucket: "offerloop-native.firebasestorage.app",
+  messagingSenderId: "184607281467",
+  appId: "1:184607281467:web:eab1b0e8be341aa8c5271e"
 };
 
 const app = initializeApp(firebaseConfig);
