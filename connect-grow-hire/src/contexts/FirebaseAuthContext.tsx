@@ -7,7 +7,8 @@ import {
   getIdToken
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, googleProvider, db } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { GoogleAuthProvider } from 'firebase/auth';
 
 const getMonthKey = () => new Date().toISOString().slice(0, 7);
 
@@ -70,76 +71,41 @@ export const FirebaseAuthProvider: React.FC<FirebaseAuthProviderProps> = ({ chil
     return () => unsubscribe();
   }, []);
 
-  const loadUserData = async (firebaseUser: FirebaseUser) => {
-    try {
-      const userDocRef = doc(db, 'users', firebaseUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      const nowKey = getMonthKey();
-      const defaultTier = 'free';
-      const defaultCredits = initialCreditsByTier(defaultTier);
+// In your existing loadUserData function, replace the Firestore logic with this:
+const loadUserData = async (firebaseUser: FirebaseUser) => {
+  try {
+    // TEMPORARY: Skip Firestore and create user from Firebase Auth
+    const nowKey = getMonthKey();
+    const defaultTier = 'free';
+    const defaultCredits = initialCreditsByTier(defaultTier);
 
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const user: User = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          name: firebaseUser.displayName || '',
-          picture: firebaseUser.photoURL || undefined,
-          tier: userData.tier || defaultTier,
-          credits: userData.credits ?? defaultCredits,
-          maxCredits: userData.maxCredits ?? defaultCredits,
-          subscriptionId: userData.subscriptionId,
-          emailsMonthKey: userData.emailsMonthKey || nowKey,
-          emailsUsedThisMonth: (userData.emailsMonthKey === nowKey)
-            ? (userData.emailsUsedThisMonth ?? 0)
-            : 0,
-        };
-        setUser(user);
+    const newUser: User = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email || '',
+      name: firebaseUser.displayName || '',
+      picture: firebaseUser.photoURL || undefined,
+      tier: defaultTier,
+      credits: defaultCredits,
+      maxCredits: defaultCredits,
+      emailsMonthKey: nowKey,
+      emailsUsedThisMonth: 0,
+    };
 
-        if (userData.emailsMonthKey !== nowKey) {
-          await updateDoc(userDocRef, {
-            emailsMonthKey: nowKey,
-            emailsUsedThisMonth: 0
-          });
-        }
-      } else {
-        const newUser: User = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          name: firebaseUser.displayName || '',
-          picture: firebaseUser.photoURL || undefined,
-          tier: defaultTier,
-          credits: defaultCredits,
-          maxCredits: defaultCredits,
-          emailsMonthKey: nowKey,
-          emailsUsedThisMonth: 0,
-        };
-
-        await setDoc(userDocRef, {
-          email: newUser.email,
-          name: newUser.name,
-          picture: newUser.picture,
-          tier: newUser.tier,
-          credits: newUser.credits,
-          maxCredits: newUser.maxCredits,
-          emailsMonthKey: newUser.emailsMonthKey,
-          emailsUsedThisMonth: newUser.emailsUsedThisMonth,
-          createdAt: new Date().toISOString(),
-        });
-
-        setUser(newUser);
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
-      setUser(null);
-    }
-  };
+    setUser(newUser);
+    console.log('User set from Firebase Auth (no Firestore):', newUser);
+  } catch (error) {
+    console.error('Error loading user data:', error);
+    setUser(null);
+  }
+};
 
   const signIn = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      const result = await signInWithPopup(auth, googleProvider);
+      const provider = new GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/gmail.compose');
+      provider.addScope('https://www.googleapis.com/auth/gmail.modify');
+      const result = await signInWithPopup(auth, provider);
       console.log('Authentication successful:', result.user.email);
     } catch (error) {
       console.error('Authentication failed:', error);

@@ -14,7 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutocompleteInput } from "@/components/AutocompleteInput";
 import ScoutChatbot from "@/components/ScoutChatbot";
 import LockedFeatureOverlay from "@/components/LockedFeatureOverlay";
-import { useAuth } from "@/contexts/AuthContext";
 import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
 import { firebaseApi } from '../services/firebaseApi';
 import { useFirebaseMigration } from '../hooks/useFirebaseMigration';
@@ -47,11 +46,10 @@ const TIER_CONFIGS = {
 };
 
 const Home = () => {
-  const { user: legacyUser, updateUser } = useAuth();
-  const { user: firebaseUser } = useFirebaseAuth();
+  const { user: firebaseUser, updateUser } = useFirebaseAuth();
   const { migrationComplete } = useFirebaseMigration();
   
-  const currentUser = firebaseUser || legacyUser;
+  const currentUser = firebaseUser;
   const waveKeyframes = `
     @keyframes wave {
       0%, 100% { transform: rotate(-8deg); }
@@ -135,6 +133,17 @@ const Home = () => {
       return;
     }
 
+    // Check if user is authenticated for API calls
+    if (!currentUser) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to search for contacts.",
+        variant: "destructive"
+      });
+      navigate('/signin');
+      return;
+    }
+
     // Validate resume for Pro tier
     if (userTier === 'pro' && !uploadedFile) {
       toast({
@@ -155,22 +164,8 @@ const Home = () => {
         setTimeout(() => setProgressValue(value), index * 600);
       });
 
-      // Build userProfile from localStorage
-      const profInfo = JSON.parse(localStorage.getItem('professionalInfo') || '{}');
-      const resumeData = JSON.parse(localStorage.getItem('resumeData') || '{}');
-      const userProfile = {
-        name: (profInfo.firstName && profInfo.lastName) ? `${profInfo.firstName} ${profInfo.lastName}` : (resumeData.name || ''),
-        firstName: profInfo.firstName || '',
-        lastName: profInfo.lastName || '',
-        university: profInfo.university || resumeData.university || '',
-        year: profInfo.graduationYear || resumeData.year || '',
-        major: profInfo.fieldOfStudy || resumeData.major || '',
-      };
-
-      let response: Response;
-
+      // Use apiService for proper Firebase auth integration
       if (userTier === 'free') {
-        // Use new Free tier API
         const searchRequest = {
           jobTitle: jobTitle.trim(),
           company: company.trim() || '',
@@ -178,53 +173,34 @@ const Home = () => {
           saveToDirectory: false
         };
 
-        const formData = new FormData();
-        formData.append('jobTitle', searchRequest.jobTitle);
-        formData.append('company', searchRequest.company);
-        formData.append('location', searchRequest.location);
-        formData.append('userEmail', effectiveUser.email);
-        formData.append('saveToDirectory', 'false');
-        formData.append('userProfile', JSON.stringify(userProfile));
-
-        response = await fetch(`${BACKEND_URL}/api/free-run?format=json`, {
-          method: 'POST',
-          body: formData,
-        });
-
-      } else if (userTier === 'pro') {
-        // Use Pro tier API with resume
-        const formData = new FormData();
-        formData.append('jobTitle', jobTitle.trim());
-        formData.append('company', company.trim() || '');
-        formData.append('location', location.trim());
-        formData.append('resume', uploadedFile!);
-        formData.append('userEmail', effectiveUser.email);
-        formData.append('saveToDirectory', 'false');
-        formData.append('userProfile', JSON.stringify(userProfile));
-
-        response = await fetch(`${BACKEND_URL}/api/pro-run?format=json`, {
-          method: 'POST',
-          body: formData,
-        });
-      } else {
-        throw new Error('Invalid tier selected');
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Search failed');
-      }
-
-      const data = await response.json();
-      setLastResults(data.contacts || []);
-      setLastResultsTier(data.tier || userTier);
-
-      if (data.csv_content) {
-        const blob = new Blob([data.csv_content], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
+        const csvBlob = await apiService.runFreeSearch(searchRequest);
+        
+        // Download CSV
+        const url = URL.createObjectURL(csvBlob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `offerloop-${data.tier || userTier}-${Date.now()}.csv`;
+        a.download = `offerloop-free-${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+      } else if (userTier === 'pro') {
+        const proRequest = {
+          jobTitle: jobTitle.trim(),
+          company: company.trim() || '',
+          location: location.trim(),
+          resume: uploadedFile!,
+          saveToDirectory: false
+        };
+
+        const csvBlob = await apiService.runProSearch(proRequest);
+        
+        // Download CSV
+        const url = URL.createObjectURL(csvBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `offerloop-pro-${Date.now()}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -236,8 +212,9 @@ const Home = () => {
         description: `Your ${currentTierConfig.name} tier CSV with up to ${currentTierConfig.maxContacts} contacts has been downloaded.`
       });
       
-      // Deduct credits (mock)
-      effectiveUser.credits -= currentTierConfig.credits;
+      // Deduct credits using Firebase updateUser
+      const newCredits = Math.max(0, effectiveUser.credits - currentTierConfig.credits);
+      await updateUser({ credits: newCredits });
       
     } catch (error) {
       console.error('Search failed:', error);

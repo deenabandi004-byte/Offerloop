@@ -12,14 +12,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, Download, Mail, Users, LogIn, Check, X } from "lucide-react";
 import { apiService, type ContactSearchRequest, type ProContactSearchRequest } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from '../contexts/AuthContext';
-import ScoutChatbot from './ScoutChatbot'; // Import the Scout chatbot
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import ScoutChatbot from './ScoutChatbot';
 
 const searchSchema = z.object({
   jobTitle: z.string().min(1, "Job title is required"),
   company: z.string().min(1, "Company is required"),
   location: z.string().min(1, "Location is required"),
-  tier: z.enum(["basic", "advanced", "pro"]),
+  tier: z.enum(["free", "pro"]),
   resume: z.any().optional(),
 });
 
@@ -32,11 +32,11 @@ export const ContactSearchForm = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [saveToDirectory, setSaveToDirectory] = useState(true);
   const { toast } = useToast();
-  const { user, signIn, updateUser } = useAuth();
+  const { user, signIn, updateUser } = useFirebaseAuth();
   const isSignedIn = !!user;
   
   const CREDITS_PER_CONTACT = 15;
-  const getMonthlyLimit = (tier: 'free' | 'starter' | 'pro') => (tier === 'free' ? 8 : 56);
+  const getMonthlyLimit = (tier: 'free' | 'pro') => (tier === 'free' ? 8 : 56);
 
   const form = useForm<SearchFormData>({
     resolver: zodResolver(searchSchema),
@@ -44,7 +44,7 @@ export const ContactSearchForm = () => {
       jobTitle: "",
       company: "",
       location: "",
-      tier: "basic",
+      tier: "free",
     },
   });
 
@@ -68,10 +68,10 @@ export const ContactSearchForm = () => {
     try {
       await signIn();
     } catch (error) {
-      setError('Failed to sign in with Gmail. Please try again.');
+      setError('Failed to sign in with Google. Please try again.');
       toast({
         title: "Sign In Failed",
-        description: "Failed to sign in with Gmail. Please try again.",
+        description: "Failed to sign in with Google. Please try again.",
         variant: "destructive",
       });
     }
@@ -79,10 +79,10 @@ export const ContactSearchForm = () => {
 
   const onSubmit = async (data: SearchFormData) => {
     if (!isSignedIn || !user) {
-      setError('Please sign in with Gmail to use Offerloop.ai');
+      setError('Please sign in with Google to use Offerloop.ai');
       toast({
         title: "Authentication Required",
-        description: "Please sign in with Gmail to search for contacts",
+        description: "Please sign in with Google to search for contacts",
         variant: "destructive",
       });
       return;
@@ -101,7 +101,7 @@ export const ContactSearchForm = () => {
       return;
     }
 
-    if (data.tier !== "basic") {
+    if (data.tier !== "free") {
       const monthlyLimit = getMonthlyLimit(user.tier);
       const used = user.emailsUsedThisMonth || 0;
       if (used + contactsCount > monthlyLimit) {
@@ -123,7 +123,7 @@ export const ContactSearchForm = () => {
         jobTitle: data.jobTitle,
         company: data.company,
         location: data.location,
-        uid: user.email,
+        uid: user.uid,
         saveToDirectory,
       };
 
@@ -132,16 +132,10 @@ export const ContactSearchForm = () => {
       let successMessage: string;
 
       switch (data.tier) {
-        case "basic":
-          csvBlob = await apiService.runBasicSearch(baseRequest);
-          filename = `Offerloop_Basic_${new Date().toISOString().slice(0, 10)}.csv`;
-          successMessage = "Basic search completed! CSV file downloaded.";
-          break;
-        
-        case "advanced":
-          csvBlob = await apiService.runAdvancedSearch(baseRequest);
-          filename = `Offerloop_Advanced_${new Date().toISOString().slice(0, 10)}.csv`;
-          successMessage = "Advanced search completed! CSV file downloaded and Gmail drafts created in your account.";
+        case "free":
+          csvBlob = await apiService.runFreeSearch(baseRequest);
+          filename = `Offerloop_Free_${new Date().toISOString().slice(0, 10)}.csv`;
+          successMessage = "Free search completed! CSV file downloaded.";
           break;
         
         case "pro":
@@ -171,7 +165,7 @@ export const ContactSearchForm = () => {
         description: successMessage,
       });
 
-      const emailsToCount = data.tier === "basic" ? 0 : tierFeatures[data.tier].contacts;
+      const emailsToCount = data.tier === "free" ? 0 : tierFeatures[data.tier].contacts;
       const monthKey = new Date().toISOString().slice(0, 7);
 
       const nextCredits = Math.max(0, (user.credits ?? 0) - creditsNeeded);
@@ -216,21 +210,15 @@ export const ContactSearchForm = () => {
   };
 
   const tierFeatures = {
-    basic: {
-      contacts: 6,
-      features: ["Basic contact info", "CSV export"],
+    free: {
+      contacts: 8,
+      features: ["Basic contact info", "CSV export", "Contact library"],
       color: "bg-blue-500",
       icon: <Users className="h-4 w-4" />,
     },
-    advanced: {
-      contacts: 8,
-      features: ["Enriched data", "AI emails", "Gmail drafts"],
-      color: "bg-green-500",
-      icon: <Mail className="h-4 w-4" />,
-    },
     pro: {
-      contacts: 12,
-      features: ["Resume analysis", "Similarity engine", "Smart subjects"],
+      contacts: 56,
+      features: ["Resume analysis", "AI emails", "Similarity engine", "Smart subjects"],
       color: "bg-purple-500",
       icon: <Upload className="h-4 w-4" />,
     },
@@ -247,13 +235,13 @@ export const ContactSearchForm = () => {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">Find Your Next Connection</CardTitle>
             <p className="text-muted-foreground">
-              Sign in with Gmail to access AI-powered recruiting tools
+              Sign in with Google to access AI-powered recruiting tools
             </p>
           </CardHeader>
           <CardContent className="text-center py-8">
             <div className="mb-6">
               <LogIn className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">Gmail Authentication Required</h3>
+              <h3 className="text-lg font-semibold mb-2">Google Authentication Required</h3>
               <p className="text-muted-foreground mb-6">
                 Offerloop.ai creates personalized email drafts directly in your Gmail account. 
                 Sign in to get started with AI-powered recruiting.
@@ -262,14 +250,14 @@ export const ContactSearchForm = () => {
             
             <Button onClick={handleSignIn} size="lg" className="min-w-48">
               <LogIn className="mr-2 h-5 w-5" />
-              Sign In with Gmail
+              Sign In with Google
             </Button>
             
             <div className="mt-6 text-sm text-muted-foreground">
-              <p>✓ Find high-quality contacts with PDL database</p>
-              <p>✓ Generate personalized networking emails with AI</p>
-              <p>✓ Create drafts directly in your Gmail account</p>
-              <p>💡 <strong>Tip:</strong> Use Scout (bottom-left) for job title suggestions!</p>
+              <p>Find high-quality contacts with PDL database</p>
+              <p>Generate personalized networking emails with AI</p>
+              <p>Create drafts directly in your Gmail account</p>
+              <p><strong>Tip:</strong> Use Scout (bottom-left) for job title suggestions!</p>
             </div>
           </CardContent>
         </Card>
@@ -297,7 +285,7 @@ export const ContactSearchForm = () => {
             Search for professionals and get personalized outreach campaigns
           </p>
           <div className="text-center text-sm text-blue-600 font-medium">
-            💡 Need help with job titles? Ask Scout in the bottom-left corner!
+            Need help with job titles? Ask Scout in the bottom-left corner!
           </div>
         </CardHeader>
         <CardContent>
@@ -324,7 +312,7 @@ export const ContactSearchForm = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Select Tier</FormLabel>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       {Object.entries(tierFeatures).map(([tier, info]) => (
                         <div
                           key={tier}
@@ -356,18 +344,6 @@ export const ContactSearchForm = () => {
               />
 
               {/* Gmail Integration Status */}
-              {selectedTier === "advanced" && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-blue-800 text-sm font-medium mb-2">
-                    <Check className="h-4 w-4" />
-                    Gmail Integration Active
-                  </div>
-                  <p className="text-blue-700 text-sm">
-                    Personalized email drafts will be created in: <strong>{user?.email}</strong>
-                  </p>
-                </div>
-              )}
-
               {selectedTier === "pro" && (
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 text-purple-800 text-sm font-medium mb-2">
@@ -375,9 +351,9 @@ export const ContactSearchForm = () => {
                     Pro Features Active
                   </div>
                   <div className="text-purple-700 text-sm">
-                    <div>✓ Resume analysis & similarity matching</div>
-                    <div>✓ Smart personalized emails in: <strong>{user?.email || "your inbox"}</strong></div>
-                    <div>✓ Advanced contact enrichment</div>
+                    <div>Resume analysis & similarity matching</div>
+                    <div>Smart personalized emails in: <strong>{user?.email || "your inbox"}</strong></div>
+                    <div>Advanced contact enrichment</div>
                   </div>
                 </div>
               )}
@@ -451,7 +427,7 @@ export const ContactSearchForm = () => {
                       </div>
                       {selectedFile && (
                         <div className="mt-2 text-sm text-green-600">
-                          ✓ {selectedFile.name} selected
+                          {selectedFile.name} selected
                         </div>
                       )}
                     </div>
@@ -474,8 +450,7 @@ export const ContactSearchForm = () => {
 
               <Button type="submit" disabled={isLoading} className="w-full" size="lg">
                 {isLoading ? (
-                  selectedTier === "basic" ? "Searching..." :
-                  selectedTier === "advanced" ? "Searching & Creating Drafts..." :
+                  selectedTier === "free" ? "Searching..." :
                   "Analyzing Resume & Creating Smart Emails..."
                 ) : (
                   <>

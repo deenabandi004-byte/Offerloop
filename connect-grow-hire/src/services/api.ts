@@ -55,19 +55,7 @@ class ApiService {
       }
     } catch (error) {
       console.error('Error getting Firebase auth headers:', error);
-      
-      const user = localStorage.getItem('user');
-      if (user) {
-        try {
-          const userData = JSON.parse(user);
-          if (userData.accessToken) {
-            headers['Authorization'] = `Bearer ${userData.accessToken}`;
-          }
-        } catch (parseError) {
-          console.error('Failed to parse user data:', parseError);
-          localStorage.removeItem('user');
-        }
-      }
+      throw new Error('Authentication required. Please sign in again.');
     }
     
     return headers;
@@ -79,8 +67,8 @@ class ApiService {
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     
-    console.log(`🌐 Making request to: ${url}`);
-    console.log(`📤 Request options:`, options);
+    console.log(`Making request to: ${url}`);
+    console.log(`Request options:`, options);
     
     // For FormData requests, don't add default headers that might override Content-Type
     let headers = { ...options.headers };
@@ -94,25 +82,25 @@ class ApiService {
       };
     }
 
-    console.log(`📋 Final headers:`, headers);
+    console.log(`Final headers:`, headers);
 
     const response = await fetch(url, {
       ...options,
       headers,
     });
 
-    console.log(`📥 Response status: ${response.status}`);
+    console.log(`Response status: ${response.status}`);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error(`❌ API Error:`, errorData);
+      console.error(`API Error:`, errorData);
       throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     // For CSV downloads, return blob
     if (response.headers.get('content-type')?.includes('text/csv') || 
         response.headers.get('content-disposition')?.includes('attachment')) {
-      console.log(`📄 Returning CSV blob`);
+      console.log(`Returning CSV blob`);
       return response.blob() as unknown as T;
     }
 
@@ -124,27 +112,14 @@ class ApiService {
    * Maps to backend /api/free-run endpoint
    */
   async runFreeSearch(request: ContactSearchRequest): Promise<Blob> {
-    // Get user email from stored user data
-    const user = localStorage.getItem('user');
-    let userEmail = 'anonymous';
-    
-    if (user) {
-      try {
-        userEmail = JSON.parse(user).email;
-      } catch (error) {
-        console.error('Failed to parse user data:', error);
-      }
-    }
-
     const backendRequest = {
       jobTitle: request.jobTitle,
       company: request.company,
       location: request.location,
-      userEmail: userEmail,
       saveToDirectory: request.saveToDirectory ?? false,
     };
 
-    console.log(`🟡 Free Search Request:`, backendRequest);
+    console.log(`Free Search Request:`, backendRequest);
 
     return this.makeRequest<Blob>('/free-run', {
       method: 'POST',
@@ -157,31 +132,18 @@ class ApiService {
    * Maps to backend /api/pro-run endpoint
    */
   async runProSearch(request: ProContactSearchRequest): Promise<Blob> {
-    const user = localStorage.getItem('user');
-    let userEmail = 'anonymous';
-    
-    if (user) {
-      try {
-        userEmail = JSON.parse(user).email;
-      } catch (error) {
-        console.error('Failed to parse user data:', error);
-      }
-    }
-
     const formData = new FormData();
     formData.append('jobTitle', request.jobTitle);
     formData.append('company', request.company);
     formData.append('location', request.location);
     formData.append('resume', request.resume);
-    formData.append('userEmail', userEmail);
     formData.append('saveToDirectory', String(!!request.saveToDirectory));
 
-    console.log(`🟣 Pro Search Request - FormData contents:`);
+    console.log(`Pro Search Request - FormData contents:`);
     console.log(`  jobTitle: "${request.jobTitle}"`);
     console.log(`  company: "${request.company}"`);
     console.log(`  location: "${request.location}"`);
     console.log(`  resume: ${request.resume.name} (${request.resume.size} bytes)`);
-    console.log(`  userEmail: "${userEmail}"`);
 
     // For FormData, DON'T set Content-Type header - let browser set it automatically
     const headers: Record<string, string> = {};
@@ -191,24 +153,17 @@ class ApiService {
       if (auth.currentUser) {
         const token = await auth.currentUser.getIdToken();
         headers['Authorization'] = `Bearer ${token}`;
+        headers['X-User-Uid'] = auth.currentUser.uid;
+        headers['X-User-Email'] = auth.currentUser.email || '';
+      } else {
+        throw new Error('User not authenticated');
       }
     } catch (error) {
       console.error('Error getting Firebase auth for FormData:', error);
-      
-      const user_data = localStorage.getItem('user');
-      if (user_data) {
-        try {
-          const userData = JSON.parse(user_data);
-          if (userData.accessToken) {
-            headers['Authorization'] = `Bearer ${userData.accessToken}`;
-          }
-        } catch (parseError) {
-          console.error('Failed to parse user data for auth:', parseError);
-        }
-      }
+      throw new Error('Authentication required. Please sign in again.');
     }
 
-    console.log(`🔐 Headers being sent:`, headers);
+    console.log(`Headers being sent:`, headers);
 
     return this.makeRequest<Blob>('/pro-run', {
       method: 'POST',
@@ -222,7 +177,7 @@ class ApiService {
    * @deprecated Use runFreeSearch() instead. Basic tier has been merged into Free tier.
    */
   async runBasicSearch(request: ContactSearchRequest): Promise<Blob> {
-    console.warn('⚠️ runBasicSearch is deprecated. Use runFreeSearch() instead.');
+    console.warn('runBasicSearch is deprecated. Use runFreeSearch() instead.');
     return this.runFreeSearch(request);
   }
 
@@ -230,7 +185,7 @@ class ApiService {
    * @deprecated Advanced tier has been removed. Use runFreeSearch() or runProSearch() instead.
    */
   async runAdvancedSearch(request: ContactSearchRequest): Promise<Blob> {
-    console.warn('⚠️ runAdvancedSearch is deprecated. Advanced tier removed. Redirecting to Free tier.');
+    console.warn('runAdvancedSearch is deprecated. Advanced tier removed. Redirecting to Free tier.');
     return this.runFreeSearch(request);
   }
 
@@ -289,30 +244,14 @@ class ApiService {
   }
 
   async getDirectoryContacts(): Promise<{contacts: Contact[]}> {
-    // Temporary hardcode to test - we know this is the right email from the logs
-    const email = 'user@example.com';
-    console.log('🔍 Fetching directory contacts for email:', email);
-    
-    return this.makeRequest(`/directory/contacts?userEmail=${encodeURIComponent(email)}`);
+    return this.makeRequest(`/directory/contacts`);
   }
 
   async saveContactsToDirectory(contacts: Contact[]): Promise<{saved:number}> {
-    try {
-      const { auth } = await import('../lib/firebase');
-      const userEmail = auth.currentUser?.email || 'anonymous';
-      return this.makeRequest(`/directory/contacts`, {
-        method: 'POST',
-        body: JSON.stringify({ userEmail, contacts }),
-      });
-    } catch (error) {
-      console.error('Error getting Firebase user for directory save:', error);
-      const user = localStorage.getItem('user');
-      const email = user ? JSON.parse(user).email : 'anonymous';
-      return this.makeRequest(`/directory/contacts`, {
-        method: 'POST',
-        body: JSON.stringify({ userEmail: email, contacts }),
-      });
-    }
+    return this.makeRequest(`/directory/contacts`, {
+      method: 'POST',
+      body: JSON.stringify({ contacts }),
+    });
   }
 }
 

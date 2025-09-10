@@ -17,6 +17,7 @@ from google.oauth2.credentials import Credentials
 import PyPDF2
 import tempfile
 import re
+import functools
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -2803,14 +2804,16 @@ def get_tier_info():
     })
 
 @app.route('/api/directory/contacts', methods=['GET'])
+@require_firebase_auth
 def get_directory_contacts():
-    user_email = (request.args.get('userEmail') or '').strip()
+    user_email = request.firebase_user.get('email')
     return jsonify({'contacts': list_contacts_sqlite(user_email)})
 
 @app.route('/api/directory/contacts', methods=['POST'])
+@require_firebase_auth
 def post_directory_contacts():
     data = request.get_json(silent=True) or {}
-    user_email = (data.get('userEmail') or '').strip()
+    user_email = request.firebase_user.get('email')
     contacts = data.get('contacts') or []
     if not isinstance(contacts, list):
         return jsonify({'error': 'contacts must be an array'}), 400
@@ -2818,22 +2821,24 @@ def post_directory_contacts():
     return jsonify({'saved': saved})
 
 @app.route('/api/free-run', methods=['POST'])
+@require_firebase_auth
 def free_run():
     """Free tier endpoint - enhanced with interesting emails"""
     try:
+        user_email = request.firebase_user.get('email')
+        user_id = request.firebase_user['uid']
+        
         if request.is_json:
             data = request.json or {}
             job_title = data.get('jobTitle', '').strip() if data.get('jobTitle') else ''
             company = data.get('company', '').strip() if data.get('company') else ''
             location = data.get('location', '').strip() if data.get('location') else ''
-            user_email = data.get('userEmail', '').strip() if data.get('userEmail') else None
             user_profile = data.get('userProfile') or None
             resume_text = data.get('resumeText', '').strip() if data.get('resumeText') else None
         else:
             job_title = (request.form.get('jobTitle') or '').strip()
             company = (request.form.get('company') or '').strip()
             location = (request.form.get('location') or '').strip()
-            user_email = (request.form.get('userEmail') or '').strip() or None
             user_profile_raw = request.form.get('userProfile')
             try:
                 user_profile = json.loads(user_profile_raw) if user_profile_raw else None
@@ -2920,9 +2925,13 @@ def free_run():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/pro-run', methods=['POST'])
+@require_firebase_auth
 def pro_run():
     """Pro tier endpoint - enhanced with interesting emails"""
     try:
+        user_email = request.firebase_user.get('email')
+        user_id = request.firebase_user['uid']
+        
         print("=== PRO ENDPOINT DEBUG ===")
         print(f"Content-Type: {request.content_type}")
         print(f"Form data keys: {list(request.form.keys())}")
@@ -2934,7 +2943,6 @@ def pro_run():
         job_title = request.form.get('jobTitle')
         company = request.form.get('company')
         location = request.form.get('location')
-        user_email = request.form.get('userEmail')
         
         print(f"Raw form values:")
         print(f"  jobTitle: '{job_title}' (type: {type(job_title)})")
@@ -2945,7 +2953,6 @@ def pro_run():
         job_title = (job_title or '').strip()
         company = (company or '').strip()
         location = (location or '').strip()
-        user_email = (user_email or '').strip() if user_email else None
         
         print(f"Cleaned values:")
         print(f"  job_title: '{job_title}' (len: {len(job_title)})")
@@ -3141,12 +3148,11 @@ def parse_resume():
         return jsonify({'error': 'Failed to parse resume'}), 500
 
 @app.route('/api/contacts', methods=['GET'])
+@require_firebase_auth
 def get_contacts():
     """Get all contacts for a user"""
     try:
-        user_id = request.args.get('userId')
-        if not user_id:
-            return jsonify({'error': 'User ID required'}), 400
+        user_id = request.firebase_user['uid']
         
         if not db:
             return jsonify({'error': 'Firebase not initialized'}), 500
@@ -3167,14 +3173,12 @@ def get_contacts():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/contacts', methods=['POST'])
+@require_firebase_auth
 def create_contact():
     """Create a new contact"""
     try:
         data = request.get_json()
-        user_id = data.get('userId')
-        
-        if not user_id:
-            return jsonify({'error': 'User ID required'}), 400
+        user_id = request.firebase_user['uid']
         
         if not db:
             return jsonify({'error': 'Firebase not initialized'}), 500
@@ -3206,14 +3210,12 @@ def create_contact():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/contacts/<contact_id>', methods=['PUT'])
+@require_firebase_auth
 def update_contact(contact_id):
     """Update an existing contact"""
     try:
         data = request.get_json()
-        user_id = data.get('userId')
-        
-        if not user_id:
-            return jsonify({'error': 'User ID required'}), 400
+        user_id = request.firebase_user['uid']
         
         if not db:
             return jsonify({'error': 'Firebase not initialized'}), 500
@@ -3243,13 +3245,11 @@ def update_contact(contact_id):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/contacts/<contact_id>', methods=['DELETE'])
+@require_firebase_auth
 def delete_contact(contact_id):
     """Delete a contact"""
     try:
-        user_id = request.args.get('userId')
-        
-        if not user_id:
-            return jsonify({'error': 'User ID required'}), 400
+        user_id = request.firebase_user['uid']
         
         if not db:
             return jsonify({'error': 'Firebase not initialized'}), 500
@@ -3268,15 +3268,14 @@ def delete_contact(contact_id):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/contacts/bulk', methods=['POST'])
+@require_firebase_auth
 def bulk_create_contacts():
     """Bulk create contacts with deduplication"""
     try:
         data = request.get_json() or {}
-        user_id = (data.get('userId') or '').strip()
+        user_id = request.firebase_user['uid']
         raw_contacts = data.get('contacts') or []
         print(f"DEBUG - Raw contacts received: {json.dumps(raw_contacts, indent=2)}")
-        if not user_id:
-            return jsonify({'error': 'User ID required'}), 400
         
         if not db:
             return jsonify({'error': 'Firebase not initialized'}), 500
@@ -3395,21 +3394,25 @@ def serve_static_files(path):
         return send_from_directory('connect-grow-hire/dist', path)
     except FileNotFoundError:
         return send_from_directory('connect-grow-hire/dist', 'index.html')
+
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 errors"""
     return jsonify({'error': 'Endpoint not found'}), 404
+
 @app.errorhandler(500)
 def internal_error(error):
     """Handle 500 errors"""
     return jsonify({'error': 'Internal server error'}), 500
+
 @app.errorhandler(Exception)
 def handle_exception(e):
     """Handle uncaught exceptions"""
     print(f"Uncaught exception: {e}")
     traceback.print_exc()
     return jsonify({'error': 'An unexpected error occurred'}), 500
+
 # ========================================
 # MAIN ENTRY POINT
 # ========================================
@@ -3435,5 +3438,3 @@ if __name__ == '__main__':
     
     port = int(os.environ.get('PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
-
-

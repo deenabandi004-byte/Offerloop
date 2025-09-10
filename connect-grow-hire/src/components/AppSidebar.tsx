@@ -13,7 +13,7 @@ import {
   Users
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
 
 import {
   Sidebar,
@@ -53,7 +53,7 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const [settingsExpanded, setSettingsExpanded] = useState(false);
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
 
   const isActive = (path: string) => currentPath === path;
   const isSettingsActive = settingsItems.some(item => isActive(item.url));
