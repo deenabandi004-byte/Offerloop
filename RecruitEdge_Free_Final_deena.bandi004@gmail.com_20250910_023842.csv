@@ -1,0 +1,11 @@
+FirstName,LastName,LinkedIn,Email,Title,Company,City,State,College,Hometown,email_subject,email_body
+james,selvi,linkedin.com/in/james-selvi-6214354a,jimselvi@gmail.com,business development,"te2, the experience engine, inc.",,,santa clara university,,Connecting with a Fellow Santa Clara University Alum,"Dear James,
+
+I hope this message finds you well. My name is {name}, and I am a {year} {degree} student majoring in {major} at Santa Clara University. I noticed that you have a background in business development at TE2, and I am very interested in pursuing a career in this field.
+
+As a fellow Santa Clara alum, I would greatly appreciate the opportunity to learn from your experiences and insights. If you have 15-20 minutes in the next couple of weeks, I would love to chat about your journey and any advice you might have for someone starting out.
+
+Thank you for considering my request. I look forward to the possibility of connecting!
+
+Best regards,
+{name}"

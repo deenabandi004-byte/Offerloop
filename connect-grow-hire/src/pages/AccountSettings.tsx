@@ -7,11 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/contexts/AuthContext";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 
 export default function AccountSettings() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+const { user } = useFirebaseAuth();
   
   // State for form data populated from onboarding
   const [personalInfo, setPersonalInfo] = useState({

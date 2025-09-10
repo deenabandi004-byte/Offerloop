@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useFirebaseAuth } from "../contexts/FirebaseAuthContext";
 
 const Header = () => {
   const navigate = useNavigate();
-  const { user, signOut, isLoading } = useAuth();
+  const { user, signOut, isLoading } = useFirebaseAuth();
 
   const handleSignOut = () => {
     signOut();

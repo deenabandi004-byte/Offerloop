@@ -1,0 +1,24 @@
+FirstName,LastName,LinkedIn,Email,Title,Company,City,State,College,Hometown,email_subject,email_body
+matt,nguyen,linkedin.com/in/mattnguy,mattnguyen94@gmail.com,software engineer,plaid,,,university of michigan,,Connecting with a Fellow University of Michigan Alum,"Dear Matt,
+
+I hope this message finds you well. My name is [name], and I am a [year] student at the University of Michigan, majoring in [major]. I am particularly interested in pursuing a career in [career_interests], and I noticed that you are currently a software engineer at Plaid.
+
+As a fellow Wolverine, I would love the opportunity to connect and learn from your experiences in the tech industry. If you have 15-20 minutes to spare in the next couple of weeks, I would greatly appreciate any insights you could share about your career path and the work you do at Plaid.
+
+Thank you for considering my request. I look forward to the possibility of chatting with you.
+
+Best regards,
+
+[name]"
+carmen,krol,linkedin.com/in/carmenvkrol,carmenvkrol@gmail.com,software engineer,meta,,,cornell university,,Connecting with a Fellow Cornellian in Software Engineering,"Dear Carmen,
+
+I hope this message finds you well. My name is {name}, and I am a {year} {degree} student majoring in {major} at {university}. I noticed that you are a software engineer at Meta and also a fellow Cornellian.
+
+As someone interested in pursuing a career in software engineering, I would greatly appreciate the opportunity to learn from your experiences. I am particularly interested in understanding how you navigated your career path and any insights you might have about working in the tech industry.
+
+Would you be open to a brief 15–20 minute chat in the next couple of weeks? I would be grateful for any advice you could share.
+
+Thank you for considering my request. I look forward to the possibility of connecting.
+
+Best regards,
+{name}"

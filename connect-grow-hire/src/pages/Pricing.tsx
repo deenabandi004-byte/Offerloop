@@ -4,30 +4,38 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useFirebaseAuth } from "../contexts/FirebaseAuthContext"; // Updated import
 
 const Pricing = () => {
   const [showProModal, setShowProModal] = useState(false);
   const navigate = useNavigate();
-  const { updateUser } = useAuth();
+  const { user, updateUser, completeOnboarding } = useFirebaseAuth(); // Updated hook usage
 
-  const handleUpgrade = (planType) => {
-    if (planType === 'free') {
-      updateUser({
-        tier: 'free',
-        credits: 120,
-        maxCredits: 120,
-        emailsUsedThisMonth: 0,
-        emailsMonthKey: new Date().toISOString().slice(0, 7),
-      });
-    } else if (planType === 'pro') {
-      updateUser({
-        tier: 'pro',
-        credits: 840,
-        maxCredits: 840,
-        emailsUsedThisMonth: 0,
-        emailsMonthKey: new Date().toISOString().slice(0, 7),
-      });
+  const handleUpgrade = async (planType) => {
+    if (!user) return;
+    
+    try {
+      if (planType === 'free') {
+        await updateUser({
+          tier: 'free',
+          credits: 120,
+          maxCredits: 120,
+          emailsUsedThisMonth: 0,
+          emailsMonthKey: new Date().toISOString().slice(0, 7),
+        });
+      } else if (planType === 'pro') {
+        await updateUser({
+          tier: 'pro',
+          credits: 840,
+          maxCredits: 840,
+          emailsUsedThisMonth: 0,
+          emailsMonthKey: new Date().toISOString().slice(0, 7),
+        });
+      }
+      // Navigate to home after successful upgrade
+      navigate("/home");
+    } catch (error) {
+      console.error("Error updating user:", error);
     }
   };
 

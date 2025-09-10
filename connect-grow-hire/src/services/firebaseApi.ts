@@ -203,6 +203,20 @@ export class FirebaseApiService {
       throw error;
     }
   }
+  async clearAllContacts(userId: string): Promise<void> {
+  try {
+    const contactsRef = collection(db, 'users', userId, 'contacts');
+    const querySnapshot = await getDocs(contactsRef);
+    
+    const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+    
+    console.log(`Deleted ${querySnapshot.docs.length} contacts for user ${userId}`);
+  } catch (error) {
+    console.error('Error clearing all contacts:', error);
+    throw error;
+  }
+}
 
   async saveResumeData(userId: string, data: ResumeData): Promise<void> {
     try {

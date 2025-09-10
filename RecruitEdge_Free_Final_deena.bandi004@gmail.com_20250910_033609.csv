@@ -1,0 +1,10 @@
+FirstName,LastName,LinkedIn,Email,Title,Company,City,State,College,Hometown,email_subject,email_body
+andy,chacon,linkedin.com/in/andy-chacon-501a5911,andychacon@yahoo.com,web developer,apple,,,california college of the arts,,Connecting with a Fellow California College of the Arts Graduate,"Hi Andy,
+
+I hope this message finds you well. My name is [name], and I am a [year] student at [university], majoring in [major]. I noticed that you graduated from California College of the Arts and now work as a web developer at Apple. As someone aspiring to build a career in [career_interests], I would love to hear about your journey and any insights you might have about breaking into the tech industry.
+
+If you have 15-20 minutes to chat in the next couple of weeks, I would greatly appreciate the opportunity to learn from your experiences. Thank you for considering my request!
+
+Best regards,
+
+[name]"

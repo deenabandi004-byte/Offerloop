@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Loader2, Mail, ExternalLink } from "lucide-react";
-import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
 import { firebaseApi } from '../services/firebaseApi';
 import { useFirebaseMigration } from '../hooks/useFirebaseMigration';
 
 interface Contact {
   id?: string;
+
+  // Base fields
   firstName: string;
   lastName: string;
   linkedinUrl: string;
@@ -19,8 +20,21 @@ interface Contact {
   firstContactDate: string;
   status: string;
   lastContactDate: string;
+
+  // Preferred UI fields (camelCase)
   emailSubject?: string;
   emailBody?: string;
+  composeLink?: string;
+
+  // Raw backend (snake_case) fields, to be normalized
+  email_subject?: string;
+  email_body?: string;
+  compose_link?: string;
+
+  // Extra fields that might arrive (ignored in UI but not harmful)
+  City?: string;
+  State?: string;
+  Hometown?: string;
 }
 
 interface ContactDirectoryProps {
@@ -28,49 +42,65 @@ interface ContactDirectoryProps {
 }
 
 const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@example.com' }) => {
-  const { user: legacyUser } = useAuth();
   const { user: firebaseUser } = useFirebaseAuth();
   const { migrationComplete } = useFirebaseMigration();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const user = firebaseUser || legacyUser;
+  const user = firebaseUser;
   const effectiveUserEmail = user?.email || userEmail;
 
-  const getStorageKey = () => `contacts_${effectiveUserEmail.replace('@', '_').replace('.', '_')}`;
+  const getStorageKey = () =>
+    `contacts_${effectiveUserEmail.replace('@', '_').replace('.', '_')}`;
 
   useEffect(() => {
     if (user || userEmail) {
       loadContacts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userEmail, migrationComplete]);
+
+  const normalizeFromServer = (c: any): Contact => {
+    // Prefer server-generated fields; fall back to camelCase if already present
+    const emailSubject = c.emailSubject ?? c.email_subject ?? '';
+    const emailBody = c.emailBody ?? c.email_body ?? '';
+    const composeLink = c.composeLink ?? c.compose_link ?? '';
+
+    return {
+      ...c,
+      emailSubject,
+      emailBody,
+      composeLink,
+    };
+  };
 
   const loadContacts = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       if (firebaseUser) {
         console.log('📂 Loading contacts from Firestore for:', firebaseUser.uid);
         const firestoreContacts = await firebaseApi.getContacts(firebaseUser.uid);
-        setContacts(firestoreContacts);
-        console.log(`✅ Loaded ${firestoreContacts.length} contacts from Firestore`);
+        const normalized = (Array.isArray(firestoreContacts) ? firestoreContacts : []).map(normalizeFromServer);
+        setContacts(normalized);
+        console.log(`✅ Loaded ${normalized.length} contacts from Firestore`);
       } else {
         console.log('📂 Loading contacts from localStorage for:', effectiveUserEmail);
         const storageKey = getStorageKey();
         const storedContacts = localStorage.getItem(storageKey);
-        
+
         if (storedContacts) {
           const parsed = JSON.parse(storedContacts);
-          setContacts(Array.isArray(parsed) ? parsed : []);
-          console.log(`✅ Loaded ${parsed.length} contacts from localStorage`);
+          const normalized = (Array.isArray(parsed) ? parsed : []).map(normalizeFromServer);
+          setContacts(normalized);
+          console.log(`✅ Loaded ${normalized.length} contacts from localStorage`);
         } else {
           setContacts([]);
           console.log('🔭 No contacts found in localStorage');
         }
       }
-      
     } catch (err) {
       console.error('Failed to load contacts:', err);
       setError('Failed to load contacts. Please try again.');
@@ -86,7 +116,7 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
       const storageKey = getStorageKey();
       const existingContacts = contacts;
       const today = new Date().toLocaleDateString();
-      
+
       const contactsToAdd: Contact[] = newContacts.map((contact, index) => ({
         id: `contact_${Date.now()}_${index}`,
         firstName: contact.firstName || '',
@@ -100,19 +130,24 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
         firstContactDate: today,
         status: 'Not Contacted',
         lastContactDate: today,
+
+        // Allow server fields to be persisted if passed in
+        emailSubject: (contact as any)?.emailSubject || (contact as any)?.email_subject || '',
+        emailBody: (contact as any)?.emailBody || (contact as any)?.email_body || '',
+        composeLink: (contact as any)?.composeLink || (contact as any)?.compose_link || '',
       }));
-      
-      // Check for duplicates (by email or LinkedIn)
+
+      // Deduplicate by email or LinkedIn
       const updatedContacts = [...existingContacts];
       let addedCount = 0;
       let skippedCount = 0;
-      
+
       contactsToAdd.forEach(newContact => {
-        const isDuplicate = existingContacts.some(existing => 
+        const isDuplicate = existingContacts.some(existing =>
           (existing.email && newContact.email && existing.email === newContact.email) ||
           (existing.linkedinUrl && newContact.linkedinUrl && existing.linkedinUrl === newContact.linkedinUrl)
         );
-        
+
         if (!isDuplicate) {
           updatedContacts.push(newContact);
           addedCount++;
@@ -120,13 +155,12 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
           skippedCount++;
         }
       });
-      
+
       localStorage.setItem(storageKey, JSON.stringify(updatedContacts));
       setContacts(updatedContacts);
-      
+
       console.log(`💾 Saved to localStorage: ${addedCount} added, ${skippedCount} skipped`);
       return { created: addedCount, skipped: skippedCount };
-      
     } catch (err) {
       console.error('Failed to save contacts to localStorage:', err);
       throw err;
@@ -151,95 +185,64 @@ const ContactDirectory: React.FC<ContactDirectoryProps> = ({ userEmail = 'user@e
   };
 
   const buildMailto = (contact: Contact) => {
+    // Prefer server-computed composeLink (already encoded)
+    if (contact.composeLink) return contact.composeLink;
+
     const to = (contact.email || '').trim();
     if (!to) return '#';
 
-    let profInfo: any = {};
-    let resumeData: any = {};
-    try { profInfo = JSON.parse(localStorage.getItem('professionalInfo') || '{}'); } catch {}
-    try { resumeData = JSON.parse(localStorage.getItem('resumeData') || '{}'); } catch {}
-    const userName = (profInfo.firstName && profInfo.lastName) ? `${profInfo.firstName} ${profInfo.lastName}` : (resumeData.name || '');
-    const userMajor = profInfo.fieldOfStudy || resumeData.major || '';
-    const userUniversity = profInfo.university || resumeData.university || '';
-    const userYear = profInfo.graduationYear || resumeData.year || '';
-
-    const subject = `Quick chat about your work at ${contact.company || 'your company'}`;
-
+    // Fallback: try to use server-generated content if present, else minimal
+    const subject = contact.emailSubject || `Quick chat about your work at ${contact.company || 'your company'}`;
     const firstName = contact.firstName || contact.lastName || 'there';
-    const intro = userName
-      ? `I'm ${userName}${userMajor ? `, studying ${userMajor}` : ''}${userUniversity ? ` at ${userUniversity}` : ''}.`
-      : `I came across your profile and was impressed by your work.`;
-    const roleLine = (contact.jobTitle || contact.company)
-      ? ` I noticed your work as ${contact.jobTitle || 'a professional'} at ${contact.company || 'your company'} and would love to learn more.`
-      : '';
+    const body = contact.emailBody || `Hi ${firstName},
 
-    const body = `Hi ${firstName},
+I came across your profile and was impressed by your work. Would you be open to a brief 15–20 minute chat sometime this or next week?
 
-${intro}${roleLine}
+Best regards,`;
 
-Would you be open to a brief 15–20 minute chat sometime this or next week?
-
-Best regards,
-${userName || ''}`;
-
-    return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.replace(/\n/g, '\r\n'))}`;
   };
 
-  // Fixed LinkedIn URL handling
+  // LinkedIn helpers (unchanged)
   const normalizeLinkedInUrl = (url: string) => {
     if (!url || url.trim() === '') return '';
-    
     const trimmedUrl = url.trim();
-    
-    // If it already starts with http, return as is
-    if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
-      return trimmedUrl;
-    }
-    
-    // If it starts with linkedin.com or www.linkedin.com, add https://
-    if (trimmedUrl.startsWith('linkedin.com') || trimmedUrl.startsWith('www.linkedin.com')) {
-      return `https://${trimmedUrl}`;
-    }
-    
-    // If it's just a path like /in/username, add the full domain
-    if (trimmedUrl.startsWith('/in/')) {
-      return `https://linkedin.com${trimmedUrl}`;
-    }
-    
-    // If it contains linkedin but is malformed, try to fix it
+    if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) return trimmedUrl;
+    if (trimmedUrl.startsWith('linkedin.com') || trimmedUrl.startsWith('www.linkedin.com')) return `https://${trimmedUrl}`;
+    if (trimmedUrl.startsWith('/in/')) return `https://linkedin.com${trimmedUrl}`;
     if (trimmedUrl.includes('linkedin') && trimmedUrl.includes('/in/')) {
-      // Extract the /in/username part and rebuild
       const match = trimmedUrl.match(/\/in\/[^\/\s]+/);
-      if (match) {
-        return `https://linkedin.com${match[0]}`;
-      }
+      if (match) return `https://linkedin.com${match[0]}`;
     }
-    
-    // Otherwise, assume it's just a username and add the full path
     return `https://linkedin.com/in/${trimmedUrl}`;
   };
 
   const openLinkedIn = (url: string) => {
     if (!url) return;
-    
     const normalizedUrl = normalizeLinkedInUrl(url);
     console.log('Opening LinkedIn URL:', normalizedUrl);
-    
     try {
       window.open(normalizedUrl, '_blank', 'noopener,noreferrer');
     } catch (error) {
       console.error('Failed to open LinkedIn URL:', error);
-      // Fallback: try to navigate directly
       window.location.href = normalizedUrl;
     }
   };
 
-  const clearAllContacts = () => {
-    if (confirm('Are you sure you want to clear all contacts? This cannot be undone.')) {
-      const storageKey = getStorageKey();
-      localStorage.removeItem(storageKey);
+  const clearAllContacts = async () => {
+    if (!confirm('Are you sure you want to clear all contacts? This cannot be undone.')) return;
+    try {
+      if (firebaseUser) {
+        await firebaseApi.clearAllContacts(firebaseUser.uid);
+        console.log('🗑️ Cleared all contacts from Firestore');
+      } else {
+        const storageKey = getStorageKey();
+        localStorage.removeItem(storageKey);
+        console.log('🗑️ Cleared all contacts from localStorage');
+      }
       setContacts([]);
-      console.log('🗑️ Cleared all contacts from localStorage');
+    } catch (error) {
+      console.error('Failed to clear contacts:', error);
     }
   };
 
@@ -268,22 +271,16 @@ ${userName || ''}`;
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">User: {effectiveUserEmail}</span>
           <span className="text-sm text-muted-foreground">Storage: {firebaseUser ? 'Firestore' : 'localStorage'}</span>
-          <Button onClick={loadContacts} variant="outline">
-            Refresh
-          </Button>
+          <Button onClick={loadContacts} variant="outline">Refresh</Button>
           {contacts.length > 0 && (
-            <Button onClick={clearAllContacts} variant="destructive" size="sm">
-              Clear All
-            </Button>
+            <Button onClick={clearAllContacts} variant="destructive" size="sm">Clear All</Button>
           )}
         </div>
       </div>
 
       {contacts.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-muted-foreground text-lg">
-            No contacts in your library yet.
-          </p>
+          <p className="text-muted-foreground text-lg">No contacts in your library yet.</p>
           <p className="text-muted-foreground mt-2">
             Use the search functionality with "Save to Library" enabled to add contacts.
           </p>
@@ -305,6 +302,11 @@ ${userName || ''}`;
                 <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">First Contact Date</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Last Contact Date</th>
+
+                {/* NEW columns */}
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Subject</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Preview</th>
+
                 <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Mail</th>
               </tr>
             </thead>
@@ -339,7 +341,7 @@ ${userName || ''}`;
                         className="p-1 h-auto text-primary hover:text-primary/80"
                         title={`Email ${contact.firstName || contact.lastName || ''}`}
                       >
-                        <a href={buildMailto(contact)}>
+                        <a href={contact.composeLink || buildMailto(contact)}>
                           <Mail className="h-4 w-4 mr-1" />
                           Email
                         </a>
@@ -360,6 +362,16 @@ ${userName || ''}`;
                     </span>
                   </td>
                   <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">{formatDate(contact.lastContactDate)}</td>
+
+                  {/* NEW cells */}
+                  <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">
+                    {contact.emailSubject || '—'}
+                  </td>
+                  <td className="px-3 py-4 text-sm text-foreground" style={{ whiteSpace: 'pre-wrap' }}>
+                    {(contact.emailBody || '').slice(0, 220)}
+                    {(contact.emailBody || '').length > 220 ? '…' : ''}
+                  </td>
+
                   <td className="px-3 py-4 whitespace-nowrap text-sm">
                     {contact.email ? (
                       <Button
@@ -370,7 +382,7 @@ ${userName || ''}`;
                         aria-label={`Quick email ${contact.firstName || contact.lastName || ''}`}
                         title={`Email ${contact.firstName || contact.lastName || ''}`}
                       >
-                        <a href={buildMailto(contact)}>
+                        <a href={contact.composeLink || buildMailto(contact)}>
                           <Mail className="h-4 w-4" />
                         </a>
                       </Button>

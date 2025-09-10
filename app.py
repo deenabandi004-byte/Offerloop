@@ -26,35 +26,18 @@ import firebase_admin
 from firebase_admin import credentials, firestore, auth as fb_auth
 
 from dotenv import load_dotenv
-<<<<<<< HEAD
-from google.oauth2 import service_account
-from google.cloud import firestore
-=======
 from openai import OpenAI
 import sqlite3
 from contextlib import contextmanager
->>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
 
 # Load environment variables from .env
 load_dotenv()
 
-<<<<<<< HEAD
-# Initialize Firestore Client using service account and explicit database
-try:
-    credentials_file = './firebase-creds.json'
-    gcred = service_account.Credentials.from_service_account_file(credentials_file)
-    db = firestore.Client(project=gcred.project_id, credentials=gcred, database='(default)')
-    print(f"✅ Firestore client initialized for project: {gcred.project_id}, database: default")
-except Exception as e:
-    print(f"❌ Firestore client initialization failed: {e}")
-    db = None
-=======
 # Grab API key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Initialize OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)
->>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
 
 # Replace them with these lines:
 PEOPLE_DATA_LABS_API_KEY = os.getenv('PEOPLE_DATA_LABS_API_KEY')
@@ -66,56 +49,7 @@ if not PEOPLE_DATA_LABS_API_KEY:
 if not OPENAI_API_KEY:
     print("WARNING: OPENAI_API_KEY not found in .env file")
 
-<<<<<<< HEAD
-def save_to_firestore(contacts, uid):
-    """Save contacts to Firestore for a user"""
-    if not db:
-        print("❌ Firestore not initialized, skipping save")
-        return False
-    
-    try:
-        user_ref = db.collection('users').document(uid)
-        contacts_ref = user_ref.collection('contacts')
-        
-        existing_contacts = contacts_ref.stream()
-        for contact in existing_contacts:
-            contact.reference.delete()
-        
-        for i, contact in enumerate(contacts):
-            contact_data = {
-                'contact_id': f"{uid}_{i}",
-                'created_at': firestore.SERVER_TIMESTAMP,
-                **contact
-            }
-            contacts_ref.add(contact_data)
-        
-        print(f"✅ Saved {len(contacts)} contacts to Firestore for user {uid}")
-        return True
-    except Exception as e:
-        print(f"❌ Failed to save to Firestore: {e}")
-        return False
-
-def get_user_contacts(uid):
-    """Retrieve user's contacts from Firestore"""
-    if not db:
-        print("❌ Firestore not initialized")
-        return []
-    
-    try:
-        user_ref = db.collection('users').document(uid)
-        contacts_ref = user_ref.collection('contacts')
-        contacts = []
-        
-        for doc in contacts_ref.stream():
-            contact_data = doc.to_dict()
-            contacts.append(contact_data)
-        
-        print(f"✅ Retrieved {len(contacts)} contacts for user {uid}")
-        return contacts
-    except Exception as e:
-        print(f"❌ Failed to retrieve contacts: {e}")
-        return []
-=======
+# Initialize Firebase
 # Initialize Firebase
 try:
     if os.getenv('GOOGLE_APPLICATION_CREDENTIALS'):
@@ -134,10 +68,15 @@ try:
                 break
         
         if cred:
-            firebase_admin.initialize_app(cred)
+            # Explicitly specify the correct project ID
+            firebase_admin.initialize_app(cred, {
+                'projectId': 'offerloop-native'
+            })
         else:
-            print("⚠️ No Firebase credentials found, initializing without credentials")
-            firebase_admin.initialize_app()
+            print("⚠️ No Firebase credentials found, initializing with explicit project ID")
+            firebase_admin.initialize_app(options={
+                'projectId': 'offerloop-native'
+            })
     
     db = firestore.client()
     print("✅ Firebase initialized successfully")
@@ -159,7 +98,6 @@ def require_firebase_auth(fn):
         except Exception as e:
             return jsonify({'error': f'Invalid token: {str(e)}'}), 401
     return wrapper
->>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -285,7 +223,7 @@ PDL_BASE_URL = 'https://api.peopledatalabs.com/v5'
 TIER_CONFIGS = {
     'free': {
         'max_contacts': 8,  # 8 emails = 120 credits (15 credits per email)
-        'fields': ['FirstName', 'LastName', 'LinkedIn', 'Email', 'Title', 'Company', 'City', 'State', 'College'],
+        'fields': ['FirstName', 'LastName', 'LinkedIn', 'Email', 'Title', 'Company', 'City', 'State', 'College', 'Hometown'],
         'uses_pdl': True,
         'uses_email_drafting': True,
         'uses_resume': False,
@@ -875,7 +813,7 @@ def execute_pdl_search(elasticsearch_query, search_type):
                 
                 contacts = []
                 for person in people_data:
-                    contact = extract_contact_from_pdl_person_optimized(person)
+                    contact = extract_contact_from_pdl_person_enhanced(person)
                     if contact:
                         contacts.append(contact)
                 
@@ -893,9 +831,49 @@ def execute_pdl_search(elasticsearch_query, search_type):
     except Exception as e:
         print(f"{search_type.title()} search execution failed: {e}")
         return []
+def extract_hometown_from_education_history_enhanced(education_history):
+    """Extract hometown from contact's education history using OpenAI with your exact prompt"""
+    try:
+        if not education_history or education_history in ['Not available', '']:
+            return "Unknown"
+        
+        print(f"Extracting hometown from education: {education_history[:100]}...")
+        
+        prompt = f"""You are given a candidate's full education history (as plain text). 
+1. **Extract** the name of the high school the candidate attended. 
+2. **Determine** the city/town (hometown) where that high school is located. Use your knowledge of schools and their locations; no external APIs are required. 
+3. **Return** only the hometown as a plain string, without any additional explanations or formatting.
 
-def extract_contact_from_pdl_person_optimized(person):
-    """Extract contact info with focus on recommended_personal_email and correct field mappings"""
+Education History:
+{education_history}
+"""
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=50,
+            temperature=0.3
+        )
+        
+        hometown = response.choices[0].message.content.strip()
+        
+        # Clean up the response
+        hometown = hometown.replace('"', '').replace("'", "").strip()
+        
+        # Validate the response
+        if hometown and len(hometown) > 0 and not hometown.lower().startswith('i '):
+            print(f"Extracted hometown: {hometown}")
+            return hometown
+        else:
+            print("Could not determine hometown from education history")
+            return "Unknown"
+        
+    except Exception as e:
+        print(f"Hometown extraction failed: {e}")
+        return "Unknown"
+
+def extract_contact_from_pdl_person_enhanced(person):
+    """Enhanced contact extraction with detailed work experience, volunteer work, and education"""
     try:
         # Basic info
         first_name = person.get('first_name', '')
@@ -904,26 +882,65 @@ def extract_contact_from_pdl_person_optimized(person):
         if not first_name or not last_name:
             return None
         
-        # Get current job from experience array
+        # Get detailed work experience from experience array
         experience = person.get('experience', [])
-        current_job = experience[0] if experience else {}
+        work_experience_details = []
+        current_job = None
         
-        # Extract company and title
-        company_info = current_job.get('company', {})
-        title_info = current_job.get('title', {})
+        if isinstance(experience, list) and experience:
+            # Current job (first in array)
+            current_job = experience[0]
+            
+            # Build detailed work experience
+            for i, job in enumerate(experience[:5]):  # Top 5 experiences
+                if isinstance(job, dict):
+                    company_info = job.get('company', {})
+                    title_info = job.get('title', {})
+                    
+                    company_name = company_info.get('name', '') if isinstance(company_info, dict) else ''
+                    job_title = title_info.get('name', '') if isinstance(title_info, dict) else ''
+                    
+                    start_date = job.get('start_date', {})
+                    end_date = job.get('end_date', {})
+                    
+                    # Format dates
+                    start_str = ""
+                    end_str = ""
+                    if isinstance(start_date, dict):
+                        start_year = start_date.get('year')
+                        start_month = start_date.get('month')
+                        if start_year:
+                            start_str = f"{start_month or 1}/{start_year}" if start_month else str(start_year)
+                    
+                    if isinstance(end_date, dict):
+                        end_year = end_date.get('year')
+                        end_month = end_date.get('month')
+                        if end_year:
+                            end_str = f"{end_month or 12}/{end_year}" if end_month else str(end_year)
+                    elif i == 0:  # Current job
+                        end_str = "Present"
+                    
+                    # Build experience entry
+                    if company_name and job_title:
+                        duration = f"{start_str} - {end_str}" if start_str else "Date unknown"
+                        work_experience_details.append(f"{job_title} at {company_name} ({duration})")
         
-        company_name = company_info.get('name', '') if isinstance(company_info, dict) else ''
-        job_title = title_info.get('name', '') if isinstance(title_info, dict) else ''
+        # Extract current job details
+        company_name = ''
+        job_title = ''
+        if current_job:
+            company_info = current_job.get('company', {})
+            title_info = current_job.get('title', {})
+            company_name = company_info.get('name', '') if isinstance(company_info, dict) else ''
+            job_title = title_info.get('name', '') if isinstance(title_info, dict) else ''
         
         # Get location using correct field structure
         location_info = person.get('location', {})
         city = location_info.get('locality', '') if isinstance(location_info, dict) else ''
         state = location_info.get('region', '') if isinstance(location_info, dict) else ''
         
-        # FOCUS ON recommended_personal_email (17.9% fill rate - highest quality emails)
+        # Enhanced email extraction
         primary_email = person.get('recommended_personal_email', '')
-        
-        # Get other emails as fallback
         emails = person.get('emails', [])
         personal_email = ''
         work_email = ''
@@ -939,7 +956,6 @@ def extract_contact_from_pdl_person_optimized(person):
                     elif email_type == 'personal':
                         personal_email = email_address
         
-        # Prioritize recommended_personal_email (PDL's highest quality email)
         if not primary_email:
             primary_email = personal_email or work_email
         
@@ -957,12 +973,13 @@ def extract_contact_from_pdl_person_optimized(person):
                     linkedin_url = profile.get('url', '')
                     break
         
-        # Get education
+        # Enhanced education extraction with detailed history
         education = person.get('education', [])
-        education_text = []
+        education_details = []
+        college_name = ""
         
         if isinstance(education, list):
-            for edu in education[:2]:
+            for edu in education:
                 if isinstance(edu, dict):
                     school_info = edu.get('school', {})
                     if isinstance(school_info, dict):
@@ -970,41 +987,88 @@ def extract_contact_from_pdl_person_optimized(person):
                         degrees = edu.get('degrees', [])
                         degree = degrees[0] if isinstance(degrees, list) and degrees else ''
                         
+                        # Get education dates
+                        start_date = edu.get('start_date', {})
+                        end_date = edu.get('end_date', {})
+                        
+                        start_year = start_date.get('year') if isinstance(start_date, dict) else None
+                        end_year = end_date.get('year') if isinstance(end_date, dict) else None
+                        
                         if school_name:
+                            # Build education entry
+                            edu_entry = school_name
                             if degree:
-                                education_text.append(f"{school_name} - {degree}")
-                            else:
-                                education_text.append(school_name)
+                                edu_entry += f" - {degree}"
+                            if start_year or end_year:
+                                years = f"({start_year or '?'} - {end_year or 'Present'})"
+                                edu_entry += f" {years}"
+                            
+                            education_details.append(edu_entry)
+                            
+                            # Set college name (usually the first/most recent)
+                            if not college_name and 'high school' not in school_name.lower():
+                                college_name = school_name
         
-        education_string = '; '.join(education_text) if education_text else 'Not available'
+        education_history = '; '.join(education_details) if education_details else 'Not available'
         
-        # Build optimized contact object with correct field mappings
+        # Enhanced volunteer work extraction from interests and other sources
+        volunteer_work = []
+        
+        # From interests (enhanced extraction)
+        interests = person.get('interests', [])
+        if isinstance(interests, list) and interests:
+            for interest in interests:
+                if isinstance(interest, str):
+                    # Look for volunteer-related keywords
+                    if any(word in interest.lower() for word in ['volunteer', 'charity', 'nonprofit', 'community', 'outreach', 'mentor']):
+                        volunteer_work.append(interest)
+                    elif len(volunteer_work) < 3:  # Add general interests as potential volunteer areas
+                        volunteer_work.append(f"{interest} enthusiast")
+        
+        # From summary or bio if available
+        summary = person.get('summary', '')
+        if summary and isinstance(summary, str):
+            # Look for volunteer mentions in summary
+            volunteer_keywords = ['volunteer', 'charity', 'nonprofit', 'community service', 'mentor', 'coach']
+            summary_lower = summary.lower()
+            for keyword in volunteer_keywords:
+                if keyword in summary_lower:
+                    # Try to extract context around the keyword
+                    sentences = summary.split('.')
+                    for sentence in sentences:
+                        if keyword in sentence.lower():
+                            volunteer_work.append(sentence.strip())
+                            break
+        
+        volunteer_history = '; '.join(volunteer_work[:5]) if volunteer_work else 'Not available'  # Limit to 5 entries
+        
+        # Build enhanced contact object
         contact = {
             'FirstName': first_name,
             'LastName': last_name,
             'LinkedIn': linkedin_url,
-            'Email': primary_email,  # This prioritizes recommended_personal_email
+            'Email': primary_email,
             'Title': job_title,
             'Company': company_name,
             'City': city,
             'State': state,
-            'College': education_string,
+            'College': college_name,
             'Phone': phone,
-            'PersonalEmail': person.get('recommended_personal_email', personal_email),  # Highlight PDL's best email
+            'PersonalEmail': person.get('recommended_personal_email', personal_email),
             'WorkEmail': work_email or 'Not available',
             'SocialProfiles': f'LinkedIn: {linkedin_url}' if linkedin_url else 'Not available',
-            'EducationTop': education_string,
-            'LinkedInConnections': person.get('linkedin_connections', 0),  # Track connection count
-            'DataVersion': person.get('dataset_version', 'Unknown')  # Track data freshness
+            'EducationTop': education_history,  # Now contains full education history
+            'VolunteerHistory': volunteer_history,  # Enhanced volunteer work
+            'WorkSummary': '; '.join(work_experience_details[:3]) if work_experience_details else f"Professional at {company_name}",  # Detailed work experience
+            'Group': f"{company_name} {job_title.split()[0] if job_title else 'Professional'} Team",
+            'LinkedInConnections': person.get('linkedin_connections', 0),
+            'DataVersion': person.get('dataset_version', 'Unknown')
         }
-        
-        # Add additional enrichment
-        add_pdl_enrichment_fields_optimized(contact, person)
         
         return contact
         
     except Exception as e:
-        print(f"Failed to extract optimized contact: {e}")
+        print(f"Failed to extract enhanced contact: {e}")
         return None
 
 def add_pdl_enrichment_fields_optimized(contact, person_data):
@@ -1695,8 +1759,6 @@ def extract_resume_info_fallback(text):
     try:
         print("Using fallback regex extraction...")
         
-        import re
-        
         result = {
             "name": "[Your Name]",
             "year": "[Your Year]",
@@ -2190,18 +2252,6 @@ def generate_enhanced_template_email(contact, resume_text=None, user_profile=Non
         # Craft the email using the enhanced template
         email_body = craft_template_email(user_info, contact, template_type, personalized_content)
         
-<<<<<<< HEAD
-        if user_email:
-            save_to_firestore(basic_contacts, user_email)
-        
-        print(f"Basic tier completed for {user_email}: {len(basic_contacts)} contacts")
-        return {
-            'contacts': basic_contacts,
-            'csv_file': csv_filename,
-            'tier': 'basic',
-            'user_email': user_email
-        }
-=======
         # Generate professional but intriguing subject line
         email_subject = generate_template_subject_line(contact, template_type, personalized_content)
         
@@ -2215,10 +2265,7 @@ def generate_enhanced_template_email(contact, resume_text=None, user_profile=Non
         )
         
         print(f"Generated enhanced template email using '{template_type}' template")
-        print(f"🔥 GENERATED SUBJECT: {email_subject}")
-        print(f"🔥 GENERATED BODY: {email_body[:200]}...")
         return email_subject, email_body
->>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
         
     except Exception as e:
         print(f"Enhanced template email generation failed: {e}")
@@ -2552,7 +2599,7 @@ def generate_email_for_tier(contact, tier='free', resume_info=None, user_profile
         
         return generate_simple_template_fallback(contact, user_name)
 
-def run_free_tier_enhanced(job_title, company, location, user_email=None, user_profile=None, resume_text=None):
+def run_free_tier_enhanced_final(job_title, company, location, user_email=None, user_profile=None, resume_text=None):
     """FREE TIER: 8 contacts max with PDL search + interesting email drafting"""
     print(f"Running FREE tier workflow with interesting emails for {user_email}")
     
@@ -2602,14 +2649,7 @@ def run_free_tier_enhanced(job_title, company, location, user_email=None, user_p
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
             f.write(csv_file.getvalue())
         
-<<<<<<< HEAD
-        if user_email:
-            save_to_firestore(advanced_contacts, user_email)
-        
-        print(f"Advanced tier completed: {len(advanced_contacts)} contacts, {successful_drafts} Gmail drafts")
-=======
         print(f"Free tier completed for {user_email}: {len(free_contacts)} contacts, {successful_drafts} Gmail drafts")
->>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
         return {
             'contacts': free_contacts,
             'csv_file': csv_filename,
@@ -2622,7 +2662,7 @@ def run_free_tier_enhanced(job_title, company, location, user_email=None, user_p
         print(f"Free tier failed for {user_email}: {e}")
         return {'error': str(e), 'contacts': []}
 
-def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=None):
+def run_pro_tier_enhanced_final(job_title, company, location, resume_file, user_email=None):
     """PRO TIER: 56 contacts max with PDL + resume analysis + similarity engine + interesting emails"""
     print(f"Running PRO tier workflow with interesting emails for {user_email}")
     
@@ -2692,14 +2732,7 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
             f.write(csv_file.getvalue())
         
-<<<<<<< HEAD
-        if user_email:
-            save_to_firestore(pro_contacts, user_email)
-        
-        print(f"Pro tier completed: {len(pro_contacts)} contacts, {successful_drafts} Gmail drafts")
-=======
         print(f"Pro tier completed for {user_email}: {len(pro_contacts)} contacts, {successful_drafts} Gmail drafts")
->>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
         print(f"User: {resume_info.get('name')} - {resume_info.get('year')} {resume_info.get('major')}")
         
         return {
@@ -2785,237 +2818,8 @@ def validate_api_keys():
         print(f"WARNING: Missing API keys: {', '.join(missing_keys)}")
         return False
     
-<<<<<<< HEAD
-    if not company or len(company.strip()) < 2:
-        errors.append("Company name must be at least 2 characters")
-    
-    if not location or len(location.strip()) < 2:
-        errors.append("Location must be at least 2 characters")
-    
-    suspicious_patterns = ['test', 'example', 'placeholder', 'xxx']
-    for pattern in suspicious_patterns:
-        if pattern.lower() in job_title.lower() or pattern.lower() in company.lower():
-            errors.append(f"Please provide real search terms (found '{pattern}')")
-    
-    return errors
-
-# ========================================
-# ENHANCED TIER FUNCTIONS WITH LOGGING
-# ========================================
-
-def run_basic_tier_enhanced(job_title, company, location, user_email=None):
-    """Enhanced Basic tier with validation and logging"""
-    print(f"Running BASIC tier workflow for {user_email}")
-    
-    try:
-        errors = validate_search_inputs(job_title, company, location)
-        if errors:
-            return {'error': f"Validation failed: {'; '.join(errors)}", 'contacts': []}
-        
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=6)
-        
-        if not contacts:
-            print("No contacts found for Basic tier")
-            log_api_usage('basic', user_email, 0)
-            return {'error': 'No contacts found', 'contacts': []}
-        
-        basic_contacts = []
-        for contact in contacts:
-            basic_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['basic']['fields']}
-            basic_contacts.append(basic_contact)
-        
-        csv_file = StringIO()
-        fieldnames = TIER_CONFIGS['basic']['fields']
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writeheader()
-        for contact in basic_contacts:
-            writer.writerow(contact)
-        
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        user_prefix = user_email.split('@')[0] if user_email else 'user'
-        csv_filename = f"RecruitEdge_Basic_{user_prefix}_{timestamp}.csv"
-        
-        with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_file.getvalue())
-        
-        log_api_usage('basic', user_email, len(basic_contacts))
-        
-        print(f"Basic tier completed for {user_email}: {len(basic_contacts)} contacts")
-        
-        if user_email:
-            save_to_firestore(basic_contacts, user_email)
-        
-        return {
-            'contacts': basic_contacts,
-            'csv_file': csv_filename,
-            'tier': 'basic',
-            'user_email': user_email,
-            'contact_count': len(basic_contacts)
-        }
-        
-    except Exception as e:
-        print(f"Basic tier failed for {user_email}: {e}")
-        log_api_usage('basic', user_email, 0)
-        return {'error': str(e), 'contacts': []}
-
-def run_advanced_tier_enhanced(job_title, company, location, user_email=None):
-    """Enhanced Advanced tier with validation and logging"""
-    print("Running ADVANCED tier workflow")
-    
-    try:
-        errors = validate_search_inputs(job_title, company, location)
-        if errors:
-            return {'error': f"Validation failed: {'; '.join(errors)}", 'contacts': []}
-        
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=8)
-        
-        if not contacts:
-            print("No contacts found for Advanced tier")
-            log_api_usage('advanced', user_email, 0, 0)
-            return {'error': 'No contacts found', 'contacts': []}
-        
-        successful_drafts = 0
-        for contact in contacts:
-            email_subject, email_body = generate_advanced_email(contact)
-            contact['email_subject'] = email_subject
-            contact['email_body'] = email_body
-            
-            draft_id = create_gmail_draft_for_user(contact, email_subject, email_body, tier='advanced', user_email=user_email)
-            contact['draft_id'] = draft_id
-            if not draft_id.startswith('mock_'):
-                successful_drafts += 1
-        
-        advanced_contacts = []
-        for contact in contacts:
-            advanced_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['advanced']['fields']}
-            advanced_contacts.append(advanced_contact)
-        
-        csv_file = StringIO()
-        fieldnames = TIER_CONFIGS['advanced']['fields']
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writeheader()
-        for contact in advanced_contacts:
-            writer.writerow(contact)
-        
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        csv_filename = f"RecruitEdge_Advanced_{timestamp}.csv"
-        
-        with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_file.getvalue())
-        
-        log_api_usage('advanced', user_email, len(advanced_contacts), len(advanced_contacts))
-        
-        print(f"Advanced tier completed: {len(advanced_contacts)} contacts, {successful_drafts} Gmail drafts")
-        
-        if user_email:
-            save_to_firestore(advanced_contacts, user_email)
-        
-        return {
-            'contacts': advanced_contacts,
-            'csv_file': csv_filename,
-            'successful_drafts': successful_drafts,
-            'tier': 'advanced',
-            'contact_count': len(advanced_contacts)
-        }
-        
-    except Exception as e:
-        print(f"Advanced tier failed: {e}")
-        log_api_usage('advanced', user_email, 0, 0)
-        return {'error': str(e), 'contacts': []}
-
-def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=None):
-    """Enhanced Pro tier with validation and logging"""
-    print("Running PRO tier workflow")
-    
-    try:
-        errors = validate_search_inputs(job_title, company, location)
-        if errors:
-            return {'error': f"Validation failed: {'; '.join(errors)}", 'contacts': []}
-        
-        resume_text = extract_text_from_pdf(resume_file)
-        if not resume_text:
-            log_api_usage('pro', user_email, 0, 0)
-            return {'error': 'Could not extract text from PDF', 'contacts': []}
-        
-        resume_info = parse_resume_info(resume_text)
-        
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=12)
-        
-        if not contacts:
-            print("No contacts found for Pro tier")
-            log_api_usage('pro', user_email, 0, 0)
-            return {'error': 'No contacts found', 'contacts': []}
-        
-        for contact in contacts:
-            similarity = generate_similarity_summary(resume_text, contact)
-            contact['Similarity'] = similarity
-            
-            hometown = extract_hometown_from_education(contact)
-            contact['Hometown'] = hometown or 'Not available'
-        
-        successful_drafts = 0
-        for contact in contacts:
-            email_subject, email_body = generate_pro_email(
-                contact,
-                resume_info,
-                contact['Similarity'],
-                contact['Hometown']
-            )
-            contact['email_subject'] = email_subject
-            contact['email_body'] = email_body
-            
-            draft_id = create_gmail_draft_for_user(contact, email_subject, email_body, tier='pro', user_email=user_email)
-            contact['draft_id'] = draft_id
-            if not draft_id.startswith('mock_'):
-                successful_drafts += 1
-        
-        pro_contacts = []
-        for contact in contacts:
-            pro_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['pro']['fields']}
-            pro_contacts.append(pro_contact)
-        
-        csv_file = StringIO()
-        fieldnames = TIER_CONFIGS['pro']['fields']
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writeheader()
-        for contact in pro_contacts:
-            writer.writerow(contact)
-        
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        csv_filename = f"RecruitEdge_Pro_{timestamp}.csv"
-        
-        with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_file.getvalue())
-        
-        log_api_usage('pro', user_email, len(pro_contacts), len(pro_contacts))
-        
-        print(f"Pro tier completed: {len(pro_contacts)} contacts, {successful_drafts} Gmail drafts")
-        print(f"User: {resume_info.get('name')} - {resume_info.get('year')} {resume_info.get('major')}")
-        
-        if user_email:
-            save_to_firestore(pro_contacts, user_email)
-        
-        return {
-            'contacts': pro_contacts,
-            'csv_file': csv_filename,
-            'successful_drafts': successful_drafts,
-            'resume_info': resume_info,
-            'tier': 'pro',
-            'contact_count': len(pro_contacts)
-        }
-        
-    except Exception as e:
-        print(f"Pro tier failed: {e}")
-        log_api_usage('pro', user_email, 0, 0)
-        return {'error': str(e), 'contacts': []}
-
-# ========================================
-# STARTUP VALIDATION
-# ========================================
-=======
     print("All API keys validated successfully")
     return True
->>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
 
 def startup_checks():
     """Run startup validation checks"""
@@ -3049,7 +2853,7 @@ def startup_checks():
     except Exception as e:
         print(f"PDL API connection: ERROR ({e})")
     
-    # OpenAI API test - properly indented
+    # OpenAI API test
     try:
         test_response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -3088,6 +2892,105 @@ def health():
         }
     })
 
+
+CREATE_GMAIL_DRAFTS = False  # Set True to create Gmail drafts; False to only return subject/body and compose links
+
+def build_mailto_link(contact, subject, body):
+    try:
+        from urllib.parse import quote
+        to_addr = contact.get('Email') or contact.get('WorkEmail') or contact.get('PersonalEmail') or ''
+        subj = quote(subject or '')
+        # Use CRLF for better compatibility; also URL-encode newlines
+        body_encoded = quote((body or '').replace('\n', '\r\n'))
+        return f"mailto:{to_addr}?subject={subj}&body={body_encoded}"
+    except Exception:
+        return ''
+
+# === NEW FINAL TIER FUNCTIONS (use unified email system) ===
+def run_free_tier_enhanced_final(job_title, company, location, user_email=None, user_profile=None, resume_text=None):
+    """FREE: 8 contacts, identical email quality to PRO, basic fields."""
+    contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=8)
+    if not contacts:
+        return {'error': 'No contacts found', 'contacts': []}
+    successful_drafts = 0
+    for contact in contacts:
+        subj, body = generate_email_for_both_tiers(contact, resume_text=resume_text, user_profile=user_profile)
+        contact['email_subject'] = subj
+        contact['email_body'] = body
+        draft_id = create_gmail_draft_for_user(contact, subj, body, tier='free', user_email=user_email)
+        contact['draft_id'] = draft_id
+        if not str(draft_id).startswith('mock_'):
+            successful_drafts += 1
+    # Filter to Free fields only (including Hometown)
+    free_contacts = []
+    for c in contacts:
+        free_contact = {k: v for k, v in c.items() if k in TIER_CONFIGS['free']['fields']}
+        free_contact['email_subject'] = c.get('email_subject','')
+        free_contact['email_body'] = c.get('email_body','')
+        free_contacts.append(free_contact)
+    # CSV
+    csv_file = StringIO()
+    fieldnames = TIER_CONFIGS['free']['fields'] + ['email_subject','email_body']
+    writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in free_contacts:
+        writer.writerow(row)
+    csv_filename = f"RecruitEdge_Free_Final_{(user_email or 'user')}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    with open(csv_filename, 'w', encoding='utf-8', newline='') as f:
+        f.write(csv_file.getvalue())
+    return {'contacts': free_contacts, 'csv_file': csv_filename, 'successful_drafts': successful_drafts, 'tier': 'free', 'user_email': user_email}
+
+def run_pro_tier_enhanced_final(job_title, company, location, resume_file, user_email=None, user_profile=None):
+    """PRO: 56 contacts, identical email quality, richer fields."""
+    resume_text = extract_text_from_pdf(resume_file)
+    if not resume_text:
+        return {'error': 'Could not extract text from PDF', 'contacts': []}
+    contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=56)
+    if not contacts:
+        return {'error': 'No contacts found', 'contacts': []}
+    # Populate extra fields: Similarity (if generator exists) + Hometown
+    for contact in contacts:
+        try:
+            sim = generate_similarity_summary(resume_text, contact)
+        except Exception:
+            sim = ''
+        contact['Similarity'] = sim
+        # Try enhanced hometown via education history (if available)
+        edu_hist = contact.get('EducationTop') or contact.get('EducationHistory') or ''
+        try:
+            hometown = extract_hometown_from_education_history_enhanced(edu_hist)
+        except Exception:
+            hometown = contact.get('Hometown') or 'Unknown'
+        contact['Hometown'] = hometown or 'Unknown'
+        # Generate email
+        subj, body = generate_email_for_both_tiers(contact, resume_text=resume_text, user_profile=user_profile)
+        contact['email_subject'] = subj
+        contact['email_body'] = body
+    # Create drafts
+    successful_drafts = 0
+    for contact in contacts:
+        draft_id = create_gmail_draft_for_user(contact, contact['email_subject'], contact['email_body'], tier='pro', user_email=user_email)
+        contact['draft_id'] = draft_id
+        if not str(draft_id).startswith('mock_'):
+            successful_drafts += 1
+    # Filter to Pro fields
+    pro_contacts = []
+    for c in contacts:
+        pro_contact = {k: v for k, v in c.items() if k in TIER_CONFIGS['pro']['fields']}
+        pro_contact['email_subject'] = c.get('email_subject','')
+        pro_contact['email_body'] = c.get('email_body','')
+        pro_contacts.append(pro_contact)
+    # CSV
+    csv_file = StringIO()
+    fieldnames = TIER_CONFIGS['pro']['fields'] + ['email_subject','email_body']
+    writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in pro_contacts:
+        writer.writerow(row)
+    csv_filename = f"RecruitEdge_Pro_Final_{(user_email or 'user')}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    with open(csv_filename, 'w', encoding='utf-8', newline='') as f:
+        f.write(csv_file.getvalue())
+    return {'contacts': pro_contacts, 'csv_file': csv_filename, 'successful_drafts': successful_drafts, 'tier': 'pro', 'user_email': user_email}
 @app.route('/api/tier-info')
 def get_tier_info():
     """Get information about available tiers"""
@@ -3194,7 +3097,7 @@ def free_run():
         if resume_text:
             print(f"Resume provided for enhanced personalization ({len(resume_text)} chars)")
         
-        result = run_free_tier_enhanced(job_title, company, location, user_email, user_profile, resume_text)
+        result = run_free_tier_enhanced_final(job_title, company, location, user_email, user_profile, resume_text)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
@@ -3304,7 +3207,7 @@ def pro_run():
         print(f"All validations passed!")
         print(f"Interesting Pro search for {user_email}: {job_title} at {company} in {location}")
         
-        result = run_pro_tier_enhanced(job_title, company, location, resume_file, user_email)
+        result = run_pro_tier_enhanced_final(job_title, company, location, resume_file, user_email)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
@@ -3737,6 +3640,163 @@ def handle_exception(e):
     traceback.print_exc()
     return jsonify({'error': 'An unexpected error occurred'}), 500
 
+
+# === BEGIN NEW UNIFIED EMAIL SYSTEM (template-based) ===
+def extract_career_interests_from_profile(user_profile):
+    """Extract only career interests from onboarding profile data.
+    Expects user_profile like {'careerInterests': ['Investment Banking','Consulting']} or similar."""
+    try:
+        if not user_profile:
+            return []
+        interests = user_profile.get('careerInterests') or user_profile.get('career_interests') or []
+        if isinstance(interests, str):
+            # split by comma if delivered as a string
+            return [s.strip() for s in interests.split(',') if s.strip()]
+        if isinstance(interests, list):
+            return [str(x).strip() for x in interests if str(x).strip()]
+        return []
+    except Exception:
+        return []
+
+def extract_user_info_from_resume_priority(resume_text, profile):
+    """Return a dict prioritizing resume-derived facts (name, school, grad year, major) over profile.
+    Fallbacks to profile-only if resume absent."""
+    info = {}
+    resume_text = (resume_text or '').strip()
+    profile = profile or {}
+    try:
+        # Pull from resume first if available via existing parser (if defined)
+        try:
+            parsed = parse_resume_info(resume_text) if resume_text else {}
+        except Exception:
+            parsed = {}
+        # Name
+        info['name'] = parsed.get('name') or profile.get('name') or profile.get('fullName') or ''
+        # University
+        info['university'] = parsed.get('university') or parsed.get('school') or profile.get('university') or profile.get('college') or ''
+        # Major
+        info['major'] = parsed.get('major') or profile.get('major') or ''
+        # Graduation year
+        info['year'] = parsed.get('grad_year') or parsed.get('graduation_year') or profile.get('graduationYear') or profile.get('year') or ''
+        # Degree
+        info['degree'] = parsed.get('degree') or profile.get('degree') or ''
+        # Hometown (optional if resume mentions)
+        info['hometown'] = parsed.get('hometown') or profile.get('hometown') or ''
+        # Career interests from onboarding only
+        info['career_interests'] = extract_career_interests_from_profile(profile)
+        return info
+    except Exception:
+        return {}
+
+def build_template_prompt(user_info, contact, resume_text):
+    """Build the exact prompt spec that drives template selection and drafting.
+    This is designed to be stable and deterministic for gpt-4o-mini."""
+    import json as _json
+    name = user_info.get('name','[Your Name]')
+    university = user_info.get('university','')
+    major = user_info.get('major','')
+    year = user_info.get('year','')
+    degree = user_info.get('degree','')
+    career_interests = user_info.get('career_interests', [])
+    contact_norm = {
+        'FirstName': contact.get('FirstName',''),
+        'LastName': contact.get('LastName',''),
+        'Title': contact.get('Title',''),
+        'Company': contact.get('Company',''),
+        'City': contact.get('City',''),
+        'State': contact.get('State',''),
+        'College': contact.get('College',''),
+        'Hometown': contact.get('Hometown','')
+    }
+    return (
+        "You are an expert career outreach email writer for college students.\n"
+        "Follow these rules exactly:\n"
+        "- You MUST choose ONE of the 5 approved templates (by name): Straightforward, Common-Background, Research-Acknowledgment, Resume-Context, Aspirational.\n"
+        "- Return STRICT JSON with keys: template, subject, body.\n"
+        "- The email must be 120-170 words, concise, respectful, and specific to the contact.\n"
+        "- Avoid placeholders like [Company] unless we truly lack data; when unsure, omit rather than bracket.\n"
+        "- No fluff. No hard sells. Ask for a 15–20 minute chat within 1–2 weeks.\n\n"
+        f"Data:\n- Student: name={{name}}, university={{university}}, major={{major}}, degree={{degree}}, year={{year}}, career_interests={{career_interests}}\n"
+        f"- Contact: " + _json.dumps(contact_norm) + "\n"
+        f"- Resume (may be empty): " + (resume_text[:1500].replace("\n"," ") if resume_text else "")
+        + "\n\nReturn JSON only.\n"
+    )
+
+def parse_openai_email_response(text):
+    """Parse JSON from model response gracefully, with fallbacks."""
+    import json as _json
+    try:
+        return _json.loads(text)
+    except Exception:
+        try:
+            start = text.find('{')
+            end = text.rfind('}')
+            if start != -1 and end != -1 and end > start:
+                return _json.loads(text[start:end+1])
+        except Exception:
+            pass
+    return {
+        'template': 'Straightforward',
+        'subject': 'Quick question about your work',
+        'body': 'Hi there — I had a quick question about your role and would value a brief chat.'
+    }
+
+def sanitize_email_placeholders(body, contact, user_info):
+    """Clean placeholders and fix easy casing issues."""
+    import re as _re
+    def cap_name(s):
+        s = (s or "").strip()
+        if not s:
+            return s
+        if s.islower():
+            return s[:1].upper() + s[1:]
+        return s
+    b = (body or '').strip()
+    b = _re.sub(r'\[(?:Company|Title|Name|University)\]', '', b)
+    b = b.replace('{Company}', contact.get('Company','')).replace('{Title}', contact.get('Title',''))
+    # Fix "Hi grace," -> "Hi Grace,"
+    fname = cap_name(contact.get('FirstName',''))
+    if fname:
+        b = _re.sub(r'(?i)\bhi\s+' + _re.escape(fname.lower()) + r'\b', 'Hi ' + fname, b)
+    b = _re.sub(r' +', ' ', b).strip()
+    return b
+
+def generate_enhanced_fallback_email(contact, user_info):
+    subject = f"Question about your work at {contact.get('Company','your company')}"
+    body = f"""Hi {contact.get('FirstName','')},
+
+My name is {user_info.get('name','[Your Name]')} and I'm a {user_info.get('year','')} {user_info.get('major','')} student at {user_info.get('university','')}. Your role as {contact.get('Title','')} at {contact.get('Company','')} stood out to me.
+
+Would you be open to a 15–20 minute chat next week? I'd love to learn how you got started and what skills matter most.
+
+Thank you,
+{user_info.get('name','[Your Name]')}"""
+    return subject, body
+
+def generate_template_based_email_system(contact, resume_text=None, user_profile=None):
+    """Core function: unified email generation for both tiers using 5 templates."""
+    user_info = extract_user_info_from_resume_priority(resume_text, user_profile)
+    prompt = build_template_prompt(user_info, contact, resume_text or '')
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role":"user","content": prompt}],
+            temperature=0.4,
+            max_tokens=500
+        )
+        raw = response.choices[0].message.content
+        parsed = parse_openai_email_response(raw)
+        subject = parsed.get('subject') or 'Quick question about your work'
+        body = parsed.get('body') or ''
+        body = sanitize_email_placeholders(body, contact, user_info)
+        return subject, body
+    except Exception:
+        return generate_enhanced_fallback_email(contact, user_info)
+
+def generate_email_for_both_tiers(contact, resume_text=None, user_profile=None):
+    """Public entrypoint used by FREE and PRO tier pipelines, identical email quality."""
+    return generate_template_based_email_system(contact, resume_text=resume_text, user_profile=user_profile)
+# === END NEW UNIFIED EMAIL SYSTEM (template-based) ===
 # ========================================
 # MAIN ENTRY POINT
 # ========================================

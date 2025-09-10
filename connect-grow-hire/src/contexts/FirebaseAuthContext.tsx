@@ -30,6 +30,7 @@ interface User {
   subscriptionId?: string;
   emailsUsedThisMonth?: number;
   emailsMonthKey?: string;
+  needsOnboarding?: boolean; 
 }
 
 interface AuthContextType {
@@ -37,6 +38,7 @@ interface AuthContextType {
   signIn: () => Promise<void>;
   signOut: () => void;
   updateUser: (updates: Partial<User>) => Promise<void>;
+  completeOnboarding: (onboardingData: any) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -71,40 +73,60 @@ export const FirebaseAuthProvider: React.FC<FirebaseAuthProviderProps> = ({ chil
     return () => unsubscribe();
   }, []);
 
-// In your existing loadUserData function, replace the Firestore logic with this:
-const loadUserData = async (firebaseUser: FirebaseUser) => {
-  try {
-    // TEMPORARY: Skip Firestore and create user from Firebase Auth
-    const nowKey = getMonthKey();
-    const defaultTier = 'free';
-    const defaultCredits = initialCreditsByTier(defaultTier);
-
-    const newUser: User = {
-      uid: firebaseUser.uid,
-      email: firebaseUser.email || '',
-      name: firebaseUser.displayName || '',
-      picture: firebaseUser.photoURL || undefined,
-      tier: defaultTier,
-      credits: defaultCredits,
-      maxCredits: defaultCredits,
-      emailsMonthKey: nowKey,
-      emailsUsedThisMonth: 0,
-    };
-
-    setUser(newUser);
-    console.log('User set from Firebase Auth (no Firestore):', newUser);
-  } catch (error) {
-    console.error('Error loading user data:', error);
-    setUser(null);
-  }
-};
+  const loadUserData = async (firebaseUser: FirebaseUser) => {
+    try {
+      // Check if user exists in Firestore
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        // User exists - load their data
+        const userData = userDoc.data();
+        const user: User = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          name: firebaseUser.displayName || '',
+          picture: firebaseUser.photoURL || undefined,
+          tier: userData.tier || 'free',
+          credits: userData.credits || initialCreditsByTier(userData.tier || 'free'),
+          maxCredits: userData.maxCredits || initialCreditsByTier(userData.tier || 'free'),
+          emailsMonthKey: userData.emailsMonthKey || getMonthKey(),
+          emailsUsedThisMonth: userData.emailsUsedThisMonth || 0,
+          needsOnboarding: false, // Existing user doesn't need onboarding
+        };
+        setUser(user);
+        console.log('Existing user loaded:', user);
+      } else {
+        // New user - needs onboarding
+        console.log('New user detected, needs onboarding');
+        const newUser: User = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          name: firebaseUser.displayName || '',
+          picture: firebaseUser.photoURL || undefined,
+          tier: 'free',
+          credits: 0,
+          maxCredits: 0,
+          emailsMonthKey: getMonthKey(),
+          emailsUsedThisMonth: 0,
+          needsOnboarding: true, // New user needs onboarding
+        };
+        setUser(newUser);
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      setUser(null);
+    }
+  };
 
   const signIn = async (): Promise<void> => {
     try {
       setIsLoading(true);
       const provider = new GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/gmail.compose');
-      provider.addScope('https://www.googleapis.com/auth/gmail.modify');
+      // Remove Gmail scopes - no longer needed
+      // provider.addScope('https://www.googleapis.com/auth/gmail.compose');
+      // provider.addScope('https://www.googleapis.com/auth/gmail.modify');
+      
       const result = await signInWithPopup(auth, provider);
       console.log('Authentication successful:', result.user.email);
     } catch (error) {
@@ -140,8 +162,50 @@ const loadUserData = async (firebaseUser: FirebaseUser) => {
     }
   };
 
+  const completeOnboarding = async (onboardingData: any) => {
+    if (user) {
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userData = {
+          ...onboardingData,
+          uid: user.uid,
+          email: user.email,
+          name: user.name,
+          picture: user.picture,
+          tier: 'free',
+          credits: initialCreditsByTier('free'),
+          maxCredits: initialCreditsByTier('free'),
+          emailsMonthKey: getMonthKey(),
+          emailsUsedThisMonth: 0,
+          createdAt: new Date().toISOString(),
+          needsOnboarding: false,
+        };
+        
+        await setDoc(userDocRef, userData);
+        
+        // Update local user state
+        setUser({
+          ...user,
+          ...userData,
+        });
+        
+        console.log('Onboarding completed and user saved to database');
+      } catch (error) {
+        console.error('Error completing onboarding:', error);
+        throw error;
+      }
+    }
+  };
+
   return (
-    <FirebaseAuthContext.Provider value={{ user, signIn, signOut, updateUser, isLoading }}>
+    <FirebaseAuthContext.Provider value={{ 
+      user, 
+      signIn, 
+      signOut, 
+      updateUser, 
+      completeOnboarding, 
+      isLoading 
+    }}>
       {children}
     </FirebaseAuthContext.Provider>
   );

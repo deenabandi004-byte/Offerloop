@@ -45,6 +45,82 @@ const TIER_CONFIGS = {
   }
 };
 
+// Helper function to parse CSV text into objects
+// Helper function to parse CSV text into objects with proper handling of quoted fields
+const parseCsvToObjects = (csvText: string) => {
+  const lines = csvText.split('\n').filter(line => line.trim());
+  if (lines.length < 2) return [];
+  
+  // Parse header row
+  const headers = parseCSVLine(lines[0]);
+  const results = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    // Parse the CSV line properly handling quoted fields
+    const values = parseCSVLine(line);
+    
+    // Skip lines that don't have enough fields (likely email content fragments)
+    if (values.length < Math.min(5, headers.length)) {
+      console.log('Skipping malformed line:', line.substring(0, 50) + '...');
+      continue;
+    }
+    
+    const obj: any = {};
+    headers.forEach((header, index) => {
+      obj[header] = values[index] || '';
+    });
+    
+    // Only include rows that have essential contact data
+    if (obj.FirstName || obj.LastName || obj.Email || obj.Company) {
+      results.push(obj);
+    } else {
+      console.log('Skipping non-contact row:', obj);
+    }
+  }
+  
+  console.log(`Parsed ${results.length} valid contacts from ${lines.length - 1} CSV rows`);
+  return results;
+};
+
+// Proper CSV line parser that handles quoted fields with commas and newlines
+const parseCSVLine = (line: string): string[] => {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  let i = 0;
+  
+  while (i < line.length) {
+    const char = line[i];
+    
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        // Handle escaped quotes ("")
+        current += '"';
+        i += 2;
+        continue;
+      } else {
+        // Toggle quote state
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // Field separator outside quotes
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+    
+    i++;
+  }
+  
+  // Add the last field
+  result.push(current.trim());
+  
+  return result.map(field => field.replace(/^"|"$/g, '')); // Remove surrounding quotes
+};
 const Home = () => {
   const { user: firebaseUser, updateUser } = useFirebaseAuth();
   const { migrationComplete } = useFirebaseMigration();
@@ -175,8 +251,17 @@ const Home = () => {
 
         const csvBlob = await apiService.runFreeSearch(searchRequest);
         
+        // Parse CSV to get results for state
+        const csvText = await csvBlob.text();
+        const parsedResults = parseCsvToObjects(csvText);
+        setLastResults(parsedResults);
+        setLastResultsTier('free');
+        
+        // Create new blob for download since we consumed the original
+        const downloadBlob = new Blob([csvText], { type: 'text/csv' });
+        
         // Download CSV
-        const url = URL.createObjectURL(csvBlob);
+        const url = URL.createObjectURL(downloadBlob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `offerloop-free-${Date.now()}.csv`;
@@ -196,8 +281,17 @@ const Home = () => {
 
         const csvBlob = await apiService.runProSearch(proRequest);
         
+        // Parse CSV to get results for state
+        const csvText = await csvBlob.text();
+        const parsedResults = parseCsvToObjects(csvText);
+        setLastResults(parsedResults);
+        setLastResultsTier('pro');
+        
+        // Create new blob for download since we consumed the original
+        const downloadBlob = new Blob([csvText], { type: 'text/csv' });
+        
         // Download CSV
-        const url = URL.createObjectURL(csvBlob);
+        const url = URL.createObjectURL(downloadBlob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `offerloop-pro-${Date.now()}.csv`;
@@ -209,7 +303,7 @@ const Home = () => {
       
       toast({
         title: "Search Complete!",
-        description: `Your ${currentTierConfig.name} tier CSV with up to ${currentTierConfig.maxContacts} contacts has been downloaded.`
+        description: `Your ${currentTierConfig.name} tier CSV with ${lastResults.length} contacts has been downloaded.`
       });
       
       // Deduct credits using Firebase updateUser
@@ -245,43 +339,40 @@ const Home = () => {
 
   const handleSaveToDirectory = async () => {
     try {
-      if (!hasResults) return;
+      if (!hasResults) {
+        toast({
+          title: "No Results",
+          description: "Please run a search first to save contacts.",
+          variant: "destructive"
+        });
+        return;
+      }
       
       const mapped = lastResults.map(mapToDirectoryContact);
       
-      // Use the global function exposed by ContactDirectory
-      if ((window as any).saveContactsToDirectory) {
-        const result = (window as any).saveContactsToDirectory(mapped);
-        
+      // Check if user is authenticated for Firestore saving
+      if (!currentUser) {
         toast({
-          title: "Saved to Contact Directory",
-          description: `Created ${result.created}, skipped ${result.skipped} duplicates.`
+          title: "Authentication Required",
+          description: "Please sign in to save contacts to your library.",
+          variant: "destructive"
         });
-      } else {
-        // Fallback: save directly to localStorage
-        const storageKey = `contacts_${effectiveUser.email.replace('@', '_').replace('.', '_')}`;
-        const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        const newContacts = mapped.map((contact, index) => ({
-          ...contact,
-          id: `contact_${Date.now()}_${index}`,
-          firstContactDate: new Date().toLocaleDateString(),
-          status: 'Not Contacted',
-          lastContactDate: new Date().toLocaleDateString(),
-        }));
-        
-        localStorage.setItem(storageKey, JSON.stringify([...existing, ...newContacts]));
-        
-        toast({
-          title: "Saved to Contact Library",
-          description: `Successfully saved ${mapped.length} contacts.`
-        });
+        return;
       }
+      
+      // Use Firebase API directly instead of the window function
+      const result = await firebaseApi.bulkCreateContacts(currentUser.uid, mapped);
+      
+      toast({
+        title: "Saved to Contact Library",
+        description: `Created ${result.created}, skipped ${result.skipped} duplicates.`
+      });
       
     } catch (e) {
       console.error('Save error:', e);
       toast({
         title: "Error",
-        description: "Failed to save contacts to directory. Please try again.",
+        description: "Failed to save contacts to library. Please try again.",
         variant: "destructive"
       });
     }
@@ -577,13 +668,22 @@ const Home = () => {
                             variant="outline"
                             disabled={!hasResults}
                             onClick={handleSaveToDirectory}
-                            className="border-blue-500 text-blue-300 hover:bg-blue-500/10"
-                            title={hasResults ? `Save ${lastResults.length} to Contact Library` : 'Search to enable saving'}
+                            className={`border-blue-500 text-blue-300 hover:bg-blue-500/10 ${hasResults ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+                            title={hasResults ? `Save ${lastResults.length} contacts to Contact Library` : 'Run a search first to enable saving'}
                           >
                             Save to Contact Library
                           </Button>
                         </div>
                       </div>
+
+                      {/* Results Summary */}
+                      {hasResults && (
+                        <div className="mt-4 p-3 bg-green-800/20 border border-green-600/30 rounded-lg">
+                          <div className="text-sm text-green-300">
+                            ✅ Found {lastResults.length} contacts from {lastResultsTier} tier search
+                          </div>
+                        </div>
+                      )}
 
                       {/* Email Preview - FIXED to use backend email content */}
                       {userTier === 'free' && (lastResults?.length || 0) > 0 && (

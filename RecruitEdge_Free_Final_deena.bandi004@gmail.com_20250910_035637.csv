@@ -1,0 +1,12 @@
+FirstName,LastName,LinkedIn,Email,Title,Company,City,State,College,Hometown,email_subject,email_body
+piper,chester,linkedin.com/in/piperchester,piperchester@gmail.com,software engineer,spotify,,,rochester institute of technology,,Connecting with a Fellow RIT Alum,"Hi Piper,
+
+I hope this message finds you well. My name is [name], and I'm a [year] student at Rochester Institute of Technology, majoring in [major]. I came across your profile and noticed that you are a software engineer at Spotify. As someone interested in pursuing a career in [career_interests], I would love to learn from your experiences in the tech industry.
+
+As a fellow RIT alum, I believe we share a common background that could lead to an insightful conversation. If you have 15-20 minutes in the next couple of weeks, I would greatly appreciate the opportunity to chat and gain your perspective on breaking into the field.
+
+Thank you for considering my request. I look forward to the possibility of connecting!
+
+Best regards,
+
+[name]"

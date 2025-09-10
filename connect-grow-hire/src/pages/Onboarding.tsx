@@ -12,7 +12,6 @@ import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import * as z from "zod";
-import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
 import { firebaseApi } from '../services/firebaseApi';
 
@@ -57,7 +56,7 @@ const universities = [
   "Berea College",
   "Berklee College of Music",
   "Berry College",
-  "Bethune–Cookman University",
+  "Bethune Cookman University",
   "Binghamton University (SUNY)",
   "Biola University",
   "Birmingham-Southern College",
@@ -145,7 +144,7 @@ const universities = [
   "Eckerd College",
   "Elmhurst University",
   "Elon University",
-  "Embry–Riddle Aeronautical University",
+  "Embry Riddle Aeronautical University",
   "Emerson College",
   "Emory University",
   "Fairfield University",
@@ -233,7 +232,7 @@ const universities = [
   "Marquette University",
   "Marshall University",
   "Massachusetts Institute of Technology (MIT)",
-  "McGill University (USA–Canada border draw)",
+  "McGill University (USA-Canada border draw)",
   "Mercer University",
   "Meredith College",
   "Merrimack College",
@@ -388,7 +387,7 @@ const universities = [
   "The University of Vermont",
   "The University of Virginia",
   "The University of Washington",
-  "The University of Wisconsin–Madison",
+  "The University of Wisconsin-Madison",
   "Towson University",
   "Trinity College",
   "Trinity University",
@@ -458,7 +457,7 @@ const universities = [
   "University of Louisiana at Monroe",
   "University of Louisville",
   "University of Maine",
-  "University of Mary Hardin–Baylor",
+  "University of Mary Hardin-Baylor",
   "University of Mary Washington",
   "University of Maryland, Baltimore County (UMBC)",
   "University of Maryland, College Park",
@@ -477,7 +476,7 @@ const universities = [
   "University of Montana",
   "University of Nebraska at Kearney",
   "University of Nebraska at Omaha",
-  "University of Nebraska–Lincoln",
+  "University of Nebraska, Lincoln",
   "University of Nevada, Las Vegas (UNLV)",
   "University of Nevada, Reno",
   "University of New Hampshire",
@@ -534,19 +533,19 @@ const universities = [
   "University of Washington",
   "University of West Florida",
   "University of West Georgia",
-  "University of Wisconsin–Eau Claire",
-  "University of Wisconsin–Green Bay",
-  "University of Wisconsin–La Crosse",
-  "University of Wisconsin–Madison",
-  "University of Wisconsin–Milwaukee",
-  "University of Wisconsin–Oshkosh",
-  "University of Wisconsin–Parkside",
-  "University of Wisconsin–Platteville",
-  "University of Wisconsin–River Falls",
-  "University of Wisconsin–Stevens Point",
-  "University of Wisconsin–Stout",
-  "University of Wisconsin–Superior",
-  "University of Wisconsin–Whitewater",
+  "University of Wisconsin-Eau Claire",
+  "University of Wisconsin-Green Bay",
+  "University of Wisconsin-La Crosse",
+  "University of Wisconsin-Madison",
+  "University of Wisconsin-Milwaukee",
+  "University of Wisconsin-Oshkosh",
+  "University of Wisconsin-Parkside",
+  "University of Wisconsin-Platteville",
+  "University of Wisconsin-River Falls",
+  "University of Wisconsin-Stevens Point",
+  "University of Wisconsin-Stout",
+  "University of Wisconsin-Superior",
+  "University of Wisconsin-Whitewater",
   "University of Wyoming",
   "Utah State University",
   "Utah Valley University",
@@ -626,10 +625,8 @@ const universities = [
 
 const Onboarding = () => {
   const navigate = useNavigate();
-  const { user: legacyUser } = useAuth();
-  const { user: firebaseUser } = useFirebaseAuth();
+  const { user } = useFirebaseAuth();
   
-  const user = firebaseUser || legacyUser;
   const [open, setOpen] = useState(false);
   
   const getResumeData = () => {
@@ -683,9 +680,9 @@ const Onboarding = () => {
         university: data.university || "",
       };
 
-      if (firebaseUser) {
-        const existing = await firebaseApi.getProfessionalInfo(firebaseUser.uid) || {};
-        await firebaseApi.saveProfessionalInfo(firebaseUser.uid, { ...existing, ...update });
+      if (user) {
+        const existing = await firebaseApi.getProfessionalInfo(user.uid) || {};
+        await firebaseApi.saveProfessionalInfo(user.uid, { ...existing, ...update });
         console.log("Saved profile data to Firestore:", { ...existing, ...update });
       } else {
         const existing = JSON.parse(localStorage.getItem('professionalInfo') || '{}');

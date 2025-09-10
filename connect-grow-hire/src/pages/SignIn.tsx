@@ -9,7 +9,7 @@ const SignIn: React.FC = () => {
   const { user, signIn, isLoading } = useFirebaseAuth();
   const { toast } = useToast();
 
-  // Debug: Log whenever user state changes
+  // Handle routing based on user status and onboarding needs
   useEffect(() => {
     console.log('🔍 SignIn useEffect triggered');
     console.log('📊 User state:', user);
@@ -17,19 +17,28 @@ const SignIn: React.FC = () => {
     console.log('⏳ Is loading?', isLoading);
     
     if (user) {
-      console.log('✅ User exists, attempting navigation to /home');
       console.log('👤 User details:', {
         email: user.email,
         name: user.name,
-        uid: user.uid
+        uid: user.uid,
+        needsOnboarding: user.needsOnboarding
       });
       
-      navigate('/home');
-      
-      toast({
-        title: "Welcome back!",
-        description: `Hello ${user.name}!`,
-      });
+      if (user.needsOnboarding) {
+        console.log('🆕 New user detected - redirecting to onboarding');
+        navigate('/onboarding/resume-upload');
+        toast({
+          title: "Welcome to Offerloop!",
+          description: "Let's get you set up",
+        });
+      } else {
+        console.log('✅ Existing user - redirecting to home');
+        navigate('/home');
+        toast({
+          title: "Welcome back!",
+          description: `Hello ${user.name}!`,
+        });
+      }
       
       console.log('🚀 Navigation and toast triggered');
     }
@@ -38,22 +47,8 @@ const SignIn: React.FC = () => {
   const handleGoogleSignIn = async () => {
     try {
       console.log('🔥 Starting Google sign in...');
-      console.log('🔍 Current user before signIn:', user);
-      
       await signIn();
-      
       console.log('✅ signIn() function completed');
-      console.log('🔍 User after signIn call:', user);
-      
-      // Force navigation as backup
-      setTimeout(() => {
-        console.log('⏰ Timeout check - user state:', user);
-        if (user) {
-          console.log('🔄 Force navigating after timeout');
-          navigate('/home');
-        }
-      }, 2000);
-      
     } catch (error) {
       console.error('❌ Sign in failed:', error);
       toast({
@@ -64,11 +59,9 @@ const SignIn: React.FC = () => {
     }
   };
 
-  // Debug: Log when component re-renders
   console.log('🔄 SignIn component rendering, user:', user);
 
   if (isLoading) {
-    console.log('⏳ Showing loading state');
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-lg text-center">
@@ -88,27 +81,19 @@ const SignIn: React.FC = () => {
           <p className="text-gray-600">Sign in to access AI-powered recruiting tools</p>
         </div>
 
-        {/* Debug Info (remove after fixing) */}
-        <div className="mb-4 p-3 bg-gray-100 rounded text-xs">
-          <div>Debug Info:</div>
-          <div>User: {user ? 'Signed In' : 'Not Signed In'}</div>
-          <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
-          {user && <div>Email: {user.email}</div>}
-        </div>
-
-        {/* Features List */}
+        {/* Features List - Updated for the new approach */}
         <div className="mb-8 space-y-3">
           <div className="flex items-center text-sm text-gray-600">
             <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
-            Gmail drafts saved to your account
+            Personalized email content generation
           </div>
           <div className="flex items-center text-sm text-gray-600">
             <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
-            Personalized email generation
+            Copy-paste ready recruiting emails
           </div>
           <div className="flex items-center text-sm text-gray-600">
             <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -151,30 +136,19 @@ const SignIn: React.FC = () => {
           <span>{isLoading ? 'Signing in...' : 'Continue with Google'}</span>
         </button>
 
-        {/* Manual Navigation Button for Testing */}
-        <button
-          onClick={() => {
-            console.log('🔄 Manual navigation triggered');
-            navigate('/home');
-          }}
-          className="w-full mt-4 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Manual Navigate to Home (Debug)
-        </button>
-
-        {/* Privacy Note */}
+        {/* Privacy Note - Updated */}
         <p className="text-xs text-gray-500 text-center mt-6">
-          By signing in, you agree to our Terms of Service and Privacy Policy. 
-          We only access your Gmail to create drafts on your behalf.
+          We generate emails in-app with one-click compose links.
         </p>
+
 
         {/* Back to Home */}
         <div className="text-center mt-6">
           <button
-            onClick={() => navigate('/home')}
+            onClick={() => navigate('/')}
             className="text-sm text-blue-600 hover:text-blue-700 underline"
           >
-            ← Back to Home (Free tier available without sign-in)
+            ← Back to Home
           </button>
         </div>
       </div>
