@@ -1,7 +1,7 @@
 # app.py
-# RECRUITEDGE COMPLETE IMPLEMENTATION - PDL OPTIMIZED WITH ENHANCED SEARCH
-# Based on your product specifications and PDL best practices
-import openai
+# RECRUITEDGE COMPLETE IMPLEMENTATION - PDL OPTIMIZED WITH INTERESTING EMAILS
+# Enhanced email generation that finds genuine mutual interests and creates compelling connections
+
 import os
 import json
 import requests
@@ -17,18 +17,28 @@ from google.oauth2.credentials import Credentials
 import PyPDF2
 import tempfile
 import re
+import functools
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import traceback
+import firebase_admin
+from firebase_admin import credentials, firestore, auth as fb_auth
 
 from dotenv import load_dotenv
+<<<<<<< HEAD
 from google.oauth2 import service_account
 from google.cloud import firestore
+=======
+from openai import OpenAI
+import sqlite3
+from contextlib import contextmanager
+>>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
 
-# Load environment variables
+# Load environment variables from .env
 load_dotenv()
 
+<<<<<<< HEAD
 # Initialize Firestore Client using service account and explicit database
 try:
     credentials_file = './firebase-creds.json'
@@ -38,17 +48,25 @@ try:
 except Exception as e:
     print(f"❌ Firestore client initialization failed: {e}")
     db = None
+=======
+# Grab API key
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Initialize OpenAI client
+client = OpenAI(api_key=OPENAI_API_KEY)
+>>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
 
 # Replace them with these lines:
 PEOPLE_DATA_LABS_API_KEY = os.getenv('PEOPLE_DATA_LABS_API_KEY')
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Add this validation
 if not PEOPLE_DATA_LABS_API_KEY:
     print("WARNING: PEOPLE_DATA_LABS_API_KEY not found in .env file")
-if not openai.api_key:
+
+if not OPENAI_API_KEY:
     print("WARNING: OPENAI_API_KEY not found in .env file")
 
+<<<<<<< HEAD
 def save_to_firestore(contacts, uid):
     """Save contacts to Firestore for a user"""
     if not db:
@@ -97,42 +115,195 @@ def get_user_contacts(uid):
     except Exception as e:
         print(f"❌ Failed to retrieve contacts: {e}")
         return []
+=======
+# Initialize Firebase
+try:
+    if os.getenv('GOOGLE_APPLICATION_CREDENTIALS'):
+        firebase_admin.initialize_app()
+    else:
+        # Try different possible paths for credentials
+        cred_paths = [
+            './firebase-creds.json',
+            '/home/ubuntu/secrets/firebase-creds.json',
+            os.path.expanduser('~/firebase-creds.json')
+        ]
+        cred = None
+        for path in cred_paths:
+            if os.path.exists(path):
+                cred = credentials.Certificate(path)
+                break
+        
+        if cred:
+            firebase_admin.initialize_app(cred)
+        else:
+            print("⚠️ No Firebase credentials found, initializing without credentials")
+            firebase_admin.initialize_app()
+    
+    db = firestore.client()
+    print("✅ Firebase initialized successfully")
+except Exception as e:
+    print(f"❌ Firebase initialization failed: {e}")
+    db = None
+
+def require_firebase_auth(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            auth_header = request.headers.get('Authorization', '')
+            if not auth_header.startswith('Bearer '):
+                return jsonify({'error': 'Missing Authorization header'}), 401
+            id_token = auth_header.split(' ', 1)[1].strip()
+            decoded = fb_auth.verify_id_token(id_token)
+            request.firebase_user = decoded
+            return fn(*args, **kwargs)
+        except Exception as e:
+            return jsonify({'error': f'Invalid token: {str(e)}'}), 401
+    return wrapper
+>>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
 
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app, origins=["https://d33d83bb2e38.ngrok-free.app", "*"])
 
-# PDL Configuration with your API key
+DB_PATH = os.path.join(os.path.dirname(__file__), 'contacts.db')
 
+@contextmanager
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+def init_db():
+    with get_db() as db:
+        db.execute("""
+        CREATE TABLE IF NOT EXISTS contacts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_email TEXT NOT NULL,
+          first_name TEXT,
+          last_name TEXT,
+          linkedin TEXT,
+          email TEXT,
+          title TEXT,
+          company TEXT,
+          city TEXT,
+          state TEXT,
+          college TEXT,
+          phone TEXT,
+          personal_email TEXT,
+          work_email TEXT,
+          social_profiles TEXT,
+          education_top TEXT,
+          volunteer_history TEXT,
+          work_summary TEXT,
+          grp TEXT,
+          hometown TEXT,
+          similarity TEXT,
+          status TEXT DEFAULT 'Not Contacted',
+          first_contact_date TEXT,
+          last_contact_date TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+        db.execute("CREATE INDEX IF NOT EXISTS idx_contacts_user_email ON contacts(user_email);")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_contacts_linkedin ON contacts(linkedin);")
+        db.commit()
+
+def normalize_contact(c: dict) -> dict:
+    today = datetime.date.today().strftime("%m/%d/%Y")
+    return {
+      'FirstName': c.get('FirstName',''),
+      'LastName': c.get('LastName',''),
+      'LinkedIn': c.get('LinkedIn',''),
+      'Email': c.get('Email',''),
+      'Title': c.get('Title',''),
+      'Company': c.get('Company',''),
+      'City': c.get('City',''),
+      'State': c.get('State',''),
+      'College': c.get('College',''),
+      'Phone': c.get('Phone',''),
+      'PersonalEmail': c.get('PersonalEmail',''),
+      'WorkEmail': c.get('WorkEmail',''),
+      'SocialProfiles': c.get('SocialProfiles',''),
+      'EducationTop': c.get('EducationTop',''),
+      'VolunteerHistory': c.get('VolunteerHistory',''),
+      'WorkSummary': c.get('WorkSummary',''),
+      'Group': c.get('Group',''),
+      'Hometown': c.get('Hometown',''),
+      'Similarity': c.get('Similarity',''),
+      'Status': c.get('Status','Not Contacted'),
+      'FirstContactDate': c.get('FirstContactDate', today),
+      'LastContactDate': c.get('LastContactDate', today),
+    }
+
+def save_contacts_sqlite(user_email: str, contacts: list) -> int:
+    if not user_email or not contacts:
+        return 0
+    rows = [normalize_contact(c) for c in contacts]
+    with get_db() as db:
+        cur = db.cursor()
+        for r in rows:
+            existing = cur.execute("""
+              SELECT id FROM contacts WHERE user_email=? AND
+                (linkedin=? AND linkedin<>'') OR (email=? AND email<>'')
+            """, (user_email, r['LinkedIn'], r['Email'])).fetchone()
+            if existing:
+                continue
+            cur.execute("""
+              INSERT INTO contacts (
+                user_email, first_name, last_name, linkedin, email, title, company, city, state, college,
+                phone, personal_email, work_email, social_profiles, education_top, volunteer_history,
+                work_summary, grp, hometown, similarity, status, first_contact_date, last_contact_date
+              ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, (
+              user_email, r['FirstName'], r['LastName'], r['LinkedIn'], r['Email'], r['Title'], r['Company'],
+              r['City'], r['State'], r['College'], r['Phone'], r['PersonalEmail'], r['WorkEmail'],
+              r['SocialProfiles'], r['EducationTop'], r['VolunteerHistory'], r['WorkSummary'],
+              r['Group'], r['Hometown'], r['Similarity'], r['Status'], r['FirstContactDate'], r['LastContactDate']
+            ))
+        db.commit()
+        return cur.rowcount or 0
+
+def list_contacts_sqlite(user_email: str) -> list:
+    if not user_email:
+        return []
+    with get_db() as db:
+        rows = db.execute("""
+          SELECT id, user_email, first_name, last_name, linkedin, email, title, company, city, state,
+                 college, phone, personal_email, work_email, social_profiles, education_top, volunteer_history,
+                 work_summary, grp, hometown, similarity, status, first_contact_date, last_contact_date, created_at
+          FROM contacts WHERE user_email=? ORDER BY created_at DESC
+        """, (user_email,)).fetchall()
+        return [dict(r) for r in rows]
+
+# PDL Configuration with your API key
 PDL_BASE_URL = 'https://api.peopledatalabs.com/v5'
 
-
-# TIER CONFIGURATIONS (from your specs)
+# TIER CONFIGURATIONS - SIMPLIFIED TO TWO TIERS
 TIER_CONFIGS = {
-    'basic': {
-        'max_contacts': 6,
+    'free': {
+        'max_contacts': 8,  # 8 emails = 120 credits (15 credits per email)
         'fields': ['FirstName', 'LastName', 'LinkedIn', 'Email', 'Title', 'Company', 'City', 'State', 'College'],
         'uses_pdl': True,
-        'uses_email_drafting': False,
-        'uses_resume': False
-    },
-    'advanced': {
-        'max_contacts': 8,
-        'fields': ['FirstName', 'LastName', 'LinkedIn', 'Email', 'Title', 'Company', 'City', 'State', 'College',
-                  'Phone', 'PersonalEmail', 'WorkEmail', 'SocialProfiles', 'EducationTop', 'VolunteerHistory',
-                  'WorkSummary', 'Group'],
-        'uses_pdl': True,
         'uses_email_drafting': True,
-        'uses_resume': False
+        'uses_resume': False,
+        'credits': 120,
+        'time_saved_minutes': 200,  # 8 emails * 25 minutes each
+        'description': 'Try out platform risk free'
     },
     'pro': {
-        'max_contacts': 12,
+        'max_contacts': 56,  # 56 emails = 840 credits (15 credits per email)
         'fields': ['FirstName', 'LastName', 'LinkedIn', 'Email', 'Title', 'Company', 'City', 'State', 'College',
                   'Phone', 'PersonalEmail', 'WorkEmail', 'SocialProfiles', 'EducationTop', 'VolunteerHistory',
                   'WorkSummary', 'Group', 'Hometown', 'Similarity'],
         'uses_pdl': True,
         'uses_email_drafting': True,
-        'uses_resume': True
+        'uses_resume': True,
+        'credits': 840,
+        'time_saved_minutes': 1200,  # 56 emails * ~21 minutes each (more efficient at scale)
+        'description': 'Everything in free plus advanced features'
     }
 }
 
@@ -894,174 +1065,498 @@ def search_contacts_with_pdl_optimized(job_title, company, location, max_contact
     return search_contacts_with_smart_location_strategy(job_title, company, location, max_contacts)
 
 # ========================================
-# EMAIL GENERATION (Advanced & Pro Tiers)
+# NEW INTERESTING EMAIL GENERATION SYSTEM
 # ========================================
 
-def generate_advanced_email(contact):
-    """Generate Advanced tier email using your exact template"""
+def find_mutual_interests_and_hooks(user_info, contact, resume_text=None):
+    """Find compelling mutual interests and conversation hooks"""
     try:
-        print(f"Generating Advanced email for {contact.get('FirstName', 'Unknown')}")
+        hooks = []
         
-        # Your exact Advanced email template
+        # Extract user's interests from resume
+        user_interests = extract_interests_from_resume(resume_text) if resume_text else []
+        user_experiences = user_info.get('experiences', [])
+        user_skills = user_info.get('skills', [])
+        
+        # Extract contact's interests from their data
+        contact_interests = extract_contact_interests(contact)
+        
+        # Find specific overlap
+        interest_overlaps = find_interest_overlaps(user_interests + user_experiences + user_skills, contact_interests)
+        
+        # Generate compelling hooks
+        if interest_overlaps:
+            for overlap in interest_overlaps[:2]:  # Top 2 overlaps
+                hooks.append(create_interest_hook(overlap, user_info, contact))
+        
+        # Add unique conversation starters
+        unique_hooks = generate_unique_conversation_starters(user_info, contact, contact_interests)
+        hooks.extend(unique_hooks[:1])  # Add 1 unique hook
+        
+        return hooks[:3]  # Return top 3 hooks
+        
+    except Exception as e:
+        print(f"Error finding mutual interests: {e}")
+        return []
+
+def extract_interests_from_resume(resume_text):
+    """Extract interests, hobbies, and activities from resume"""
+    try:
+        if not resume_text or len(resume_text.strip()) < 50:
+            return []
+        
+        # Look for interests section
+        interests = []
+        resume_lower = resume_text.lower()
+        
+        # Common interest indicators
+        interest_patterns = [
+            r'interests?[:\-\s]+(.*?)(?:\n\n|\n[A-Z]|$)',
+            r'hobbies[:\-\s]+(.*?)(?:\n\n|\n[A-Z]|$)',
+            r'activities[:\-\s]+(.*?)(?:\n\n|\n[A-Z]|$)',
+            r'volunteer[:\-\s]+(.*?)(?:\n\n|\n[A-Z]|$)',
+            r'extracurricular[:\-\s]+(.*?)(?:\n\n|\n[A-Z]|$)'
+        ]
+        
+        for pattern in interest_patterns:
+            matches = re.findall(pattern, resume_text, re.IGNORECASE | re.DOTALL)
+            for match in matches:
+                # Clean and split interests
+                clean_interests = [i.strip() for i in re.split(r'[,;•\-\n]', match) if i.strip() and len(i.strip()) > 2]
+                interests.extend(clean_interests[:5])  # Limit to 5 per category
+        
+        # Also look for projects that might indicate interests
+        project_keywords = ['project', 'built', 'created', 'developed', 'designed']
+        for keyword in project_keywords:
+            pattern = rf'{keyword}[:\s]+([^.\n]+)'
+            matches = re.findall(pattern, resume_text, re.IGNORECASE)
+            for match in matches[:3]:  # Top 3 projects
+                if len(match.strip()) > 10:
+                    interests.append(f"Project: {match.strip()[:50]}")
+        
+        # Remove duplicates and return
+        unique_interests = list(set(interests))
+        return unique_interests[:10]  # Top 10 interests
+        
+    except Exception as e:
+        print(f"Error extracting interests from resume: {e}")
+        return []
+
+def extract_contact_interests(contact):
+    """Extract potential interests from contact's profile data"""
+    interests = []
+    
+    # From volunteer history
+    volunteer = contact.get('VolunteerHistory', '')
+    if volunteer and 'Not available' not in volunteer:
+        interests.extend([v.strip() for v in volunteer.split(';') if v.strip()])
+    
+    # From company (industry interests)
+    company = contact.get('Company', '')
+    if company:
+        interests.append(f"Works in {get_industry_from_company(company)}")
+    
+    # From job title (role interests)
+    title = contact.get('Title', '')
+    if title:
+        interests.append(f"Interested in {extract_field_from_title(title)}")
+    
+    # From education (academic interests)
+    education = contact.get('EducationTop', '')
+    if education and 'Not available' not in education:
+        # Extract university and potential major
+        edu_parts = education.split(' - ')
+        if len(edu_parts) > 1:
+            interests.append(f"Academic background in {edu_parts[1]}")
+        interests.append(f"Alumni of {edu_parts[0]}")
+    
+    # From location (geographic interests)
+    city = contact.get('City', '')
+    state = contact.get('State', '')
+    if city and state:
+        interests.append(f"Lives in {city}, {state}")
+        interests.append(f"Connected to {state} region")
+    
+    return interests
+
+def get_industry_from_company(company):
+    """Determine industry from company name"""
+    company_lower = company.lower()
+    
+    if any(word in company_lower for word in ['google', 'apple', 'microsoft', 'amazon', 'meta', 'facebook', 'netflix']):
+        return 'Big Tech'
+    elif any(word in company_lower for word in ['tesla', 'spacex', 'nvidia', 'intel']):
+        return 'Innovation/Hardware'
+    elif any(word in company_lower for word in ['goldman', 'morgan', 'jpmorgan', 'bank', 'capital', 'investment']):
+        return 'Finance'
+    elif any(word in company_lower for word in ['mckinsey', 'bain', 'bcg', 'consulting']):
+        return 'Consulting'
+    elif any(word in company_lower for word in ['healthcare', 'medical', 'pharma', 'biotech']):
+        return 'Healthcare/Biotech'
+    elif any(word in company_lower for word in ['startup', 'labs', 'ventures']):
+        return 'Startup/Entrepreneurship'
+    else:
+        return 'their industry'
+
+def extract_field_from_title(title):
+    """Extract field of interest from job title"""
+    title_lower = title.lower()
+    
+    if any(word in title_lower for word in ['engineer', 'developer', 'software', 'technical']):
+        return 'technology and engineering'
+    elif any(word in title_lower for word in ['product', 'pm']):
+        return 'product management'
+    elif any(word in title_lower for word in ['data', 'analytics', 'scientist']):
+        return 'data science and analytics'
+    elif any(word in title_lower for word in ['marketing', 'brand', 'growth']):
+        return 'marketing and growth'
+    elif any(word in title_lower for word in ['sales', 'business', 'revenue']):
+        return 'business development'
+    elif any(word in title_lower for word in ['design', 'ux', 'ui']):
+        return 'design and user experience'
+    elif any(word in title_lower for word in ['finance', 'accounting', 'analyst']):
+        return 'finance and analysis'
+    else:
+        return 'their field'
+
+def find_interest_overlaps(user_interests, contact_interests):
+    """Find overlapping interests between user and contact"""
+    overlaps = []
+    
+    for user_int in user_interests:
+        for contact_int in contact_interests:
+            similarity_score = calculate_interest_similarity(user_int, contact_int)
+            if similarity_score > 0.3:  # Threshold for similarity
+                overlaps.append({
+                    'user_interest': user_int,
+                    'contact_interest': contact_int,
+                    'similarity': similarity_score,
+                    'overlap_type': determine_overlap_type(user_int, contact_int)
+                })
+    
+    # Sort by similarity score
+    return sorted(overlaps, key=lambda x: x['similarity'], reverse=True)
+
+def calculate_interest_similarity(user_int, contact_int):
+    """Calculate similarity between two interests"""
+    user_words = set(user_int.lower().split())
+    contact_words = set(contact_int.lower().split())
+    
+    # Jaccard similarity
+    intersection = len(user_words.intersection(contact_words))
+    union = len(user_words.union(contact_words))
+    
+    if union == 0:
+        return 0
+    
+    return intersection / union
+
+def determine_overlap_type(user_int, contact_int):
+    """Determine the type of overlap for better hook generation"""
+    if 'project' in user_int.lower() and 'tech' in contact_int.lower():
+        return 'technical_project'
+    elif 'volunteer' in user_int.lower() or 'volunteer' in contact_int.lower():
+        return 'community_impact'
+    elif any(word in user_int.lower() for word in ['university', 'college', 'school']):
+        return 'education'
+    elif any(word in user_int.lower() for word in ['startup', 'entrepreneur', 'founded']):
+        return 'entrepreneurship'
+    elif any(word in contact_int.lower() for word in ['lives in', 'connected to']):
+        return 'geographic'
+    else:
+        return 'professional'
+
+def create_interest_hook(overlap, user_info, contact):
+    """Create a compelling conversation hook from an overlap"""
+    overlap_type = overlap['overlap_type']
+    user_interest = overlap['user_interest']
+    contact_interest = overlap['contact_interest']
+    
+    hooks = {
+        'technical_project': f"I noticed you work in {extract_field_from_title(contact.get('Title', ''))} - I actually built a {user_interest.replace('Project:', '').strip()} and would love your perspective on the technical challenges.",
+        
+        'community_impact': f"I saw your involvement in {contact_interest} - I'm passionate about {user_interest} and curious how you balance community impact with your work at {contact.get('Company', '')}.",
+        
+        'education': f"Fellow {extract_university_name(contact.get('EducationTop', ''))} connection! I'd love to hear how your experience there shaped your path to {contact.get('Company', '')}.",
+        
+        'entrepreneurship': f"I noticed your background suggests entrepreneurial thinking - I've been working on {user_interest} and would value your insights on navigating innovation in established companies.",
+        
+        'geographic': f"I have strong ties to {extract_location_from_interest(contact_interest)} and am curious about the {get_industry_from_company(contact.get('Company', ''))} scene there.",
+        
+        'professional': f"Your work in {extract_field_from_title(contact.get('Title', ''))} aligns perfectly with my interest in {user_interest} - I'd love to learn about your journey and current projects."
+    }
+    
+    return hooks.get(overlap_type, hooks['professional'])
+
+def generate_unique_conversation_starters(user_info, contact, contact_interests):
+    """Generate unique conversation starters based on current trends and company-specific topics"""
+    starters = []
+    
+    company = contact.get('Company', '')
+    title = contact.get('Title', '')
+    
+    # Company-specific conversation starters
+    if company:
+        company_lower = company.lower()
+        
+        if 'tesla' in company_lower:
+            starters.append("I've been following Tesla's Full Self-Driving progress - curious about your take on the intersection of hardware and software in autonomous systems.")
+        elif 'google' in company_lower:
+            starters.append("With Google's focus on AI integration across products, I'm curious how that's impacting your day-to-day work and team dynamics.")
+        elif 'microsoft' in company_lower:
+            starters.append("Microsoft's shift toward AI-first development is fascinating - would love to hear your perspective on how that's changing the engineering culture.")
+        elif 'amazon' in company_lower:
+            starters.append("Amazon's scale of operations is incredible - I'm curious about the unique technical challenges that come with that level of complexity.")
+        elif 'meta' in company_lower or 'facebook' in company_lower:
+            starters.append("Meta's investment in VR/AR and the metaverse is bold - interested in your thoughts on how that vision is shaping current product decisions.")
+        elif 'netflix' in company_lower:
+            starters.append("Netflix's data-driven approach to content and user experience is impressive - curious about the technical infrastructure that makes that personalization possible.")
+        elif any(word in company_lower for word in ['startup', 'labs', 'ventures']):
+            starters.append(f"The startup environment at {company} must be exciting - I'm curious about the unique challenges and opportunities in a rapidly scaling company.")
+        elif any(word in company_lower for word in ['consulting', 'mckinsey', 'bain', 'bcg']):
+            starters.append("The consulting world offers such diverse problem-solving opportunities - would love to hear about the most interesting challenge you've tackled recently.")
+        elif any(word in company_lower for word in ['bank', 'finance', 'capital']):
+            starters.append("The intersection of finance and technology is evolving rapidly - curious about how traditional finance is adapting to new tech paradigms.")
+    
+    # Role-specific conversation starters
+    if title:
+        title_lower = title.lower()
+        
+        if 'product' in title_lower:
+            starters.append("Product management requires balancing so many stakeholder needs - I'm curious about your framework for prioritizing features and making tough trade-offs.")
+        elif 'data' in title_lower:
+            starters.append("The role of data science in business decisions keeps expanding - interested in how you communicate complex insights to non-technical stakeholders.")
+        elif 'design' in title_lower:
+            starters.append("User experience design is becoming more strategic - curious about how you balance user research with business objectives in your design process.")
+        elif 'marketing' in title_lower:
+            starters.append("Marketing is becoming increasingly data-driven and technical - would love to hear about the tools and methodologies you find most effective.")
+    
+    return starters
+
+def extract_university_name(education):
+    """Extract university name from education string"""
+    if not education or 'Not available' in education:
+        return ''
+    
+    parts = education.split(' - ')
+    return parts[0] if parts else education
+
+def extract_location_from_interest(interest):
+    """Extract location from interest string"""
+    if 'lives in' in interest:
+        return interest.replace('lives in', '').strip()
+    elif 'connected to' in interest:
+        return interest.replace('connected to', '').replace('region', '').strip()
+    return interest
+
+def generate_compelling_email_with_hooks(user_info, contact, hooks):
+    """Generate email using the identified hooks and mutual interests"""
+    try:
+        # Select the best hook
+        primary_hook = hooks[0] if hooks else "I'm interested in learning more about your work"
+        
+        # Build context
+        user_context = f"{user_info.get('year', '')} {user_info.get('major', '')} student at {user_info.get('university', '')}"
+        contact_role = f"{contact.get('Title', '')} at {contact.get('Company', '')}"
+        
         prompt = f"""
-Given the information provided which includes name, job title, city, state, work experiences, education, undergrad, write an email following this exact template that's tailored for them but still leave all the [Your Name], [Your year/major], and [Your University] placeholders empty so the sender can fill those in:
+Write a compelling networking email that feels genuine and creates immediate interest.
 
-Hi {contact.get('FirstName', '[First Name]')},
+SENDER: {user_info.get('name', '[Name]')} - {user_context}
 
-I hope you're doing well! My name is [Your Name], and I'm currently a [Your year/major] at [Your University]. I came across your profile while researching {contact.get('Company', '[Company Name]')}/{contact.get('Title', 'your field').lower()} and was really inspired by your work in {contact.get('Title', '[specific role, team, project, or recent accomplishment]')}.
+RECIPIENT: {contact.get('FirstName', '')} {contact.get('LastName', '')} - {contact_role}
 
-I'm very interested in {contact.get('Title', '[role/team/industry]').lower()} and would really appreciate the chance to learn more about your journey and any advice you may have. If you're open to it, would you be available for a quick 15-20 minute chat sometime this or next week?
+PRIMARY CONVERSATION HOOK: {primary_hook}
 
-Thanks so much in advance - I'd love to hear your perspective!
+ADDITIONAL CONTEXT:
+- Location: {contact.get('City', '')}, {contact.get('State', '')}
+- Background: {contact.get('WorkSummary', '')}
 
-Warmly, [Your Full Name]
+EMAIL REQUIREMENTS:
+1. Start with "Hi {contact.get('FirstName', '')},"
+2. Use the conversation hook naturally in the first or second sentence
+3. Show genuine curiosity about their specific work/experience
+4. Make it feel like you've done research but aren't stalking them
+5. Ask for a brief 15-20 minute conversation
+6. Keep it 60-100 words
+7. End with {user_info.get('name', '[Name]')}
+8. Make it feel conversational and interesting, not formal or templated
 
-Contact Information:
-- Name: {contact.get('FirstName')} {contact.get('LastName')}
-- Company: {contact.get('Company')}
-- Title: {contact.get('Title')}
-- Work Summary: {contact.get('WorkSummary', '')}
-- Education: {contact.get('EducationTop', '')}
-- Volunteer History: {contact.get('VolunteerHistory', '')}
-
-Customize the email by:
-- Filling in their actual first name, company name, and industry
-- Referencing their specific role, team, or a recent accomplishment from their work experience
-- Making the industry/role interest sound genuine and specific to their background
-- Keep [Your Name], [Your year/major], [Your University], and [Your Full Name] as placeholders for the sender to fill in
+Focus on creating immediate intrigue and showing you'd be an interesting person to talk to.
 """
         
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are an expert at writing personalized networking emails for Advanced tier. Keep emails warm, professional, and follow the template exactly."},
+                {"role": "system", "content": "You write compelling networking emails that create immediate interest and intrigue. Focus on making genuine connections through shared interests and curiosity."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=400,
-            temperature=0.7
+            max_tokens=300,
+            temperature=0.8
         )
         
-        email_body = response.choices[0].message.content.strip()
+        return response.choices[0].message.content.strip()
         
-        # Generate subject using your template
-        email_subject = f"Quick Chat to Learn about Your Work at {contact.get('Company', 'Your Company')}?"
+    except Exception as e:
+        print(f"Error generating compelling email: {e}")
+        return generate_fallback_email_with_hook(user_info, contact, primary_hook)
+
+def generate_intriguing_subject_line(user_info, contact, hooks):
+    """Generate subject line that creates curiosity and gets opened"""
+    try:
+        primary_hook = hooks[0] if hooks else ""
         
-        print(f"Generated Advanced email for {contact.get('FirstName', 'Unknown')}")
+        prompt = f"""
+Create an intriguing email subject line that creates curiosity and gets opened.
+
+Context:
+- {user_info.get('major', 'Student')} at {user_info.get('university', '')}
+- Reaching out to {contact.get('Title', '')} at {contact.get('Company', '')}
+- Conversation hook: {primary_hook[:100]}...
+
+The subject should:
+- Create immediate curiosity or intrigue
+- Be 4-7 words
+- Make the recipient want to know more
+- Not be generic or obvious
+- Include a personal element if possible
+
+Examples of intriguing subjects:
+- "Autonomous systems question from Alabama"
+- "Meta's VR strategy + student perspective"
+- "Tesla engineer + FSD curiosity"
+- "Startup question from CS student"
+- "Data science ethics dilemma"
+- "Product management trade-off question"
+
+Return only the subject line.
+"""
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You write intriguing email subject lines that create curiosity and get opened. Focus on making people want to know more."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=30,
+            temperature=0.8
+        )
+        
+        return response.choices[0].message.content.strip().strip('"').strip("'")
+        
+    except Exception as e:
+        print(f"Error generating subject line: {e}")
+        return f"Question about {contact.get('Company', 'your work')}"
+
+def generate_fallback_email_with_hook(user_info, contact, hook):
+    """Fallback email generation if AI fails"""
+    return f"""Hi {contact.get('FirstName', '')},
+
+{hook}
+
+As a {user_info.get('major', '')} student at {user_info.get('university', '')}, I'd love to hear your perspective. Would you be open to a brief 15-20 minute conversation?
+
+Best regards,
+{user_info.get('name', '')}"""
+
+def generate_interesting_email(contact, resume_text=None, user_profile=None):
+    """
+    Generate highly interesting and personalized emails using mutual interests
+    """
+    try:
+        print(f"Generating interesting email for {contact.get('FirstName', 'Unknown')}")
+        
+        # Extract comprehensive user information
+        user_info = extract_comprehensive_user_info(resume_text, user_profile)
+        
+        # Find mutual interests and conversation hooks
+        hooks = find_mutual_interests_and_hooks(user_info, contact, resume_text)
+        
+        if not hooks:
+            print(f"No strong hooks found for {contact.get('FirstName', '')}, generating general interest email")
+            hooks = [f"I'm genuinely curious about your work in {extract_field_from_title(contact.get('Title', ''))} at {contact.get('Company', '')}"]
+        
+        print(f"Found {len(hooks)} conversation hooks for {contact.get('FirstName', '')}")
+        
+        # Generate compelling email
+        email_body = generate_compelling_email_with_hooks(user_info, contact, hooks)
+        
+        # Generate intriguing subject line
+        email_subject = generate_intriguing_subject_line(user_info, contact, hooks)
+        
+        # Clean up placeholders
+        email_body = sanitize_placeholders(
+            email_body,
+            user_info.get('name', ''),
+            user_info.get('year', ''),
+            user_info.get('major', ''),
+            user_info.get('university', '')
+        )
+        
+        print(f"Generated interesting email for {contact.get('FirstName', 'Unknown')}")
         return email_subject, email_body
         
     except Exception as e:
-        print(f"Advanced email generation failed: {e}")
-        return f"Quick Chat about Your Work at {contact.get('Company', 'Your Company')}?", f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at {contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
+        print(f"Interesting email generation failed: {e}")
+        return generate_simple_fallback_email(contact, user_info.get('name', ''))
 
-def generate_pro_email(contact, resume_info, similarity, hometown):
-    """Generate Pro tier email using your exact template with resume integration"""
-    try:
-        print(f"Generating Pro email for {contact.get('FirstName', 'Unknown')}")
-        
-        # Extract values safely to avoid f-string issues
-        user_name = resume_info.get('name', '[User Name]')
-        user_year = resume_info.get('year', '[User Year in school]')
-        user_major = resume_info.get('major', '[User Major/field of study]')
-        user_university = resume_info.get('university', '[User University]')
-        contact_first = contact.get('FirstName', '[First Name]')
-        contact_company = contact.get('Company', '[Company Name]')
-        contact_title = contact.get('Title', '[Industry]')
-        
-        # Your exact Pro email template - fixed to avoid f-string syntax issues
-        prompt = f"""
-Given the information provided which includes first name, last name, job title, city, state, work experiences, education, undergrad, hometown, group, summary of the person you're reaching out to and summary of your similarities.
+def extract_comprehensive_user_info(resume_text=None, user_profile=None):
+    """Extract comprehensive user information from all available sources"""
+    user_info = {
+        'name': '',
+        'year': '',
+        'major': '',
+        'university': '',
+        'experiences': [],
+        'skills': [],
+        'interests': [],
+        'projects': [],
+        'leadership': []
+    }
+    
+    # Priority 1: Extract from resume if available
+    if resume_text and len(resume_text.strip()) > 50:
+        try:
+            # Parse basic info
+            basic_info = parse_resume_info(resume_text)
+            user_info.update(basic_info)
+            
+            # Extract detailed insights
+            detailed_insights = extract_detailed_resume_insights(resume_text)
+            user_info.update(detailed_insights)
+            
+            # Extract interests
+            user_info['interests'] = extract_interests_from_resume(resume_text)
+            
+        except Exception as e:
+            print(f"Resume parsing failed: {e}")
+    
+    # Priority 2: Fallback to user profile
+    if user_profile and not user_info.get('name'):
+        user_info['name'] = user_profile.get('name') or f"{user_profile.get('firstName', '')} {user_profile.get('lastName', '')}".strip()
+        user_info['year'] = user_profile.get('year') or user_profile.get('graduationYear') or ""
+        user_info['major'] = user_profile.get('major') or user_profile.get('fieldOfStudy') or ""
+        user_info['university'] = user_profile.get('university') or ""
+    
+    return user_info
 
-It also includes the extracted text from the user's resume. Which from there extract the necessary information which is: User's Name, their year in school and major.
+def generate_simple_fallback_email(contact, user_name):
+    """Simple fallback if everything else fails"""
+    subject = f"Question about {contact.get('Company', 'your work')}"
+    
+    body = f"""Hi {contact.get('FirstName', '')},
 
-Write an email following this exact template but when possible integrate in a concise way the similarities you have with the person.
+I came across your profile while researching {contact.get('Company', 'your company')} and your work in {extract_field_from_title(contact.get('Title', ''))} caught my attention.
 
-Contact Information:
-- Name: {contact.get('FirstName')} {contact.get('LastName')}
-- Company: {contact.get('Company')}
-- Title: {contact.get('Title')}
-- City: {contact.get('City')}
-- State: {contact.get('State')}
-- Work Summary: {contact.get('WorkSummary', '')}
-- Education: {contact.get('EducationTop', '')}
-- Volunteer History: {contact.get('VolunteerHistory', '')}
-- Group: {contact.get('Group', '')}
-- Hometown: {hometown or 'Not available'}
+As someone exploring this field, I'd love to hear your perspective. Would you be open to a brief 15-20 minute conversation?
 
-User Information:
-- Name: {user_name}
-- Year in School: {user_year}
-- Major: {user_major}
-- University: {user_university}
-
-Similarity Summary: {similarity}
-
-Template:
-Hi {contact_first},
-
-I hope you're doing well! My name is {user_name}, and I'm currently a {user_year} studying {user_major} at {user_university}. I came across your profile while researching {contact_company}/{contact_title.lower()} and was really inspired by your work in {contact_title}.
-
-I'm very interested in {contact_title.lower()} and would really appreciate the chance to learn more about your journey and any advice you may have. If you're open to it, would you be available for a quick 15-20 minute chat sometime this or next week?
-
-Thanks so much in advance - I'd love to hear your perspective!
-
-Warmly, {user_name}
-
-Customize the email by:
-- Filling in their actual first name, company name, and industry
-- Referencing their specific role, team, or a recent accomplishment from their work experience
-- Making the industry/role interest sound genuine and specific to their background
-- Integrate similarities naturally and concisely
-- Make it the best possible with the information provided
-- Limit it to at most 3 concise paragraphs
-- For relating judge which ones will make the outreach more personable and for interests make it specific where possible and show genuine interest
-"""
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an expert at writing personalized networking emails for Pro tier. Keep emails concise, warm, and professional with natural similarity integration."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=600,
-            temperature=0.7
-        )
-        
-        email_body = response.choices[0].message.content.strip()
-        
-        # Generate subject line using your exact prompt
-        subject_prompt = f"""
-Given the email body, develop an appropriate subject for the email. It's very short but it captures what the email is asking for which is a coffee chat and then also any personal connection but again it's an email subject so for example if they're a USC alumni and you're a USC student in the subject mention that. Or if you're from the same hometown. Maybe not even hometown but judge what's appropriate and generate good subject lines that are more likely to lead to responses.
-
-Email body: {email_body[:300]}...
-Contact: {contact_first} at {contact_company}
-User: {user_name} - {user_year} at {user_university}
-Hometown connection: {hometown or 'None'}
-Similarity: {similarity}
-
-Just give the subject line no citations, reasoning or explanations.
-"""
-        
-        subject_response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an expert at writing compelling email subject lines that get responses. Be concise and personal."},
-                {"role": "user", "content": subject_prompt}
-            ],
-            max_tokens=50,
-            temperature=0.7
-        )
-        
-        email_subject = subject_response.choices[0].message.content.strip().strip('"').strip("'")
-        
-        print(f"Generated Pro email for {contact.get('FirstName', 'Unknown')}")
-        return email_subject, email_body
-        
-    except Exception as e:
-        print(f"Pro email generation failed: {e}")
-        return f"Coffee chat about your work at {contact.get('Company', 'your company')}?", f"Hi {contact.get('FirstName', '')},\n\nI'd love to learn more about your work at {contact.get('Company', '')}. Would you be open to a brief chat?\n\nBest regards"
+Best regards,
+{user_name}"""
+    
+    return subject, body
 
 # ========================================
-# PRO TIER - RESUME PROCESSING
+# RESUME PROCESSING FUNCTIONS
 # ========================================
 
 def extract_text_from_pdf(pdf_file):
@@ -1123,24 +1618,26 @@ def parse_resume_info(resume_text):
         prompt = f"""
 Extract the following information from this resume text:
 - Full Name
-- Year in school (e.g., "Junior", "Senior", "Graduate Student", "Class of 2027")
+- Graduation Year (extract the 4-digit year from graduation date, e.g., "2022", "2023", "2024")
 - Major/Field of Study
 - University/School name
 
 Return as JSON format:
 {{
     "name": "Full Name",
-    "year": "Year in school",
+    "year": "2022",
     "major": "Major/Field",
     "university": "University Name"
 }}
+
+If graduation year is not found, use "Unknown" for the year field.
 
 Resume text:
 {clean_text}
 """
         
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert at extracting structured information from resumes. Return only valid JSON with no extra text."},
                 {"role": "user", "content": prompt}
@@ -1166,6 +1663,13 @@ Resume text:
             for field in required_fields:
                 if field not in result or not result[field]:
                     result[field] = f"[Your {field.capitalize()}]"
+            
+            if result['year'] and result['year'] != "[Your Year]":
+                year_match = re.search(r'\b(19|20)\d{2}\b', result['year'])
+                if year_match:
+                    result['year'] = year_match.group()
+                elif result['year'].lower() in ['graduated', 'unknown', 'n/a']:
+                    result['year'] = ""
             
             print(f"Parsed resume info: {result['name']} - {result['year']} {result['major']} at {result['university']}")
             return result
@@ -1267,6 +1771,58 @@ def extract_resume_info_fallback(text):
             "university": "[Your University]"
         }
 
+def extract_detailed_resume_insights(resume_text):
+    """Extract detailed insights from resume for better personalization"""
+    try:
+        clean_text = resume_text.replace('"', "'").replace('\n', ' ')
+        clean_text = ' '.join(clean_text.split())[:1200]  # Limit to 1200 chars
+        
+        prompt = f"""
+Analyze this resume and extract key information for networking email personalization:
+
+Resume: {clean_text}
+
+Extract and return JSON with:
+{{
+    "experiences": ["2-3 most relevant work/internship experiences"],
+    "skills": ["3-4 key technical or professional skills"],
+    "interests": ["2-3 career interests or goals mentioned"],
+    "projects": ["1-2 notable projects if mentioned"],
+    "leadership": ["any leadership roles or activities"]
+}}
+
+Keep each field concise - 1-2 words per item maximum.
+"""
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Extract key resume insights for networking. Return only valid JSON with concise entries."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=250,
+            temperature=0.3
+        )
+        
+        response_text = response.choices[0].message.content.strip()
+        
+        # Try to parse JSON
+        try:
+            if '```' in response_text:
+                response_text = response_text.split('```')[1]
+                if response_text.startswith('json'):
+                    response_text = response_text[4:]
+            
+            insights = json.loads(response_text)
+            return insights
+            
+        except json.JSONDecodeError:
+            return {'experiences': [], 'skills': [], 'interests': [], 'projects': [], 'leadership': []}
+            
+    except Exception as e:
+        print(f"Detailed resume insights extraction failed: {e}")
+        return {'experiences': [], 'skills': [], 'interests': [], 'projects': [], 'leadership': []}
+
 def generate_similarity_summary(resume_text, contact):
     """Generate similarity between resume and contact with improved error handling"""
     try:
@@ -1302,8 +1858,8 @@ Contact Background:
 Generate ONE sentence highlighting the most relevant similarity:
 """
         
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert at finding meaningful connections between people's backgrounds. Write concise, specific similarities."},
                 {"role": "user", "content": prompt}
@@ -1357,6 +1913,21 @@ def extract_hometown_from_education(contact):
         print(f"Hometown extraction failed: {e}")
         return None
 
+def sanitize_placeholders(text: str, user_name: str = "", user_year: str = "", user_major: str = "", user_university: str = "") -> str:
+    replacements = {
+        "[Your Name]": user_name,
+        "[Your Full Name]": user_name,
+        "[Your Year]": user_year or "",
+        "[Your year/major]": f"{user_year} {user_major}".strip(),
+        "[Your Major]": user_major or "",
+        "[Your University]": user_university or "",
+        "[Name]": user_name,
+    }
+    for k, v in replacements.items():
+        text = text.replace(k, v)
+    # Remove any remaining bracketed placeholders conservatively
+    return text
+
 # ========================================
 # GMAIL INTEGRATION
 # ========================================
@@ -1399,7 +1970,7 @@ def get_gmail_service_for_user(user_email):
         print(f"Gmail service failed for {user_email}: {e}")
         return None
 
-def create_gmail_draft_for_user(contact, email_subject, email_body, tier='advanced', user_email=None):
+def create_gmail_draft_for_user(contact, email_subject, email_body, tier='free', user_email=None):
     """Create Gmail draft in the user's account"""
     try:
         gmail_service = get_gmail_service_for_user(user_email)
@@ -1428,7 +1999,8 @@ def create_gmail_draft_for_user(contact, email_subject, email_body, tier='advanc
         message = MIMEText(email_body)
         message['to'] = recipient_email
         message['subject'] = email_subject
-        message['from'] = user_email  # Set the user's email as sender
+        safe_from = user_email or os.getenv("DEFAULT_FROM_EMAIL", "noreply@offerloop.ai")
+        message['from'] = safe_from
         
         raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
         
@@ -1458,8 +2030,8 @@ def create_gmail_draft_for_user(contact, email_subject, email_body, tier='advanc
 def apply_recruitedge_label_for_user(gmail_service, message_id, tier, user_email):
     """Apply appropriate RecruitEdge label for specific user"""
     try:
-        if tier == 'advanced':
-            label_name = f"RecruitEdge Advanced - {user_email.split('@')[0]}"
+        if tier == 'free':
+            label_name = f"RecruitEdge Free - {user_email.split('@')[0]}"
         elif tier == 'pro':
             label_name = f"RecruitEdge Pro - {user_email.split('@')[0]}"
         else:
@@ -1495,8 +2067,8 @@ def apply_recruitedge_label_for_user(gmail_service, message_id, tier, user_email
     except Exception as e:
         print(f"Label application failed for {user_email}: {e}")
 
-def create_gmail_draft(contact, email_subject, email_body, tier='advanced'):
-    """Create Gmail draft with appropriate RecruitEdge label as per your specs"""
+def create_gmail_draft(contact, email_subject, email_body, tier='free'):
+    """Create Gmail draft with appropriate RecruitEdge label"""
     try:
         gmail_service = get_gmail_service()
         if not gmail_service:
@@ -1542,7 +2114,7 @@ def create_gmail_draft(contact, email_subject, email_body, tier='advanced'):
         
         print(f"Created {tier.capitalize()} Gmail draft {draft_id}")
         
-        # Apply RecruitEdge label as per your specs
+        # Apply RecruitEdge label
         try:
             apply_recruitedge_label(gmail_service, draft_result['message']['id'], tier)
         except Exception as label_error:
@@ -1555,17 +2127,13 @@ def create_gmail_draft(contact, email_subject, email_body, tier='advanced'):
         return f"mock_{tier}_draft_{contact.get('FirstName', 'unknown').lower()}"
 
 def apply_recruitedge_label(gmail_service, message_id, tier):
-    """Apply appropriate RecruitEdge label as per your specs"""
+    """Apply appropriate RecruitEdge label"""
     try:
-        # Your exact label naming convention
-        if tier == 'advanced':
-            label_name = "RecruitEdge Advanced"
+        # Updated label naming convention for two tiers
+        if tier == 'free':
+            label_name = "RecruitEdge Free"
         elif tier == 'pro':
             label_name = "RecruitEdge Pro"
-        elif tier == 'advanced_trial':
-            label_name = "RecruitEdge Advanced Trial"
-        elif tier == 'pro_trial':
-            label_name = "RecruitEdge Pro Trial"
         else:
             label_name = f"RecruitEdge {tier.capitalize()}"
         
@@ -1598,40 +2166,31 @@ def apply_recruitedge_label(gmail_service, message_id, tier):
         
     except Exception as e:
         print(f"Label application failed: {e}")
-
+        
 # ========================================
-# TIER ENDPOINT IMPLEMENTATIONS
+# ENHANCED TEMPLATE EMAIL GENERATION SYSTEM
 # ========================================
 
-def run_basic_tier(job_title, company, location, user_email=None):
-    """BASIC TIER: 6 contacts max with PDL search only"""
-    print(f"Running BASIC tier workflow for {user_email}")
-    
+def generate_enhanced_template_email(contact, resume_text=None, user_profile=None):
+    """
+    Generate emails using enhanced templates that follow the structure but add compelling hooks
+    """
     try:
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=6)
+        print(f"Generating enhanced template email for {contact.get('FirstName', 'Unknown')}")
         
-        if not contacts:
-            print("No contacts found for Basic tier")
-            return {'error': 'No contacts found', 'contacts': []}
+        # Extract user information
+        user_info = extract_comprehensive_user_info(resume_text, user_profile)
         
-        # Filter to Basic fields only
-        basic_contacts = []
-        for contact in contacts:
-            basic_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['basic']['fields']}
-            basic_contacts.append(basic_contact)
+        # Select the best template based on available information
+        template_type = select_optimal_template(user_info, contact, resume_text)
         
-        # Generate CSV with user identifier
-        csv_file = StringIO()
-        fieldnames = TIER_CONFIGS['basic']['fields']
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writeheader()
-        for contact in basic_contacts:
-            writer.writerow(contact)
+        # Generate personalized content for the template
+        personalized_content = generate_template_content(user_info, contact, template_type, resume_text)
         
-        csv_filename = f"RecruitEdge_Basic_{user_email.split('@')[0] if user_email else 'user'}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-            f.write(csv_file.getvalue())
+        # Craft the email using the enhanced template
+        email_body = craft_template_email(user_info, contact, template_type, personalized_content)
         
+<<<<<<< HEAD
         if user_email:
             save_to_firestore(basic_contacts, user_email)
         
@@ -1642,72 +2201,430 @@ def run_basic_tier(job_title, company, location, user_email=None):
             'tier': 'basic',
             'user_email': user_email
         }
+=======
+        # Generate professional but intriguing subject line
+        email_subject = generate_template_subject_line(contact, template_type, personalized_content)
+        
+        # Clean up placeholders
+        email_body = sanitize_placeholders(
+            email_body,
+            user_info.get('name', ''),
+            user_info.get('year', ''),
+            user_info.get('major', ''),
+            user_info.get('university', '')
+        )
+        
+        print(f"Generated enhanced template email using '{template_type}' template")
+        print(f"🔥 GENERATED SUBJECT: {email_subject}")
+        print(f"🔥 GENERATED BODY: {email_body[:200]}...")
+        return email_subject, email_body
+>>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
         
     except Exception as e:
-        print(f"Basic tier failed for {user_email}: {e}")
-        return {'error': str(e), 'contacts': []}
+        print(f"Enhanced template email generation failed: {e}")
+        user_info = extract_comprehensive_user_info(resume_text, user_profile)
+        return generate_simple_template_fallback(contact, user_info.get('name', ''))
 
-def run_advanced_tier(job_title, company, location, user_email=None):
-    """ADVANCED TIER: 8 contacts max with PDL + email drafting"""
-    print("Running ADVANCED tier workflow")
+def select_optimal_template(user_info, contact, resume_text):
+    """Select the best template based on available information and connections"""
+    
+    # Check for strong connections first
+    if find_university_connection(user_info, contact):
+        return "common_background"
+    
+    if find_geographic_connection(user_info, contact, resume_text):
+        return "mutual_affiliation"
+    
+    # Check if we have resume for context
+    if resume_text and len(resume_text.strip()) > 100:
+        return "resume_context"
+    
+    # Check company type for appropriate approach
+    company = contact.get('Company', '').lower()
+    if any(word in company for word in ['google', 'microsoft', 'amazon', 'meta', 'apple']):
+        return "research_acknowledgment"
+    elif any(word in company for word in ['startup', 'labs', 'ventures']):
+        return "values_cultural"
+    elif any(word in company for word in ['consulting', 'mckinsey', 'bain', 'bcg']):
+        return "aspirational"
+    
+    # Default to straightforward with strong personalization
+    return "straightforward_enhanced"
+
+def generate_template_content(user_info, contact, template_type, resume_text):
+    """Generate personalized content for the selected template"""
+    content = {}
+    
+    # Generate compelling personalization hook
+    content['personalization_hook'] = generate_personalization_hook(contact, resume_text)
+    
+    # Generate specific interest statement
+    content['specific_interest'] = generate_specific_interest(contact, user_info)
+    
+    # Generate connection point if applicable
+    content['connection_point'] = find_connection_point(user_info, contact, resume_text)
+    
+    # Generate value proposition (why they should talk to you)
+    content['value_prop'] = generate_value_proposition(user_info, contact, template_type)
+    
+    return content
+
+def generate_personalization_hook(contact, resume_text):
+    """Generate a compelling, specific personalization hook"""
+    company = contact.get('Company', '')
+    title = contact.get('Title', '')
+    
+    # Company-specific hooks
+    company_lower = company.lower()
+    if 'google' in company_lower:
+        hooks = [
+            f"your work on Google's AI integration across products",
+            f"your experience with Google's engineering culture",
+            f"your role in Google's product development process",
+            f"your perspective on Google's approach to innovation"
+        ]
+    elif 'tesla' in company_lower:
+        hooks = [
+            f"your work on Tesla's autonomous driving technology",
+            f"your experience with Tesla's rapid iteration cycles",
+            f"your role in Tesla's hardware-software integration",
+            f"your perspective on Tesla's engineering challenges"
+        ]
+    elif 'meta' in company_lower or 'facebook' in company_lower:
+        hooks = [
+            f"your work on Meta's VR/AR initiatives",
+            f"your experience with Meta's product development",
+            f"your role in Meta's technical infrastructure",
+            f"your perspective on Meta's future direction"
+        ]
+    elif 'amazon' in company_lower:
+        hooks = [
+            f"your work on Amazon's scale challenges",
+            f"your experience with Amazon's customer obsession",
+            f"your role in Amazon's technical systems",
+            f"your perspective on Amazon's innovation process"
+        ]
+    elif 'microsoft' in company_lower:
+        hooks = [
+            f"your work on Microsoft's cloud transformation",
+            f"your experience with Microsoft's developer tools",
+            f"your role in Microsoft's AI initiatives",
+            f"your perspective on Microsoft's enterprise focus"
+        ]
+    else:
+        # Generic but specific hooks
+        hooks = [
+            f"your experience building products at {company}",
+            f"your role in {company}'s growth",
+            f"your perspective on {company}'s market position",
+            f"your work on {company}'s technical challenges"
+        ]
+    
+    return hooks[0]  # Return the first/best hook
+
+def generate_specific_interest(contact, user_info):
+    """Generate specific interest statement based on user's background and contact's role"""
+    user_major = user_info.get('major', '').lower()
+    contact_title = contact.get('Title', '').lower()
+    contact_company = contact.get('Company', '')
+    
+    if 'computer science' in user_major or 'software' in user_major:
+        if 'engineer' in contact_title:
+            return f"how you approached the technical challenges in your engineering career at {contact_company}"
+        elif 'product' in contact_title:
+            return f"how you bridge technical and business perspectives in product development"
+        else:
+            return f"the intersection of technology and business in your role"
+    
+    elif 'business' in user_major:
+        if 'consulting' in contact_title:
+            return f"how you approach complex problem-solving in consulting"
+        elif 'manager' in contact_title:
+            return f"how you developed your leadership and strategic thinking skills"
+        else:
+            return f"how you built your business acumen and industry expertise"
+    
+    else:
+        return f"your career journey and what drew you to {contact_company}"
+
+def find_connection_point(user_info, contact, resume_text):
+    """Find meaningful connection points between user and contact"""
+    connections = []
+    
+    # University connection
+    user_uni = user_info.get('university', '').lower()
+    contact_edu = contact.get('EducationTop', '').lower()
+    if user_uni and user_uni in contact_edu:
+        return f"I noticed we both have ties to {user_info.get('university', '')}"
+    
+    # Geographic connection
+    if resume_text:
+        resume_lower = resume_text.lower()
+        contact_city = contact.get('City', '').lower()
+        contact_state = contact.get('State', '').lower()
+        
+        if contact_city and contact_city in resume_lower:
+            return f"I have connections to {contact.get('City', '')} as well"
+        elif contact_state and contact_state in resume_lower:
+            return f"I also have ties to {contact.get('State', '')}"
+    
+    # Industry/field connection
+    user_major = user_info.get('major', '').lower()
+    contact_title = contact.get('Title', '').lower()
+    
+    if 'computer science' in user_major and any(word in contact_title for word in ['engineer', 'developer', 'technical']):
+        return f"as someone studying {user_info.get('major', '')}, your technical background really resonates with me"
+    
+    return None
+
+def generate_value_proposition(user_info, contact, template_type):
+    """Generate why the contact should want to talk to the user"""
+    value_props = {
+        'straightforward_enhanced': f"I'm genuinely curious about your experience and would value your perspective as I prepare for my own career",
+        'common_background': f"Since we share similar backgrounds, I'd love to learn from your experience",
+        'research_acknowledgment': f"I've been researching the industry and would greatly value insights from someone with your experience",
+        'resume_context': f"I'd be grateful for your perspective on my background and the industry",
+        'aspirational': f"I admire your career trajectory and would value any guidance you could share",
+        'values_cultural': f"I'm drawn to the innovation and culture you've helped build",
+        'mutual_affiliation': f"I'd love to learn from someone who shares similar experiences"
+    }
+    
+    return value_props.get(template_type, value_props['straightforward_enhanced'])
+
+def craft_template_email(user_info, contact, template_type, content):
+    """Craft the actual email using the enhanced template"""
+    
+    templates = {
+        'straightforward_enhanced': f"""Hi {contact.get('FirstName', '')},
+
+My name is {user_info.get('name', '[Your Name]')}, and I'm a {user_info.get('year', '')} {user_info.get('major', '')} at {user_info.get('university', '')} pursuing a career in {extract_field_from_title(contact.get('Title', ''))}. I came across your profile while researching professionals at {contact.get('Company', '')}, and I was particularly interested in {content['personalization_hook']}.
+
+I'd be grateful for the chance to hear more about {content['specific_interest']}. Would you be open to a 15-20 minute call in the next couple of weeks?
+
+Best,
+{user_info.get('name', '[Your Name]')}""",
+
+        'common_background': f"""Hi {contact.get('FirstName', '')},
+
+I'm {user_info.get('name', '[Your Name]')}, a {user_info.get('year', '')} at {user_info.get('university', '')} studying {user_info.get('major', '')}. {content.get('connection_point', '')} and I also saw that you {content['personalization_hook']}. Since I'm exploring a similar path, I'd love to learn more about {content['specific_interest']}.
+
+Would you have 15-20 minutes for a call or Zoom in the coming weeks? I'll keep it focused and respect your time.
+
+Best regards,
+{user_info.get('name', '[Your Name]')}""",
+
+        'research_acknowledgment': f"""Dear {contact.get('FirstName', '')},
+
+I hope this note finds you well. My name is {user_info.get('name', '[Your Name]')}, and I am a {user_info.get('year', '')} at {user_info.get('university', '')} majoring in {user_info.get('major', '')}. While researching {contact.get('Company', '')}, I was particularly impressed by {content['personalization_hook']}.
+
+Would you be open to a short call or Zoom meeting at your convenience? I'd greatly value hearing about {content['specific_interest']} and any advice you might offer to someone preparing to enter the industry.
+
+Warm regards,
+{user_info.get('name', '[Your Name]')}""",
+
+        'resume_context': f"""Hi {contact.get('FirstName', '')},
+
+My name is {user_info.get('name', '[Your Name]')}, and I'm a {user_info.get('year', '')} student at {user_info.get('university', '')} majoring in {user_info.get('major', '')}. I was particularly interested to see {content['personalization_hook']}, and I'd love to hear how those experiences shaped your career.
+
+{content['value_prop']}. Would you be open to a short conversation (15-20 minutes) in the next couple of weeks?
+
+Thank you,
+{user_info.get('name', '[Your Name]')}""",
+
+        'aspirational': f"""Hi {contact.get('FirstName', '')},
+
+I'm {user_info.get('name', '[Your Name]')}, a {user_info.get('year', '')} at {user_info.get('university', '')} majoring in {user_info.get('major', '')}. Your career path at {contact.get('Company', '')} stood out to me—especially {content['personalization_hook']}. I admire how you've built your trajectory and would be grateful for the chance to hear about {content['specific_interest']}.
+
+If you're available, I'd appreciate a brief 15-20 minute conversation in the next couple of weeks.
+
+Sincerely,
+{user_info.get('name', '[Your Name]')}""",
+
+        'values_cultural': f"""Hi {contact.get('FirstName', '')},
+
+I'm {user_info.get('name', '[Your Name]')}, a {user_info.get('year', '')} at {user_info.get('university', '')} studying {user_info.get('major', '')}. In looking into {contact.get('Company', '')}, I've been drawn to its reputation for innovation and impact. {content['personalization_hook']} really caught my attention.
+
+I'd be grateful if you'd be open to a short call (15-20 minutes) in the next couple of weeks to hear more about {content['specific_interest']}.
+
+Best regards,
+{user_info.get('name', '[Your Name]')}""",
+
+        'mutual_affiliation': f"""Hi {contact.get('FirstName', '')},
+
+I'm {user_info.get('name', '[Your Name]')}, a {user_info.get('year', '')} studying {user_info.get('major', '')} at {user_info.get('university', '')}. {content.get('connection_point', '')} and I was particularly interested in {content['personalization_hook']}.
+
+I'd love to learn how your experiences shaped your career path and what drew you to {contact.get('Company', '')}. Would you be open to a 15-20 minute chat in the next couple of weeks?
+
+Thank you,
+{user_info.get('name', '[Your Name]')}"""
+    }
+    
+    return templates.get(template_type, templates['straightforward_enhanced'])
+
+def generate_template_subject_line(contact, template_type, content):
+    """Generate appropriate subject lines for each template type"""
+    
+    company = contact.get('Company', '')
+    
+    subjects = {
+        'straightforward_enhanced': f"Question about your work at {company}",
+        'common_background': f"Fellow alumnus interested in {company}",
+        'research_acknowledgment': f"Research inquiry about {company}",
+        'resume_context': f"Student seeking perspective on {company}",
+        'aspirational': f"Career guidance from {company}",
+        'values_cultural': f"Interested in {company}'s culture and impact",
+        'mutual_affiliation': f"Shared background + {company} question"
+    }
+    
+    return subjects.get(template_type, f"Question about {company}")
+
+def find_university_connection(user_info, contact):
+    """Check if there's a university connection"""
+    user_uni = user_info.get('university', '').lower()
+    contact_edu = contact.get('EducationTop', '').lower()
+    
+    if user_uni and user_uni in contact_edu:
+        return True
+    
+    # Check for partial matches (e.g., "USC" in "University of Southern California")
+    if user_uni:
+        uni_words = user_uni.split()
+        for word in uni_words:
+            if len(word) > 3 and word in contact_edu:
+                return True
+    
+    return False
+
+def find_geographic_connection(user_info, contact, resume_text):
+    """Check if there's a geographic connection"""
+    if not resume_text:
+        return False
+    
+    resume_lower = resume_text.lower()
+    contact_city = contact.get('City', '').lower()
+    contact_state = contact.get('State', '').lower()
+    
+    if contact_city and contact_city in resume_lower:
+        return True
+    if contact_state and contact_state in resume_lower:
+        return True
+    
+    return False
+
+def generate_simple_template_fallback(contact, user_name):
+    """Simple fallback template if generation fails"""
+    subject = f"Question about your work at {contact.get('Company', 'your company')}"
+    
+    body = f"""Hi {contact.get('FirstName', '')},
+
+My name is {user_name}, and I'm a student interested in learning more about your experience at {contact.get('Company', '')}. Your work as a {contact.get('Title', '')} caught my attention.
+
+Would you be open to a brief 15-20 minute conversation in the next couple of weeks?
+
+Thank you for your time,
+{user_name}"""
+    
+    return subject, body
+
+# ========================================
+# TIER ENDPOINT IMPLEMENTATIONS WITH INTERESTING EMAILS
+# ========================================
+
+def generate_email_for_tier(contact, tier='free', resume_info=None, user_profile=None, similarity=None, hometown=None, resume_text=None):
+    """
+    Generate emails using enhanced templates that follow professional structure
+    """
+    try:
+        print(f"Generating enhanced template email for {contact.get('FirstName', 'Unknown')} (tier: {tier})")
+        
+        # Use the enhanced template system
+        return generate_enhanced_template_email(contact, resume_text=resume_text, user_profile=user_profile)
+        
+    except Exception as e:
+        print(f"Enhanced template email generation failed for {tier}: {e}")
+        
+        # Fallback
+        user_name = ""
+        if resume_info:
+            user_name = resume_info.get('name', '')
+        elif user_profile:
+            user_name = user_profile.get('name', '')
+        
+        return generate_simple_template_fallback(contact, user_name)
+
+def run_free_tier_enhanced(job_title, company, location, user_email=None, user_profile=None, resume_text=None):
+    """FREE TIER: 8 contacts max with PDL search + interesting email drafting"""
+    print(f"Running FREE tier workflow with interesting emails for {user_email}")
     
     try:
-        # Step 1: PDL Search for 8 contacts (includes Basic + enrichment)
         contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=8)
         
         if not contacts:
-            print("No contacts found for Advanced tier")
+            print("No contacts found for Free tier")
             return {'error': 'No contacts found', 'contacts': []}
         
-        # Step 2: Generate Advanced emails for each contact
+        # Step 2: Generate interesting emails for each contact
         successful_drafts = 0
         for contact in contacts:
-            email_subject, email_body = generate_advanced_email(contact)
+            email_subject, email_body = generate_email_for_tier(
+                contact,
+                tier='free',
+                user_profile=user_profile,
+                resume_text=resume_text
+            )
             contact['email_subject'] = email_subject
             contact['email_body'] = email_body
             
             # Create Gmail draft
-            draft_id = create_gmail_draft_for_user(contact, email_subject, email_body, tier='advanced', user_email=user_email)
+            draft_id = create_gmail_draft_for_user(contact, email_subject, email_body, tier='free', user_email=user_email)
             contact['draft_id'] = draft_id
             if not draft_id.startswith('mock_'):
                 successful_drafts += 1
         
-        # Step 3: Filter to Advanced fields
-        advanced_contacts = []
+        # Filter to Free fields only
+        free_contacts = []
         for contact in contacts:
-            advanced_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['advanced']['fields']}
-            advanced_contacts.append(advanced_contact)
+            free_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['free']['fields']}
+            # Include email content for preview
+            free_contact['email_subject'] = contact.get('email_subject', '')
+            free_contact['email_body'] = contact.get('email_body', '')
+            free_contacts.append(free_contact)
         
-        # Step 4: Generate CSV
+        # Generate CSV with user identifier
         csv_file = StringIO()
-        fieldnames = TIER_CONFIGS['advanced']['fields']
+        fieldnames = TIER_CONFIGS['free']['fields'] + ['email_subject', 'email_body']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
-        for contact in advanced_contacts:
+        for contact in free_contacts:
             writer.writerow(contact)
         
-        csv_filename = f"RecruitEdge_Advanced_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        csv_filename = f"RecruitEdge_Free_Interesting_{user_email.split('@')[0] if user_email else 'user'}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
             f.write(csv_file.getvalue())
         
+<<<<<<< HEAD
         if user_email:
             save_to_firestore(advanced_contacts, user_email)
         
         print(f"Advanced tier completed: {len(advanced_contacts)} contacts, {successful_drafts} Gmail drafts")
+=======
+        print(f"Free tier completed for {user_email}: {len(free_contacts)} contacts, {successful_drafts} Gmail drafts")
+>>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
         return {
-            'contacts': advanced_contacts,
+            'contacts': free_contacts,
             'csv_file': csv_filename,
             'successful_drafts': successful_drafts,
-            'tier': 'advanced'
+            'tier': 'free',
+            'user_email': user_email
         }
         
     except Exception as e:
-        print(f"Advanced tier failed: {e}")
+        print(f"Free tier failed for {user_email}: {e}")
         return {'error': str(e), 'contacts': []}
 
-def run_pro_tier(job_title, company, location, resume_file, user_email=None):
-    """PRO TIER: 12 contacts max with PDL + resume analysis + similarity engine + smart emails"""
-    print("Running PRO tier workflow")
+def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=None):
+    """PRO TIER: 56 contacts max with PDL + resume analysis + similarity engine + interesting emails"""
+    print(f"Running PRO tier workflow with interesting emails for {user_email}")
     
     try:
         # Step 1: Extract and parse resume
@@ -1717,8 +2634,8 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
         
         resume_info = parse_resume_info(resume_text)
         
-        # Step 2: PDL Search for 12 contacts (includes all enrichment)
-        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=12)
+        # Step 2: PDL Search for up to 56 contacts (includes all enrichment)
+        contacts = search_contacts_with_pdl_optimized(job_title, company, location, max_contacts=56)
         
         if not contacts:
             print("No contacts found for Pro tier")
@@ -1734,14 +2651,16 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
             hometown = extract_hometown_from_education(contact)
             contact['Hometown'] = hometown or 'Not available'
         
-        # Step 4: Generate Pro emails with resume integration
+        # Step 4: Generate interesting emails with resume integration
         successful_drafts = 0
         for contact in contacts:
-            email_subject, email_body = generate_pro_email(
+            email_subject, email_body = generate_email_for_tier(
                 contact,
-                resume_info,
-                contact['Similarity'],
-                contact['Hometown']
+                tier='pro',
+                resume_info=resume_info,
+                resume_text=resume_text,
+                similarity=contact['Similarity'],
+                hometown=contact['Hometown']
             )
             contact['email_subject'] = email_subject
             contact['email_body'] = email_body
@@ -1756,24 +2675,31 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
         pro_contacts = []
         for contact in contacts:
             pro_contact = {k: v for k, v in contact.items() if k in TIER_CONFIGS['pro']['fields']}
+            # Include email content for preview
+            pro_contact['email_subject'] = contact.get('email_subject', '')
+            pro_contact['email_body'] = contact.get('email_body', '')
             pro_contacts.append(pro_contact)
         
         # Step 6: Generate CSV
         csv_file = StringIO()
-        fieldnames = TIER_CONFIGS['pro']['fields']
+        fieldnames = TIER_CONFIGS['pro']['fields'] + ['email_subject', 'email_body']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
         for contact in pro_contacts:
             writer.writerow(contact)
         
-        csv_filename = f"RecruitEdge_Pro_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        csv_filename = f"RecruitEdge_Pro_Interesting_{user_email.split('@')[0] if user_email else 'user'}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
             f.write(csv_file.getvalue())
         
+<<<<<<< HEAD
         if user_email:
             save_to_firestore(pro_contacts, user_email)
         
         print(f"Pro tier completed: {len(pro_contacts)} contacts, {successful_drafts} Gmail drafts")
+=======
+        print(f"Pro tier completed for {user_email}: {len(pro_contacts)} contacts, {successful_drafts} Gmail drafts")
+>>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
         print(f"User: {resume_info.get('name')} - {resume_info.get('year')} {resume_info.get('major')}")
         
         return {
@@ -1781,117 +2707,32 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
             'csv_file': csv_filename,
             'successful_drafts': successful_drafts,
             'resume_info': resume_info,
-            'tier': 'pro'
+            'tier': 'pro',
+            'user_email': user_email
         }
         
     except Exception as e:
-        print(f"Pro tier failed: {e}")
+        print(f"Pro tier failed for {user_email}: {e}")
         return {'error': str(e), 'contacts': []}
 
 # ========================================
-# TRIAL IMPLEMENTATIONS (Advanced & Pro)
+# ENHANCED TIER FUNCTIONS WITH LOGGING - TWO TIERS ONLY
 # ========================================
 
-def run_advanced_trial(linkedin_url):
-    """ADVANCED TRIAL: 1 contact from LinkedIn URL"""
-    print("Running ADVANCED TRIAL workflow")
+def validate_search_inputs(job_title, company, location):
+    errors = []
     
-    try:
-        print(f"Advanced trial LinkedIn extraction not yet implemented for: {linkedin_url}")
-        
-        return {
-            'error': 'Advanced trial LinkedIn extraction coming soon',
-            'contacts': []
-        }
-        
-    except Exception as e:
-        print(f"Advanced trial failed: {e}")
-        return {'error': str(e), 'contacts': []}
-
-def run_pro_trial(linkedin_url, resume_file):
-    """PRO TRIAL: 1 contact from LinkedIn URL + resume analysis"""
-    print("Running PRO TRIAL workflow")
+    if not job_title or len(job_title.strip()) < 2:
+        errors.append("Job title must be at least 2 characters")
     
-    try:
-        # Extract and parse resume
-        resume_text = extract_text_from_pdf(resume_file)
-        if not resume_text:
-            return {'error': 'Could not extract text from PDF', 'contacts': []}
-        
-        resume_info = parse_resume_info(resume_text)
-        
-        print(f"Pro trial LinkedIn extraction not yet implemented for: {linkedin_url}")
-        
-        return {
-            'error': 'Pro trial LinkedIn extraction coming soon',
-            'contacts': [],
-            'resume_info': resume_info
-        }
-        
-    except Exception as e:
-        print(f"Pro trial failed: {e}")
-        return {'error': str(e), 'contacts': []}
-
-# ========================================
-# TESTING FUNCTIONS
-# ========================================
-
-def test_pdl_implementation():
-    """Test the complete PDL implementation"""
-    print("Testing RecruitEdge PDL Implementation")
+    # Company is optional - only validate if provided
+    if company and len(company.strip()) < 2:
+        errors.append("Company name must be at least 2 characters")
     
-    # Test Basic tier
-    print("\nTesting Basic Tier")
-    basic_result = run_basic_tier("Software Engineer", "Google", "San Francisco, CA")
-    print(f"Basic result: {len(basic_result.get('contacts', []))} contacts")
+    if not location or len(location.strip()) < 2:
+        errors.append("Location must be at least 2 characters")
     
-    # Test Advanced tier
-    print("\nTesting Advanced Tier")
-    advanced_result = run_advanced_tier("Software Engineer", "Google", "San Francisco, CA")
-    print(f"Advanced result: {len(advanced_result.get('contacts', []))} contacts")
-    
-    print("\nTesting complete")
-
-def test_location_strategy():
-    """Test the location strategy determination"""
-    test_locations = [
-        "San Francisco, CA",
-        "New York, NY",
-        "Austin, TX",
-        "Palo Alto, CA",
-        "Manhattan, NY",
-        "Smalltown, Iowa",
-        "Boston",
-        "Remote"
-    ]
-    
-    for location in test_locations:
-        strategy = determine_location_strategy(location)
-        print(f"Location: {location}")
-        print(f"Strategy: {strategy['strategy']}")
-        print(f"Metro: {strategy['metro_location']}")
-        print("---")
-
-# ========================================
-# ADDITIONAL UTILITY FUNCTIONS
-# ========================================
-
-def validate_api_keys():
-    """Validate that all required API keys are present"""
-    missing_keys = []
-    
-    if not PEOPLE_DATA_LABS_API_KEY or PEOPLE_DATA_LABS_API_KEY == 'your_pdl_api_key':
-        missing_keys.append('PEOPLE_DATA_LABS_API_KEY')
-    
-    if not openai.api_key or 'your_openai_api_key' in openai.api_key:
-        missing_keys.append('OPENAI_API_KEY')
-    
-    if missing_keys:
-        print(f"WARNING: Missing API keys: {', '.join(missing_keys)}")
-        return False
-    
-    print("All API keys validated successfully")
-    return True
+    return errors
 
 def log_api_usage(tier, user_email, contacts_found, emails_generated=0):
     """Log API usage for monitoring and billing"""
@@ -1929,23 +2770,22 @@ def cleanup_old_csv_files():
     except Exception as e:
         print(f"Error cleaning up CSV files: {e}")
 
-# ========================================
-# ERROR HANDLING AND RATE LIMITING
-# ========================================
-
-def handle_pdl_rate_limit():
-    """Handle PDL API rate limiting"""
-    print("PDL API rate limit hit - implementing backoff strategy")
-    import time
-    time.sleep(5)
-
-def validate_search_inputs(job_title, company, location):
-    """Validate search inputs before making API calls"""
-    errors = []
+def validate_api_keys():
+    """Validate that all required API keys are present"""
+    missing_keys = []
     
-    if not job_title or len(job_title.strip()) < 2:
-        errors.append("Job title must be at least 2 characters")
+    if not PEOPLE_DATA_LABS_API_KEY or PEOPLE_DATA_LABS_API_KEY == 'your_pdl_api_key':
+        missing_keys.append('PEOPLE_DATA_LABS_API_KEY')
     
+    if not OPENAI_API_KEY or 'your_openai_api_key' in OPENAI_API_KEY:
+        missing_keys.append('OPENAI_API_KEY')
+
+    
+    if missing_keys:
+        print(f"WARNING: Missing API keys: {', '.join(missing_keys)}")
+        return False
+    
+<<<<<<< HEAD
     if not company or len(company.strip()) < 2:
         errors.append("Company name must be at least 2 characters")
     
@@ -2172,10 +3012,21 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
 # ========================================
 # STARTUP VALIDATION
 # ========================================
+=======
+    print("All API keys validated successfully")
+    return True
+>>>>>>> 70f4d97e13f8bc183c739f0e51c7b3496715b1ae
 
 def startup_checks():
     """Run startup validation checks"""
     print("Running startup checks...")
+    
+    # Initialize database
+    try:
+        init_db()
+        print("SQLite database initialized: OK")
+    except Exception as e:
+        print(f"SQLite database initialization: FAILED - {e}")
     
     if not validate_api_keys():
         print("WARNING: Some API keys are missing or invalid")
@@ -2198,6 +3049,17 @@ def startup_checks():
     except Exception as e:
         print(f"PDL API connection: ERROR ({e})")
     
+    # OpenAI API test - properly indented
+    try:
+        test_response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=5
+        )
+        print("OpenAI API connection: OK")
+    except Exception as e:
+        print(f"OpenAI API connection: ERROR - {e}")
+    
     print("Startup checks completed")
 
 def search_contacts_with_pdl(job_title, company, location, max_contacts=8):
@@ -2205,7 +3067,7 @@ def search_contacts_with_pdl(job_title, company, location, max_contacts=8):
     return search_contacts_with_pdl_optimized(job_title, company, location, max_contacts)
 
 # ========================================
-# MAIN API ENDPOINTS
+# MAIN API ENDPOINTS - SIMPLIFIED TO TWO TIERS
 # ========================================
 
 @app.route('/ping')
@@ -2217,6 +3079,8 @@ def health():
     """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
+        'tiers': ['free', 'pro'],
+        'email_system': 'interesting_mutual_interests_v2',
         'services': {
             'pdl': 'connected',
             'openai': 'connected',
@@ -2224,67 +3088,95 @@ def health():
         }
     })
 
-@app.route('/api/basic-run', methods=['POST'])
-def basic_run():
-    """Enhanced Basic endpoint with validation and logging - FIXED to handle form data"""
-    try:
-        if request.is_json:
-            data = request.json or {}
-            job_title = data.get('jobTitle', '').strip() if data.get('jobTitle') else ''
-            company = data.get('company', '').strip() if data.get('company') else ''
-            location = data.get('location', '').strip() if data.get('location') else ''
-            user_email = data.get('userEmail', '').strip() if data.get('userEmail') else None
-        else:
-            job_title = (request.form.get('jobTitle') or '').strip()
-            company = (request.form.get('company') or '').strip()
-            location = (request.form.get('location') or '').strip()
-            user_email = (request.form.get('userEmail') or '').strip() or None
-        
-        print(f"DEBUG - Basic endpoint received:")
-        print(f"  job_title: '{job_title}' (len: {len(job_title)})")
-        print(f"  company: '{company}' (len: {len(company)})")
-        print(f"  location: '{location}' (len: {len(location)})")
-        print(f"  user_email: '{user_email}'")
-        
-        if not job_title or not location:
-            missing = []
-            if not job_title: missing.append('Job Title')
-            if not location: missing.append('Location')
-            error_msg = f"Missing required fields: {', '.join(missing)}"
-            print(f"ERROR: {error_msg}")
-            return jsonify({'error': error_msg}), 400
-        
-        print(f"Basic search for {user_email}: {job_title} at {company} in {location}")
-        
-        result = run_basic_tier_enhanced(job_title, company, location, user_email)
-        
-        if result.get('error'):
-            return jsonify({'error': result['error']}), 500
-        
-        return send_file(result['csv_file'], as_attachment=True)
-        
-    except Exception as e:
-        print(f"Basic endpoint error: {e}")
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+@app.route('/api/tier-info')
+def get_tier_info():
+    """Get information about available tiers"""
+    return jsonify({
+        'tiers': {
+            'free': {
+                'name': 'Free',
+                'max_contacts': TIER_CONFIGS['free']['max_contacts'],
+                'credits': TIER_CONFIGS['free']['credits'],
+                'time_saved_minutes': TIER_CONFIGS['free']['time_saved_minutes'],
+                'description': TIER_CONFIGS['free']['description'],
+                'features': [
+                    f"{TIER_CONFIGS['free']['credits']} credits",
+                    f"Estimated time saved: {TIER_CONFIGS['free']['time_saved_minutes']} minutes",
+                    "Interesting personalized emails",
+                    "Mutual interest detection",
+                    "Company-specific conversation starters",
+                    "Try out platform risk free"
+                ]
+            },
+            'pro': {
+                'name': 'Pro',
+                'max_contacts': TIER_CONFIGS['pro']['max_contacts'],
+                'credits': TIER_CONFIGS['pro']['credits'],
+                'time_saved_minutes': TIER_CONFIGS['pro']['time_saved_minutes'],
+                'description': TIER_CONFIGS['pro']['description'],
+                'features': [
+                    f"{TIER_CONFIGS['pro']['credits']} credits",
+                    f"Estimated time saved: {TIER_CONFIGS['pro']['time_saved_minutes']} minutes",
+                    "Same quality interesting emails as Free",
+                    "Resume-enhanced personalization",
+                    "Directory permanently saves",
+                    "Priority Support",
+                    "Advanced features"
+                ]
+            }
+        }
+    })
 
-@app.route('/api/advanced-run', methods=['POST'])
-def advanced_run():
-    """Enhanced Advanced endpoint with validation and logging - FIXED to handle form data"""
+@app.route('/api/directory/contacts', methods=['GET'])
+@require_firebase_auth
+def get_directory_contacts():
+    user_email = request.firebase_user.get('email')
+    return jsonify({'contacts': list_contacts_sqlite(user_email)})
+
+@app.route('/api/directory/contacts', methods=['POST'])
+@require_firebase_auth
+def post_directory_contacts():
+    data = request.get_json(silent=True) or {}
+    user_email = request.firebase_user.get('email')
+    contacts = data.get('contacts') or []
+    if not isinstance(contacts, list):
+        return jsonify({'error': 'contacts must be an array'}), 400
+    saved = save_contacts_sqlite(user_email, contacts)
+    return jsonify({'saved': saved})
+
+@app.route('/api/free-run', methods=['POST'])
+@require_firebase_auth
+def free_run():
+    """Free tier endpoint - enhanced with interesting emails"""
     try:
+        user_email = request.firebase_user.get('email')
+        user_id = request.firebase_user['uid']
+        
         if request.is_json:
             data = request.json or {}
             job_title = data.get('jobTitle', '').strip() if data.get('jobTitle') else ''
             company = data.get('company', '').strip() if data.get('company') else ''
             location = data.get('location', '').strip() if data.get('location') else ''
-            user_email = data.get('userEmail', '').strip() if data.get('userEmail') else None
+            user_profile = data.get('userProfile') or None
+            resume_text = data.get('resumeText', '').strip() if data.get('resumeText') else None
         else:
             job_title = (request.form.get('jobTitle') or '').strip()
             company = (request.form.get('company') or '').strip()
             location = (request.form.get('location') or '').strip()
-            user_email = (request.form.get('userEmail') or '').strip() or None
+            user_profile_raw = request.form.get('userProfile')
+            try:
+                user_profile = json.loads(user_profile_raw) if user_profile_raw else None
+            except Exception:
+                user_profile = None
+            
+            # Handle optional resume for Free tier
+            resume_text = None
+            if 'resume' in request.files:
+                resume_file = request.files['resume']
+                if resume_file.filename and resume_file.filename.lower().endswith('.pdf'):
+                    resume_text = extract_text_from_pdf(resume_file)
         
-        print(f"DEBUG - Advanced endpoint received:")
+        print(f"DEBUG - Free endpoint received:")
         print(f"  job_title: '{job_title}' (len: {len(job_title)})")
         print(f"  company: '{company}' (len: {len(company)})")
         print(f"  location: '{location}' (len: {len(location)})")
@@ -2298,24 +3190,72 @@ def advanced_run():
             print(f"ERROR: {error_msg}")
             return jsonify({'error': error_msg}), 400
         
-        print(f"Advanced search for {user_email}: {job_title} at {company} in {location}")
+        print(f"Interesting Free search for {user_email}: {job_title} at {company} in {location}")
+        if resume_text:
+            print(f"Resume provided for enhanced personalization ({len(resume_text)} chars)")
         
-        result = run_advanced_tier_enhanced(job_title, company, location, user_email)
+        result = run_free_tier_enhanced(job_title, company, location, user_email, user_profile, resume_text)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
-            
+        
+        # CHECK FOR JSON FORMAT REQUEST
+        want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
+        if want_json:
+            return jsonify(result)
+        
+        # Check if we should save to directory
+        save_flag = False
+        if request.is_json:
+            data = request.json or {}
+            save_flag = bool(data.get('saveToDirectory'))
+        else:
+            save_flag = (request.form.get('saveToDirectory') == 'true')
+
+        if save_flag and user_email:
+            contacts = result.get('contacts', [])
+            if not contacts:
+                # Fallback: parse from CSV if result doesn't include contacts
+                try:
+                    parsed = []
+                    with open(result['csv_file'], newline='', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            parsed.append({
+                                'FirstName': row.get('FirstName') or row.get('First Name',''),
+                                'LastName': row.get('LastName') or row.get('Last Name',''),
+                                'LinkedIn': row.get('LinkedIn') or row.get('LinkedIn URL',''),
+                                'Email': row.get('Email') or row.get('Email Address',''),
+                                'Title': row.get('Title') or row.get('Job Title',''),
+                                'Company': row.get('Company',''),
+                                'City': row.get('City',''),
+                                'State': row.get('State',''),
+                                'College': row.get('College',''),
+                            })
+                    contacts = parsed
+                except Exception as e:
+                    print(f"Warning: failed to parse contacts from CSV for save: {e}")
+            try:
+                saved = save_contacts_sqlite(user_email, contacts)
+                print(f"Saved {saved} contacts to directory for {user_email}")
+            except Exception as e:
+                print(f"Warning: failed to save directory contacts: {e}")
+
         return send_file(result['csv_file'], as_attachment=True)
         
     except Exception as e:
-        print(f"Advanced endpoint error: {e}")
+        print(f"Free endpoint error: {e}")
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/pro-run', methods=['POST'])
+@require_firebase_auth
 def pro_run():
-    """Enhanced Pro endpoint with validation and logging"""
+    """Pro tier endpoint - enhanced with interesting emails"""
     try:
+        user_email = request.firebase_user.get('email')
+        user_id = request.firebase_user['uid']
+        
         print("=== PRO ENDPOINT DEBUG ===")
         print(f"Content-Type: {request.content_type}")
         print(f"Form data keys: {list(request.form.keys())}")
@@ -2327,7 +3267,6 @@ def pro_run():
         job_title = request.form.get('jobTitle')
         company = request.form.get('company')
         location = request.form.get('location')
-        user_email = request.form.get('userEmail')
         
         print(f"Raw form values:")
         print(f"  jobTitle: '{job_title}' (type: {type(job_title)})")
@@ -2338,7 +3277,6 @@ def pro_run():
         job_title = (job_title or '').strip()
         company = (company or '').strip()
         location = (location or '').strip()
-        user_email = (user_email or '').strip() if user_email else None
         
         print(f"Cleaned values:")
         print(f"  job_title: '{job_title}' (len: {len(job_title)})")
@@ -2364,19 +3302,74 @@ def pro_run():
             return jsonify({'error': 'Valid PDF resume file is required'}), 400
         
         print(f"All validations passed!")
-        print(f"Pro search for {user_email}: {job_title} at {company} in {location}")
+        print(f"Interesting Pro search for {user_email}: {job_title} at {company} in {location}")
         
         result = run_pro_tier_enhanced(job_title, company, location, resume_file, user_email)
         
         if result.get('error'):
             return jsonify({'error': result['error']}), 500
+        
+        # CHECK FOR JSON FORMAT REQUEST
+        want_json = request.args.get('format') == 'json' or 'application/json' in (request.headers.get('Accept', ''))
+        if want_json:
+            return jsonify(result)
             
+        # Check if we should save to directory
+        save_flag = False
+        if request.is_json:
+            data = request.json or {}
+            save_flag = bool(data.get('saveToDirectory'))
+        else:
+            save_flag = (request.form.get('saveToDirectory') == 'true')
+
+        if save_flag and user_email:
+            contacts = result.get('contacts', [])
+            if not contacts:
+                # Fallback: parse from CSV if result doesn't include contacts
+                try:
+                    parsed = []
+                    with open(result['csv_file'], newline='', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            parsed.append({
+                                'FirstName': row.get('FirstName') or row.get('First Name',''),
+                                'LastName': row.get('LastName') or row.get('Last Name',''),
+                                'LinkedIn': row.get('LinkedIn') or row.get('LinkedIn URL',''),
+                                'Email': row.get('Email') or row.get('Email Address',''),
+                                'Title': row.get('Title') or row.get('Job Title',''),
+                                'Company': row.get('Company',''),
+                                'City': row.get('City',''),
+                                'State': row.get('State',''),
+                                'College': row.get('College',''),
+                            })
+                    contacts = parsed
+                except Exception as e:
+                    print(f"Warning: failed to parse contacts from CSV for save: {e}")
+            try:
+                saved = save_contacts_sqlite(user_email, contacts)
+                print(f"Saved {saved} contacts to directory for {user_email}")
+            except Exception as e:
+                print(f"Warning: failed to save directory contacts: {e}")
+
         return send_file(result['csv_file'], as_attachment=True)
         
     except Exception as e:
         print(f"Pro endpoint exception: {e}")
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+# Backward compatibility - redirect old endpoints to new ones
+@app.route('/api/basic-run', methods=['POST'])
+def basic_run_redirect():
+    """Redirect basic-run to free-run for backward compatibility"""
+    print("Redirecting /api/basic-run to /api/free-run")
+    return free_run()
+
+@app.route('/api/advanced-run', methods=['POST'])
+def advanced_run_redirect():
+    """Redirect advanced-run to free-run (advanced tier removed)"""
+    print("Redirecting /api/advanced-run to /api/free-run (advanced tier removed)")
+    return free_run()
 
 @app.route('/api/autocomplete/<data_type>', methods=['GET'])
 def autocomplete_api(data_type):
@@ -2449,6 +3442,266 @@ def enrich_job_title_api():
         print(f"Job title enrichment API error: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/parse-resume', methods=['POST'])
+def parse_resume():
+    """Parse uploaded resume and extract user information"""
+    try:
+        if 'resume' not in request.files:
+            return jsonify({'error': 'No resume file provided'}), 400
+        
+        file = request.files['resume']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'Only PDF files are supported'}), 400
+        
+        resume_text = extract_text_from_pdf(file)
+        if not resume_text:
+            return jsonify({'error': 'Could not extract text from PDF'}), 400
+        
+        parsed_info = parse_resume_info(resume_text)
+        
+        return jsonify({
+            'success': True,
+            'data': parsed_info
+        })
+        
+    except Exception as e:
+        print(f"Resume parsing error: {e}")
+        return jsonify({'error': 'Failed to parse resume'}), 500
+
+@app.route('/api/contacts', methods=['GET'])
+@require_firebase_auth
+def get_contacts():
+    """Get all contacts for a user"""
+    try:
+        user_id = request.firebase_user['uid']
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        contacts_ref = db.collection('users').document(user_id).collection('contacts')
+        docs = contacts_ref.order_by('createdAt', direction=firestore.Query.DESCENDING).stream()
+        
+        items = []
+        for doc in docs:
+            d = doc.to_dict()
+            d['id'] = doc.id
+            items.append(d)
+        
+        return jsonify({'contacts': items})
+        
+    except Exception as e:
+        print(f"Error getting contacts: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts', methods=['POST'])
+@require_firebase_auth
+def create_contact():
+    """Create a new contact"""
+    try:
+        data = request.get_json()
+        user_id = request.firebase_user['uid']
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        today = datetime.datetime.now().strftime('%m/%d/%Y')
+        contact = {
+            'firstName': data.get('firstName', ''),
+            'lastName': data.get('lastName', ''),
+            'linkedinUrl': data.get('linkedinUrl', ''),
+            'email': data.get('email', ''),
+            'company': data.get('company', ''),
+            'jobTitle': data.get('jobTitle', ''),
+            'college': data.get('college', ''),
+            'location': data.get('location', ''),
+            'firstContactDate': today,
+            'status': 'Not Contacted',
+            'lastContactDate': today,
+            'userId': user_id,
+            'createdAt': today,
+        }
+        
+        doc_ref = db.collection('users').document(user_id).collection('contacts').add(contact)
+        contact['id'] = doc_ref[1].id
+        
+        return jsonify({'contact': contact}), 201
+        
+    except Exception as e:
+        print(f"Error creating contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts/<contact_id>', methods=['PUT'])
+@require_firebase_auth
+def update_contact(contact_id):
+    """Update an existing contact"""
+    try:
+        data = request.get_json()
+        user_id = request.firebase_user['uid']
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        ref = db.collection('users').document(user_id).collection('contacts').document(contact_id)
+        doc = ref.get()
+        
+        if not doc.exists:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        update = {k: data[k] for k in ['firstName', 'lastName', 'linkedinUrl', 'email', 'company', 'jobTitle', 'college', 'location'] if k in data}
+        
+        if 'status' in data:
+            current = doc.to_dict()
+            if current.get('status') != data['status']:
+                update['lastContactDate'] = datetime.datetime.now().strftime('%m/%d/%Y')
+            update['status'] = data['status']
+        
+        ref.update(update)
+        out = ref.get().to_dict()
+        out['id'] = contact_id
+        
+        return jsonify({'contact': out})
+        
+    except Exception as e:
+        print(f"Error updating contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts/<contact_id>', methods=['DELETE'])
+@require_firebase_auth
+def delete_contact(contact_id):
+    """Delete a contact"""
+    try:
+        user_id = request.firebase_user['uid']
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+        
+        ref = db.collection('users').document(user_id).collection('contacts').document(contact_id)
+        
+        if not ref.get().exists:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        ref.delete()
+        
+        return jsonify({'message': 'Contact deleted successfully'})
+        
+    except Exception as e:
+        print(f"Error deleting contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contacts/bulk', methods=['POST'])
+@require_firebase_auth
+def bulk_create_contacts():
+    """Bulk create contacts with deduplication"""
+    try:
+        data = request.get_json() or {}
+        user_id = request.firebase_user['uid']
+        raw_contacts = data.get('contacts') or []
+        print(f"DEBUG - Raw contacts received: {json.dumps(raw_contacts, indent=2)}")
+        
+        if not db:
+            return jsonify({'error': 'Firebase not initialized'}), 500
+
+        contacts_ref = db.collection('users').document(user_id).collection('contacts')
+        created = 0
+        skipped = 0
+        created_contacts = []
+        today = datetime.datetime.now().strftime('%m/%d/%Y')
+
+        for rc in raw_contacts:
+            first_name = (rc.get('FirstName') or rc.get('firstName') or '').strip()
+            last_name = (rc.get('LastName') or rc.get('lastName') or '').strip()
+            email = (rc.get('Email') or rc.get('WorkEmail') or rc.get('PersonalEmail') or rc.get('email') or '').strip()
+            linkedin = (rc.get('LinkedIn') or rc.get('linkedinUrl') or '').strip()
+            company = (rc.get('Company') or rc.get('company') or '').strip()
+            job_title = (rc.get('Title') or rc.get('jobTitle') or '').strip()
+            college = (rc.get('College') or rc.get('college') or '').strip()
+            city = (rc.get('City') or '').strip()
+            state = (rc.get('State') or '').strip()
+            location = (rc.get('location') or ', '.join([v for v in [city, state] if v]) or '').strip()
+
+            is_dup = False
+            if email:
+                dup_q = contacts_ref.where('email', '==', email).limit(1).stream()
+                is_dup = any(True for _ in dup_q)
+            if not is_dup and linkedin:
+                dup_q2 = contacts_ref.where('linkedinUrl', '==', linkedin).limit(1).stream()
+                is_dup = any(True for _ in dup_q2)
+
+            if is_dup:
+                skipped += 1
+                continue
+
+            doc_data = {
+                'firstName': first_name,
+                'lastName': last_name,
+                'linkedinUrl': linkedin,
+                'email': email,
+                'company': company,
+                'jobTitle': job_title,
+                'college': college,
+                'location': location,
+                'firstContactDate': today,
+                'status': 'Not Contacted',
+                'lastContactDate': today,
+                'userId': user_id,
+                'createdAt': today,
+            }
+            doc_ref = contacts_ref.add(doc_data)[1]
+            doc_data['id'] = doc_ref.id
+            created_contacts.append(doc_data)
+            created += 1
+
+        return jsonify({
+            'created': created,
+            'skipped': skipped,
+            'contacts': created_contacts
+        }), 201
+
+    except Exception as e:
+        print(f"Bulk create error: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/user/update-tier', methods=['POST'])
+def update_user_tier():
+    """Update user tier and credits"""
+    try:
+        data = request.get_json() or {}
+        user_email = data.get('userEmail', '').strip()
+        tier = data.get('tier', '').strip()
+        credits = data.get('credits', 0)
+        max_credits = data.get('maxCredits', 0)
+        
+        if not user_email or not tier:
+            return jsonify({'error': 'User email and tier required'}), 400
+        
+        # Validate tier
+        if tier not in ['free', 'pro']:
+            return jsonify({'error': 'Invalid tier. Must be "free" or "pro"'}), 400
+        
+        # Store user tier info
+        user_data = {
+            'email': user_email,
+            'tier': tier,
+            'credits': credits,
+            'maxCredits': max_credits,
+            'updated_at': datetime.datetime.now().isoformat()
+        }
+        
+        print(f"Updated user {user_email} to {tier} tier with {credits} credits")
+        
+        return jsonify({
+            'success': True,
+            'user': user_data
+        })
+        
+    except Exception as e:
+        print(f"User tier update error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # Frontend routes
 @app.route('/')
 def serve_frontend():
@@ -2456,7 +3709,7 @@ def serve_frontend():
     try:
         return send_from_directory('connect-grow-hire/dist', 'index.html')
     except:
-        return "RecruitEdge API Server Running - Frontend not found"
+        return "RecruitEdge API Server Running with Interesting Emails - Frontend not found"
 
 @app.route('/<path:path>')
 def serve_static_files(path):
@@ -2487,21 +3740,25 @@ def handle_exception(e):
 # ========================================
 # MAIN ENTRY POINT
 # ========================================
-
 if __name__ == '__main__':
     print("=" * 50)
-    print("Initializing RecruitEdge server with Enhanced PDL Search...")
+    print("Initializing RecruitEdge server with TWO TIERS: Free and Pro...")
     print("=" * 50)
     
     startup_checks()
     
     print("\n" + "=" * 50)
-    print("Starting Enhanced RecruitEdge server on port 5001...")
+    print("Starting RecruitEdge server on port 5001...")
     print("Access the API at: http://localhost:5001")
     print("Health check: http://localhost:5001/health")
+    print("Available Tiers:")
+    print("- FREE: 8 emails, 120 credits, 200 minutes saved")
+    print("- PRO: 56 emails, 840 credits, 1200 minutes saved")
     print("New endpoints:")
-    print("- Autocomplete: /api/autocomplete/<type>?query=<text>")
-    print("- Job title enrichment: /api/enrich-job-title")
+    print("- /api/free-run (replaces basic-run)")
+    print("- /api/pro-run (enhanced with resume)")
+    print("- /api/tier-info (get tier information)")
     print("=" * 50 + "\n")
     
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    port = int(os.environ.get('PORT', 5001))
+    app.run(host='0.0.0.0', port=port, debug=True)
