@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { db } from './firebase-config';
 
 interface User {
   email: string;

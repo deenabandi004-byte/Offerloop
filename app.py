@@ -23,10 +23,21 @@ from werkzeug.utils import secure_filename
 import traceback
 
 from dotenv import load_dotenv
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 # Load environment variables
 load_dotenv()
 
+# Initialize Firebase Admin SDK
+try:
+    cred = credentials.Certificate('./firebase-creds.json')
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    print("✅ Firebase initialized successfully")
+except Exception as e:
+    print(f"❌ Firebase initialization failed: {e}")
+    db = None
 
 # Replace them with these lines:
 PEOPLE_DATA_LABS_API_KEY = os.getenv('PEOPLE_DATA_LABS_API_KEY')
@@ -37,6 +48,55 @@ if not PEOPLE_DATA_LABS_API_KEY:
     print("WARNING: PEOPLE_DATA_LABS_API_KEY not found in .env file")
 if not openai.api_key:
     print("WARNING: OPENAI_API_KEY not found in .env file")
+
+def save_to_firestore(contacts, uid):
+    """Save contacts to Firestore for a user"""
+    if not db:
+        print("❌ Firestore not initialized, skipping save")
+        return False
+    
+    try:
+        user_ref = db.collection('users').document(uid)
+        contacts_ref = user_ref.collection('contacts')
+        
+        existing_contacts = contacts_ref.stream()
+        for contact in existing_contacts:
+            contact.reference.delete()
+        
+        for i, contact in enumerate(contacts):
+            contact_data = {
+                'contact_id': f"{uid}_{i}",
+                'created_at': firestore.SERVER_TIMESTAMP,
+                **contact
+            }
+            contacts_ref.add(contact_data)
+        
+        print(f"✅ Saved {len(contacts)} contacts to Firestore for user {uid}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to save to Firestore: {e}")
+        return False
+
+def get_user_contacts(uid):
+    """Retrieve user's contacts from Firestore"""
+    if not db:
+        print("❌ Firestore not initialized")
+        return []
+    
+    try:
+        user_ref = db.collection('users').document(uid)
+        contacts_ref = user_ref.collection('contacts')
+        contacts = []
+        
+        for doc in contacts_ref.stream():
+            contact_data = doc.to_dict()
+            contacts.append(contact_data)
+        
+        print(f"✅ Retrieved {len(contacts)} contacts for user {uid}")
+        return contacts
+    except Exception as e:
+        print(f"❌ Failed to retrieve contacts: {e}")
+        return []
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -1572,6 +1632,9 @@ def run_basic_tier(job_title, company, location, user_email=None):
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
             f.write(csv_file.getvalue())
         
+        if user_email:
+            save_to_firestore(basic_contacts, user_email)
+        
         print(f"Basic tier completed for {user_email}: {len(basic_contacts)} contacts")
         return {
             'contacts': basic_contacts,
@@ -1626,6 +1689,9 @@ def run_advanced_tier(job_title, company, location, user_email=None):
         csv_filename = f"RecruitEdge_Advanced_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
             f.write(csv_file.getvalue())
+        
+        if user_email:
+            save_to_firestore(advanced_contacts, user_email)
         
         print(f"Advanced tier completed: {len(advanced_contacts)} contacts, {successful_drafts} Gmail drafts")
         return {
@@ -1703,6 +1769,9 @@ def run_pro_tier(job_title, company, location, resume_file, user_email=None):
         csv_filename = f"RecruitEdge_Pro_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
             f.write(csv_file.getvalue())
+        
+        if user_email:
+            save_to_firestore(pro_contacts, user_email)
         
         print(f"Pro tier completed: {len(pro_contacts)} contacts, {successful_drafts} Gmail drafts")
         print(f"User: {resume_info.get('name')} - {resume_info.get('year')} {resume_info.get('major')}")
