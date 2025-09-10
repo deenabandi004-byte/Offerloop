@@ -33,8 +33,8 @@ load_dotenv()
 try:
     credentials_file = './firebase-creds.json'
     gcred = service_account.Credentials.from_service_account_file(credentials_file)
-    db = firestore.Client(project=gcred.project_id, credentials=gcred, database='(default)')
-    print(f"✅ Firestore client initialized for project: {gcred.project_id}, database: (default)")
+    db = firestore.Client(project=gcred.project_id, credentials=gcred, database='default')
+    print(f"✅ Firestore client initialized for project: {gcred.project_id}, database: default")
 except Exception as e:
     print(f"❌ Firestore client initialization failed: {e}")
     db = None

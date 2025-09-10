@@ -3,10 +3,10 @@ from google.cloud import firestore
 
 try:
     gcred = service_account.Credentials.from_service_account_file('./firebase-creds.json')
-    db = firestore.Client(project=gcred.project_id, credentials=gcred, database='(default)')
+    db = firestore.Client(project=gcred.project_id, credentials=gcred, database='default')
     print('✅ Firestore client created')
     print(f'✅ Project ID: {gcred.project_id}')
-    print('✅ Database ID: (default)')
+    print('✅ Database ID: default')
 
     test_ref = db.collection('test').document('connection_test')
     test_ref.set({'timestamp': firestore.SERVER_TIMESTAMP, 'status': 'connected'})
