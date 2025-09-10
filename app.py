@@ -23,20 +23,20 @@ from werkzeug.utils import secure_filename
 import traceback
 
 from dotenv import load_dotenv
-import firebase_admin
-from firebase_admin import credentials, firestore
+from google.oauth2 import service_account
+from google.cloud import firestore
 
 # Load environment variables
 load_dotenv()
 
-# Initialize Firebase Admin SDK
+# Initialize Firestore Client using service account and explicit database
 try:
-    cred = credentials.Certificate('./firebase-creds.json')
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    print("✅ Firebase initialized successfully")
+    credentials_file = './firebase-creds.json'
+    gcred = service_account.Credentials.from_service_account_file(credentials_file)
+    db = firestore.Client(project=gcred.project_id, credentials=gcred, database='(default)')
+    print(f"✅ Firestore client initialized for project: {gcred.project_id}, database: (default)")
 except Exception as e:
-    print(f"❌ Firebase initialization failed: {e}")
+    print(f"❌ Firestore client initialization failed: {e}")
     db = None
 
 # Replace them with these lines:
@@ -2001,6 +2001,10 @@ def run_basic_tier_enhanced(job_title, company, location, user_email=None):
         log_api_usage('basic', user_email, len(basic_contacts))
         
         print(f"Basic tier completed for {user_email}: {len(basic_contacts)} contacts")
+        
+        if user_email:
+            save_to_firestore(basic_contacts, user_email)
+        
         return {
             'contacts': basic_contacts,
             'csv_file': csv_filename,
@@ -2062,6 +2066,10 @@ def run_advanced_tier_enhanced(job_title, company, location, user_email=None):
         log_api_usage('advanced', user_email, len(advanced_contacts), len(advanced_contacts))
         
         print(f"Advanced tier completed: {len(advanced_contacts)} contacts, {successful_drafts} Gmail drafts")
+        
+        if user_email:
+            save_to_firestore(advanced_contacts, user_email)
+        
         return {
             'contacts': advanced_contacts,
             'csv_file': csv_filename,
@@ -2143,6 +2151,9 @@ def run_pro_tier_enhanced(job_title, company, location, resume_file, user_email=
         
         print(f"Pro tier completed: {len(pro_contacts)} contacts, {successful_drafts} Gmail drafts")
         print(f"User: {resume_info.get('name')} - {resume_info.get('year')} {resume_info.get('major')}")
+        
+        if user_email:
+            save_to_firestore(pro_contacts, user_email)
         
         return {
             'contacts': pro_contacts,
